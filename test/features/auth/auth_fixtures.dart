@@ -15,6 +15,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+/// Sales-capable user for visit-order / map tests.
+AuthSession salesSession() {
+  return AuthSession(
+    user: const AuthUser(id: 9, username: 'sales', firstName: 'Ada', lastName: 'Field'),
+    profile: const UserProfileSnapshot(
+      role: 'cashier',
+      isSuperAdmin: false,
+      isAdmin: false,
+      isManager: false,
+      roleDisplay: 'Sales',
+    ),
+    permissions: PermissionSet(const [
+      PermissionGrant(module: 'pos', action: 'view'),
+      PermissionGrant(module: 'pos', action: 'create'),
+      PermissionGrant(module: 'sales', action: 'view'),
+      PermissionGrant(module: 'sales', action: 'create'),
+      PermissionGrant(module: 'customers', action: 'view'),
+      PermissionGrant(module: 'customers', action: 'create'),
+    ]),
+    persona: AppPersona.cashier,
+  );
+}
+
 AuthSession cashierSession({bool dailySales = false}) {
   return AuthSession(
     user: const AuthUser(id: 1, username: 'sales', firstName: 'Sam', lastName: 'Cash'),

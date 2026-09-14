@@ -104,9 +104,9 @@ void main() {
       expect((await api.queue()).getOrThrow().single.id, 11);
       expect((await api.pack(11)).getOrThrow().stockAllocated, isTrue);
       expect(
-        (await api.assign(orderId: 11, deliveryAgentId: 101))
+        (await api.assign(orderId: 11, deliveryDriverId: 101))
             .getOrThrow()
-            .assignedDeliveryAgentId,
+            .assignedDeliveryDriverId,
         101,
       );
 
@@ -114,7 +114,7 @@ void main() {
       expect((await bad.queue()).isFailure, isTrue);
       expect((await bad.pack(1)).isFailure, isTrue);
       expect(
-        (await bad.assign(orderId: 1, deliveryAgentId: 1)).isFailure,
+        (await bad.assign(orderId: 1, deliveryDriverId: 1)).isFailure,
         isTrue,
       );
 
@@ -137,7 +137,7 @@ void main() {
   });
 
   group('controller', () {
-    test('assign requires agent selected', () async {
+    test('assign requires driver selected', () async {
       final push = FakePushNotifier();
       final api = _api(
         MockClient((request) async {
@@ -161,14 +161,14 @@ void main() {
       expect(c.state.orders, isNotEmpty);
       expect(c.state.canAssign, isFalse);
       expect(await c.assign(11), isFalse);
-      expect(c.state.error, contains('Select a delivery agent'));
-      c.selectDeliveryAgent(101);
+      expect(c.state.error, contains('Select a delivery driver'));
+      c.selectDeliveryDriver(101);
       expect(c.state.canAssign, isTrue);
       expect(await c.pack(11), isTrue);
       expect(await c.assign(11), isTrue);
       expect(push.sent.length, greaterThanOrEqualTo(2));
-      c.selectDeliveryAgent(null);
-      expect(c.state.selectedDeliveryAgentId, isNull);
+      c.selectDeliveryDriver(null);
+      expect(c.state.selectedDeliveryDriverId, isNull);
     });
 
     test('load and action failures', () async {
@@ -178,14 +178,14 @@ void main() {
       );
       await c.load();
       expect(c.state.error, isNotNull);
-      c.selectDeliveryAgent(1);
+      c.selectDeliveryDriver(1);
       expect(await c.pack(1), isFalse);
       expect(await c.assign(1), isFalse);
     });
   });
 
   group('widgets', () {
-    testWidgets('assign CTA disabled until agent selected', (tester) async {
+    testWidgets('assign CTA disabled until driver selected', (tester) async {
       final container = ProviderContainer(
         overrides: [
           authSessionSeedProvider.overrideWithValue(_dispatcherSession()),
@@ -222,7 +222,7 @@ void main() {
       );
       expect(assign.onPressed, isNull);
 
-      await tester.tap(find.byKey(const Key('dispatch_agent_select')));
+      await tester.tap(find.byKey(const Key('dispatch_driver_select')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Driver A (101)').last);
       await tester.pumpAndSettle();
@@ -302,13 +302,13 @@ void main() {
     });
   });
 
-  test('summary assigned agent parse', () {
+  test('summary assigned driver parse', () {
     final s = FieldOrderSummary.fromJson({
       ..._orderJson(),
       'assigned_delivery_agent_id': 9,
       'stock_allocated': true,
     });
-    expect(s.assignedDeliveryAgentId, 9);
+    expect(s.assignedDeliveryDriverId, 9);
     expect(s.stockAllocated, isTrue);
   });
 }

@@ -5,9 +5,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../design_system/buttons/cb_primary_button.dart';
 import '../../../design_system/states/async_states.dart';
-import '../../agents/domain/site_visit.dart';
-import '../../agents/presentation/map_pin_picker.dart';
+import '../domain/site_pin.dart';
+import 'map_pin_picker.dart';
 import '../../customers/application/customers_controllers.dart';
 import '../../customers/domain/customer.dart';
 import '../../customers/presentation/customer_form_page.dart';
@@ -206,7 +207,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: _bottomBar(state),
         ),
       ),
@@ -314,38 +315,23 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
           ],
         );
       case VisitOrderStep.review:
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        return Row(
           children: [
-            if (state.error != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  state.error!,
-                  key: const Key('visit_place_error'),
-                  style: const TextStyle(color: AppColors.destructive),
-                ),
+            TextButton(
+              onPressed: state.submitting
+                  ? null
+                  : () => ref
+                      .read(visitOrderProvider.notifier)
+                      .goTo(VisitOrderStep.location),
+              child: const Text('Back'),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: CbPrimaryButton(
+                key: const Key('visit_place_order'),
+                label: state.submitting ? 'Placing…' : 'Place order',
+                onPressed: state.canPlace ? _place : null,
               ),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: state.submitting
-                      ? null
-                      : () => ref
-                          .read(visitOrderProvider.notifier)
-                          .goTo(VisitOrderStep.location),
-                  child: const Text('Back'),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: CbPrimaryButton(
-                    key: const Key('visit_place_order'),
-                    label: state.submitting ? 'Placing…' : 'Place order',
-                    onPressed: state.canPlace ? _place : null,
-                  ),
-                ),
-              ],
             ),
           ],
         );
@@ -778,6 +764,16 @@ class _ReviewStep extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         Text('Review & place', style: Theme.of(context).textTheme.titleMedium),
+        if (state.error != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            state.error!,
+            key: const Key('visit_place_error'),
+            maxLines: 6,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AppColors.destructive),
+          ),
+        ],
         const SizedBox(height: 12),
         ListTile(
           contentPadding: EdgeInsets.zero,

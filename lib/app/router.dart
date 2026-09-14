@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../features/dispatch/presentation/dispatch_queue_page.dart';
 import '../features/delivery/presentation/delivery_route_page.dart';
-import '../features/agents/presentation/google_map_pin_picker.dart';
-import '../features/agents/presentation/map_pin_picker.dart';
+import '../features/field_orders/presentation/google_map_pin_picker.dart';
+import '../features/field_orders/presentation/map_pin_picker.dart';
 import '../features/field_orders/presentation/visit_order_page.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/presentation/login_page.dart';
@@ -91,11 +91,7 @@ GoRouter createAppRouter({
           !(auth.session?.permissions.canViewDailySales ?? false)) {
         return AppRoutes.home;
       }
-      if (loc.startsWith(AppRoutes.siteVisit) &&
-          !(auth.session?.permissions.canPlaceVisitOrders ?? false)) {
-        return AppRoutes.home;
-      }
-      if (loc.startsWith('/agents/orders') &&
+      if (loc.startsWith('/visit-orders') &&
           !(auth.session?.permissions.canPlaceVisitOrders ?? false)) {
         return AppRoutes.home;
       }
@@ -202,14 +198,6 @@ GoRouter createAppRouter({
           ),
           GoRoute(
             path: AppRoutes.siteVisit,
-            builder: (context, state) => VisitOrderPage(
-              mapBuilder: const bool.fromEnvironment('FLUTTER_TEST')
-                  ? fakeMapPinPickerBuilder
-                  : googleMapPinPickerBuilder,
-            ),
-          ),
-          GoRoute(
-            path: AppRoutes.fieldOrderCart,
             builder: (context, state) => VisitOrderPage(
               mapBuilder: const bool.fromEnvironment('FLUTTER_TEST')
                   ? fakeMapPinPickerBuilder

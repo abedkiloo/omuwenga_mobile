@@ -4,7 +4,7 @@ import 'package:completebyte_pos_mobile/app/providers.dart';
 import 'package:completebyte_pos_mobile/core/env/app_env.dart';
 import 'package:completebyte_pos_mobile/core/network/api_client.dart';
 import 'package:completebyte_pos_mobile/core/secure/token_store.dart';
-import 'package:completebyte_pos_mobile/features/agents/presentation/map_pin_picker.dart';
+import 'package:completebyte_pos_mobile/features/field_orders/presentation/map_pin_picker.dart';
 import 'package:completebyte_pos_mobile/features/customers/application/customers_controllers.dart';
 import 'package:completebyte_pos_mobile/features/customers/data/customers_api.dart';
 import 'package:completebyte_pos_mobile/features/field_orders/application/field_order_controllers.dart';

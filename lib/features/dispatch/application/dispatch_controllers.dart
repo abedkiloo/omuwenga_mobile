@@ -16,34 +16,34 @@ class DispatchQueueState {
     this.orders = const [],
     this.loading = false,
     this.error,
-    this.selectedDeliveryAgentId,
+    this.selectedDeliveryDriverId,
     this.acting = false,
   });
 
   final List<FieldOrderSummary> orders;
   final bool loading;
   final String? error;
-  final int? selectedDeliveryAgentId;
+  final int? selectedDeliveryDriverId;
   final bool acting;
 
-  bool get canAssign => selectedDeliveryAgentId != null && !acting;
+  bool get canAssign => selectedDeliveryDriverId != null && !acting;
 
   DispatchQueueState copyWith({
     List<FieldOrderSummary>? orders,
     bool? loading,
     String? error,
-    int? selectedDeliveryAgentId,
+    int? selectedDeliveryDriverId,
     bool? acting,
     bool clearError = false,
-    bool clearAgent = false,
+    bool clearDriver = false,
   }) {
     return DispatchQueueState(
       orders: orders ?? this.orders,
       loading: loading ?? this.loading,
       error: clearError ? null : (error ?? this.error),
-      selectedDeliveryAgentId: clearAgent
+      selectedDeliveryDriverId: clearDriver
           ? null
-          : (selectedDeliveryAgentId ?? this.selectedDeliveryAgentId),
+          : (selectedDeliveryDriverId ?? this.selectedDeliveryDriverId),
       acting: acting ?? this.acting,
     );
   }
@@ -67,10 +67,10 @@ class DispatchQueueController extends StateNotifier<DispatchQueueState> {
     );
   }
 
-  void selectDeliveryAgent(int? id) {
+  void selectDeliveryDriver(int? id) {
     state = state.copyWith(
-      selectedDeliveryAgentId: id,
-      clearAgent: id == null,
+      selectedDeliveryDriverId: id,
+      clearDriver: id == null,
       clearError: true,
     );
   }
@@ -94,13 +94,13 @@ class DispatchQueueController extends StateNotifier<DispatchQueueState> {
   }
 
   Future<bool> assign(int orderId) async {
-    final agentId = state.selectedDeliveryAgentId;
-    if (agentId == null) {
-      state = state.copyWith(error: 'Select a delivery agent');
+    final driverId = state.selectedDeliveryDriverId;
+    if (driverId == null) {
+      state = state.copyWith(error: 'Select a delivery driver');
       return false;
     }
     state = state.copyWith(acting: true, clearError: true);
-    final result = await _api.assign(orderId: orderId, deliveryAgentId: agentId);
+    final result = await _api.assign(orderId: orderId, deliveryDriverId: driverId);
     if (result.isFailure) {
       final f = result as Failure;
       state = state.copyWith(acting: false, error: f.error.toString());
@@ -109,7 +109,7 @@ class DispatchQueueController extends StateNotifier<DispatchQueueState> {
     await _push.notify(
       title: 'Assigned',
       body: 'Order #$orderId assigned',
-      data: {'field_order_id': '$orderId', 'agent_id': '$agentId'},
+      data: {'field_order_id': '$orderId', 'driver_id': '$driverId'},
     );
     state = state.copyWith(acting: false);
     await load();

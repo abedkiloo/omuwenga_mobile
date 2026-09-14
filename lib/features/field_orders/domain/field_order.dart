@@ -138,7 +138,7 @@ class FieldOrderSummary {
     this.latitude,
     this.longitude,
     this.lines = const [],
-    this.assignedDeliveryAgentId,
+    this.assignedDeliveryDriverId,
     this.stockAllocated = false,
   });
 
@@ -151,7 +151,7 @@ class FieldOrderSummary {
   final double? latitude;
   final double? longitude;
   final List<CartLine> lines;
-  final int? assignedDeliveryAgentId;
+  final int? assignedDeliveryDriverId;
   final bool stockAllocated;
 
   factory FieldOrderSummary.fromJson(Map<String, dynamic> json) {
@@ -197,7 +197,7 @@ class FieldOrderSummary {
           ? double.tryParse('${site['longitude']}')
           : null,
       lines: lines,
-      assignedDeliveryAgentId:
+      assignedDeliveryDriverId:
           (json['assigned_delivery_agent_id'] as num?)?.toInt(),
       stockAllocated: json['stock_allocated'] == true,
     );

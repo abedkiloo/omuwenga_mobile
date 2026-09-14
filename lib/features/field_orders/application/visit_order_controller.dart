@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../agents/domain/site_visit.dart';
+import '../domain/site_pin.dart';
 import '../../customers/domain/customer.dart';
 import '../../pos/domain/cart.dart';
 import '../../pos/domain/product_variant.dart';
@@ -190,7 +190,10 @@ class VisitOrderController extends StateNotifier<VisitOrderState> {
         return true;
       },
       failure: (e, _) {
-        state = state.copyWith(submitting: false, error: e.toString());
+        state = state.copyWith(
+          submitting: false,
+          error: _shortError(e.toString()),
+        );
         return false;
       },
     );
@@ -199,6 +202,12 @@ class VisitOrderController extends StateNotifier<VisitOrderState> {
   void reset() {
     state = const VisitOrderState();
   }
+}
+
+String _shortError(String raw) {
+  final trimmed = raw.trim();
+  if (trimmed.length <= 240) return trimmed;
+  return '${trimmed.substring(0, 240)}…';
 }
 
 final visitOrderProvider =

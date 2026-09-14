@@ -44,11 +44,11 @@ class DispatchApi {
 
   Future<Result<FieldOrderSummary>> assign({
     required int orderId,
-    required int deliveryAgentId,
+    required int deliveryDriverId,
   }) async {
     final res = await _client.post(
       'dispatch/field-orders/$orderId/assign/',
-      body: {'delivery_agent_id': deliveryAgentId},
+      body: {'delivery_agent_id': deliveryDriverId},
     );
     return _parse(res, 'Assign failed');
   }

@@ -6,6 +6,10 @@ import 'package:completebyte_pos_mobile/core/env/app_env.dart';
 import 'package:completebyte_pos_mobile/core/network/api_client.dart';
 import 'package:completebyte_pos_mobile/core/notifications/push_notifier.dart';
 import 'package:completebyte_pos_mobile/core/secure/token_store.dart';
+import 'package:completebyte_pos_mobile/features/auth/application/auth_controller.dart';
+import 'package:completebyte_pos_mobile/features/auth/domain/auth_session.dart';
+import 'package:completebyte_pos_mobile/features/auth/domain/permission_set.dart';
+import 'package:completebyte_pos_mobile/features/auth/domain/persona.dart';
 import 'package:completebyte_pos_mobile/features/dispatch/application/dispatch_controllers.dart';
 import 'package:completebyte_pos_mobile/features/dispatch/data/dispatch_api.dart';
 import 'package:completebyte_pos_mobile/features/dispatch/presentation/dispatch_queue_page.dart';
@@ -21,6 +25,22 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+AuthSession _dispatcherSession() {
+  return AuthSession(
+    user: const AuthUser(id: 3, username: 'dispatch', firstName: 'Di', lastName: 'Patch'),
+    profile: const UserProfileSnapshot(
+      role: 'manager',
+      isSuperAdmin: false,
+      isAdmin: false,
+      isManager: true,
+    ),
+    permissions: PermissionSet(const [
+      PermissionGrant(module: 'dispatch', action: 'view'),
+      PermissionGrant(module: 'dispatch', action: 'update'),
+    ]),
+    persona: AppPersona.dispatcher,
+  );
+}
 ApiClient _client(MockClient httpClient) {
   return ApiClient(
     env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
@@ -184,6 +204,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          authSessionSeedProvider.overrideWithValue(_dispatcherSession()),
           dispatchApiProvider.overrideWithValue(api),
           pushNotifierProvider.overrideWithValue(FakePushNotifier()),
         ],
@@ -198,7 +219,7 @@ void main() {
     await tester.tap(find.byKey(const Key('dispatch_order_11')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('dispatch_agent_select')));
+    await tester.tap(find.byKey(const Key('dispatch_driver_select')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Driver A (101)').last);
     await tester.pumpAndSettle();

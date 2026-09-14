@@ -8,7 +8,7 @@ import '../../pos/domain/cart.dart';
 import '../../pos/presentation/variant_picker_sheet.dart';
 import '../application/field_order_controllers.dart';
 
-/// Agent review: site map/photos first, then lines, then submit.
+/// Review: site map/photos first, then lines, then submit.
 class FieldOrderReviewPage extends ConsumerWidget {
   const FieldOrderReviewPage({super.key});
 

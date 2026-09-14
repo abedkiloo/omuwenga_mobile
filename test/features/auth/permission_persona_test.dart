@@ -42,7 +42,7 @@ void main() {
       expect(PermissionGrant.fromJson({'module': 'a', 'action': 'b'}).key, 'a.b');
     });
 
-    test('dispatch and agents grants', () {
+    test('dispatch and visit-order grants', () {
       final dispatch = PermissionSet.fromJsonList([
         {'module': 'dispatch', 'action': 'view'},
         {'module': 'dispatch', 'action': 'update'},
@@ -62,18 +62,20 @@ void main() {
       expect(updateOnly.canDispatch, isFalse);
       expect(updateOnly.canUpdateDispatch, isTrue);
 
-      final agents = PermissionSet.fromJsonList([
-        {'module': 'agents', 'action': 'create'},
+      final sales = PermissionSet.fromJsonList([
+        {'module': 'sales', 'action': 'view'},
       ]);
-      expect(agents.canAccessAgents, isTrue);
-      expect(agents.canCreateAgentSites, isTrue);
-      expect(agents.canPlaceVisitOrders, isTrue);
+      expect(sales.canPlaceVisitOrders, isTrue);
 
-      final agentsView = PermissionSet.fromJsonList([
-        {'module': 'agents', 'action': 'view'},
+      final posOnly = PermissionSet.fromJsonList([
+        {'module': 'pos', 'action': 'view'},
       ]);
-      expect(agentsView.canAccessAgents, isTrue);
-      expect(agentsView.canPlaceVisitOrders, isFalse);
+      expect(posOnly.canPlaceVisitOrders, isTrue);
+
+      final neither = PermissionSet.fromJsonList([
+        {'module': 'delivery', 'action': 'view'},
+      ]);
+      expect(neither.canPlaceVisitOrders, isFalse);
 
       final byName = PermissionSet.fromJsonList([
         {'module': '', 'action': '', 'name': 'dispatch.view'},
@@ -175,7 +177,7 @@ void main() {
       );
     });
 
-    test('delivery agent persona from delivery grants', () {
+    test('delivery driver persona from delivery grants', () {
       final perms = PermissionSet([
         const PermissionGrant(module: 'delivery', action: 'view'),
         const PermissionGrant(module: 'delivery', action: 'update'),
@@ -192,7 +194,7 @@ void main() {
           ),
           permissions: perms,
         ),
-        AppPersona.deliveryAgent,
+        AppPersona.deliveryDriver,
       );
     });
   });

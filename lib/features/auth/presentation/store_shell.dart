@@ -115,12 +115,11 @@ class PersonaHomePage extends ConsumerWidget {
           canAccessPos: session.permissions.canAccessPos,
           canViewCustomers: session.permissions.canViewCustomers,
           canViewDailySales: session.permissions.canViewDailySales,
+          canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
         );
-      case AppPersona.fieldAgent:
-        return _AgentHome(name: session.user.displayName);
       case AppPersona.dispatcher:
         return _DispatcherHome(name: session.user.displayName);
-      case AppPersona.deliveryAgent:
+      case AppPersona.deliveryDriver:
         return _DeliveryHome(name: session.user.displayName);
       case AppPersona.manager:
       case AppPersona.admin:
@@ -132,6 +131,7 @@ class PersonaHomePage extends ConsumerWidget {
           canViewCustomers: session.permissions.canViewCustomers,
           canViewDailySales: session.permissions.canViewDailySales,
           canDispatch: session.permissions.canDispatch,
+          canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
         );
     }
   }
@@ -193,38 +193,6 @@ class _DispatcherHome extends StatelessWidget {
               key: const Key('home_primary_cta'),
               label: 'Open dispatch queue',
               onPressed: () => context.go(AppRoutes.dispatchQueue),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AgentHome extends StatelessWidget {
-  const _AgentHome({required this.name});
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Hi, $name', style: theme.textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(
-              'Visit a customer, take their order, pin the location, and send it to the office to pack.',
-              style: theme.textTheme.bodyLarge?.copyWith(color: AppColors.mutedForeground),
-            ),
-            const SizedBox(height: 32),
-            CbPrimaryButton(
-              key: const Key('home_primary_cta'),
-              label: 'New visit order',
-              onPressed: () => context.go(AppRoutes.siteVisit),
             ),
           ],
         ),

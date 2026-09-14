@@ -18,6 +18,7 @@ class StoreHomeDashboard extends ConsumerWidget {
     required this.canViewCustomers,
     this.canViewDailySales = false,
     this.canDispatch = false,
+    this.canPlaceVisitOrders = false,
   });
 
   final String title;
@@ -25,6 +26,7 @@ class StoreHomeDashboard extends ConsumerWidget {
   final bool canViewCustomers;
   final bool canViewDailySales;
   final bool canDispatch;
+  final bool canPlaceVisitOrders;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -66,6 +68,14 @@ class StoreHomeDashboard extends ConsumerWidget {
                 key: const Key('home_customers'),
                 onPressed: () => context.go(AppRoutes.customers),
                 child: const Text('Customers'),
+              ),
+            ],
+            if (canPlaceVisitOrders) ...[
+              const SizedBox(height: 12),
+              OutlinedButton(
+                key: const Key('home_visit_order'),
+                onPressed: () => context.go(AppRoutes.siteVisit),
+                child: const Text('New visit order'),
               ),
             ],
             if (canDispatch) ...[

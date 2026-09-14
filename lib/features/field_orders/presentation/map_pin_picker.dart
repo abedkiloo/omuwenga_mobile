@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../domain/site_visit.dart';
+import '../domain/site_pin.dart';
 
 typedef MapPinPickerBuilder = Widget Function(
   BuildContext context, {

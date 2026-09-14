@@ -9,9 +9,9 @@ abstract final class AppRoutes {
   static const more = '/more';
   static const dailySales = '/daily-sales';
   static const salesHistory = '/sales';
-  static const siteVisit = '/agents/site-visit';
-  static const fieldOrderCart = '/agents/orders/new';
-  static const fieldOrderReview = '/agents/orders/review';
+  static const siteVisit = '/visit-orders/new';
+  static const fieldOrderCart = '/visit-orders/new';
+  static const fieldOrderReview = '/visit-orders/review';
   static const dispatchQueue = '/dispatch';
   static const deliveryRoute = '/delivery';
 
@@ -21,8 +21,7 @@ abstract final class AppRoutes {
   static String saleDetail(int id) => '/sales/$id';
   static String dailyCustomerDay(int customerId, {required String date}) =>
       '/daily-sales/customer/$customerId?date=${Uri.encodeQueryComponent(date)}';
-  static String fieldOrderCartForSite(int siteId) =>
-      '/agents/orders/new?siteId=$siteId';
+  static String fieldOrderCartForSite(int siteId) => '/visit-orders/new';
   static String dispatchOrder(int id) => '/dispatch/orders/$id';
   static String deliveryStop(int id) => '/delivery/stops/$id';
 }

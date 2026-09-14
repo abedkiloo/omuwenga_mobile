@@ -57,13 +57,9 @@ class PermissionSet {
   bool get canViewSales => has('sales', 'view');
   bool get canRefundSales => has('sales', 'refund');
 
-  /// Browse agent tools / own orders (agents.view+).
-  bool get canAccessAgents =>
-      has('agents', 'view') || has('agents', 'create') || has('agents', 'update');
-
-  /// Place visit orders — FE/BE place requires agents.create.
-  bool get canCreateAgentSites => has('agents', 'create');
-  bool get canPlaceVisitOrders => canCreateAgentSites;
+  /// Visit / field orders — normal sales users with POS or sales access.
+  bool get canPlaceVisitOrders =>
+      canAccessPos || canViewSales || has('sales', 'create');
 
   /// Field sales list / pack queue — FE nav: dispatch.view.
   bool get canDispatch => has('dispatch', 'view');

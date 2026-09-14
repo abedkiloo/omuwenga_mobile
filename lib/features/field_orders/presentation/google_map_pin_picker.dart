@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import '../domain/site_visit.dart';
+import '../domain/site_pin.dart';
 import 'map_pin_picker.dart';
 
 /// Production Google Maps pin picker (excluded from coverage gate — platform view).

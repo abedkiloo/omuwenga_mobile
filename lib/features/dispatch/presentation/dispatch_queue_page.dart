@@ -158,10 +158,10 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
           const SizedBox(height: 16),
           if (canPack)
             DropdownButtonFormField<int>(
-              key: const Key('dispatch_agent_select'),
-              initialValue: state.selectedDeliveryAgentId,
+              key: const Key('dispatch_driver_select'),
+              initialValue: state.selectedDeliveryDriverId,
               decoration: const InputDecoration(
-                labelText: 'Delivery agent',
+                labelText: 'Delivery driver',
                 border: OutlineInputBorder(),
               ),
               items: const [
@@ -169,7 +169,7 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
                 DropdownMenuItem(value: 102, child: Text('Driver B (102)')),
               ],
               onChanged: (v) =>
-                  ref.read(dispatchQueueProvider.notifier).selectDeliveryAgent(v),
+                  ref.read(dispatchQueueProvider.notifier).selectDeliveryDriver(v),
             ),
           if (state.error != null)
             Padding(
@@ -203,7 +203,7 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
                     const SizedBox(height: 8),
                     CbPrimaryButton(
                       key: const Key('dispatch_assign'),
-                      label: 'Assign delivery agent',
+                      label: 'Assign delivery driver',
                       onPressed: state.canAssign
                           ? () => ref
                               .read(dispatchQueueProvider.notifier)

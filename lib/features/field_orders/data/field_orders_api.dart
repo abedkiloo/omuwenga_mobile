@@ -94,7 +94,9 @@ class FieldOrdersApi {
     final response = responseResult.getOrThrow();
     if (response.statusCode < 200 || response.statusCode >= 300) {
       return Failure(
-        FieldOrdersApiException('$label (${response.statusCode}): ${response.body}'),
+        FieldOrdersApiException(
+          '$label (${response.statusCode}): ${_errorBody(response.body)}',
+        ),
       );
     }
     try {
@@ -107,4 +109,23 @@ class FieldOrdersApi {
       return Failure(e, st);
     }
   }
+}
+
+String _errorBody(String body) {
+  final trimmed = body.trim();
+  if (trimmed.isEmpty) return 'Request failed';
+  if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
+    return 'Endpoint not found. Restart the API server with the latest code.';
+  }
+  try {
+    final data = jsonDecode(trimmed);
+    if (data is Map) {
+      final detail = data['detail'] ?? data['error'] ?? data['message'];
+      if (detail != null) return detail.toString();
+    }
+  } on Object {
+    // fall through
+  }
+  if (trimmed.length <= 180) return trimmed;
+  return '${trimmed.substring(0, 180)}…';
 }

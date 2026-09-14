@@ -1,14 +1,13 @@
 import 'permission_set.dart';
 
-/// Mobile home persona — store + field agent.
+/// Mobile home persona — store roles only.
 enum AppPersona {
   cashier,
   manager,
   /// Super admin uses manager-style attention home on mobile.
   admin,
-  fieldAgent,
   dispatcher,
-  deliveryAgent,
+  deliveryDriver,
 }
 
 class UserProfileSnapshot {
@@ -59,26 +58,18 @@ AppPersona resolvePersona({
   }
   if (permissions.canDispatch &&
       !permissions.canAccessPos &&
-      !permissions.canAccessAgents &&
+      !permissions.canPlaceVisitOrders &&
       !permissions.canAccessDelivery) {
     return AppPersona.dispatcher;
   }
   if (permissions.canAccessDelivery &&
       !permissions.canAccessPos &&
-      !permissions.canAccessAgents) {
-    return AppPersona.deliveryAgent;
+      !permissions.canPlaceVisitOrders) {
+    return AppPersona.deliveryDriver;
   }
-  if (permissions.canAccessAgents &&
-      !permissions.canAccessPos &&
-      (profile.role == 'agent' ||
-          profile.roleDisplay == 'Field Agent' ||
-          profile.role == 'field_agent')) {
-    return AppPersona.fieldAgent;
-  }
-  if (permissions.canAccessAgents && !permissions.canAccessPos) {
-    return AppPersona.fieldAgent;
-  }
-  if (profile.role == 'cashier' || profile.role == 'sales') {
+  if (profile.role == 'cashier' ||
+      profile.role == 'sales' ||
+      profile.role == 'field_sales') {
     return AppPersona.cashier;
   }
   // Permission heuristic for custom roles.
@@ -89,10 +80,7 @@ AppPersona resolvePersona({
     return AppPersona.dispatcher;
   }
   if (permissions.canAccessDelivery) {
-    return AppPersona.deliveryAgent;
-  }
-  if (permissions.canAccessAgents) {
-    return AppPersona.fieldAgent;
+    return AppPersona.deliveryDriver;
   }
   return AppPersona.cashier;
 }
