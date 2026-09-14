@@ -1,0 +1,52 @@
+name: completebyte_pos_mobile
+description: CompleteBytePOS Flutter mobile — Android-first native client
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_riverpod: ^2.6.1
+  go_router: ^15.1.2
+  http: ^1.4.0
+  flutter_secure_storage: ^9.2.4
+  drift: ^2.35.0
+  sqlite3_flutter_libs: ^0.6.0+eol
+  path_provider: ^2.1.6
+  path: ^1.9.1
+  uuid: ^4.6.0
+  connectivity_plus: ^7.3.1
+  encrypt: ^5.0.3
+  crypto: ^3.0.7
+  google_maps_flutter: ^2.18.0
+  geolocator: ^14.0.2
+  image_picker: ^1.2.3
+  flutter_image_compress: ^2.5.1
+  cross_file: ^0.3.5+5
+  http_parser: ^4.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  drift_dev: ^2.35.0
+  build_runner: ^2.15.1
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/branding/omuwenga_logo.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/branding/omuwenga_logo.png
+  adaptive_icon_background: "#00000000"
+  adaptive_icon_foreground: assets/branding/omuwenga_logo.png
+  remove_alpha_ios: false
+  background_color_ios: "#00000000"
