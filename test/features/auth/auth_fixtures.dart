@@ -53,6 +53,8 @@ AuthSession managerSession({bool dailySales = false}) {
       const PermissionGrant(module: 'customers', action: 'update'),
       const PermissionGrant(module: 'sales', action: 'view'),
       const PermissionGrant(module: 'sales', action: 'refund'),
+      const PermissionGrant(module: 'dispatch', action: 'view'),
+      const PermissionGrant(module: 'dispatch', action: 'update'),
       if (dailySales) const PermissionGrant(module: 'sales', action: 'daily_sales'),
     ]),
     persona: AppPersona.manager,

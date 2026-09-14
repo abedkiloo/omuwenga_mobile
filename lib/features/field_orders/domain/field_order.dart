@@ -122,6 +122,7 @@ class FieldOrderCart {
             'product_id': line.productId,
             'quantity': line.quantity.toString(),
             'unit_price': line.unitPrice.toStringAsFixed(2),
+            if (line.variantId != null) 'variant_id': line.variantId,
           },
       ];
 }
@@ -175,6 +176,7 @@ class FieldOrderSummary {
             name: (row['product_name'] ?? '').toString(),
             unitPrice: double.tryParse('${row['unit_price']}') ?? 0,
             quantity: double.tryParse('${row['quantity']}') ?? 0,
+            variantId: (row['variant_id'] as num?)?.toInt(),
           ),
         );
       }

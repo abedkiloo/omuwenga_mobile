@@ -1,7 +1,7 @@
 /// Documented client defaults — mirrors `be/agents/config.py`.
 class SiteVisitConfig {
   const SiteVisitConfig({
-    this.minPhotos = 1,
+    this.minPhotos = 0,
     this.maxPhotos = 10,
     this.maxImageBytes = 2 * 1024 * 1024,
     this.compressQuality = 75,
@@ -12,11 +12,11 @@ class SiteVisitConfig {
   final int maxImageBytes;
   final int compressQuality;
 
-  static const defaults = SiteVisitConfig();
+  static const defaults = SiteVisitConfig(minPhotos: 0);
 
   factory SiteVisitConfig.fromJson(Map<String, dynamic> json) {
     return SiteVisitConfig(
-      minPhotos: (json['min_site_media'] as num?)?.toInt() ?? 1,
+      minPhotos: (json['min_site_media'] as num?)?.toInt() ?? 0,
       maxPhotos: (json['max_site_media'] as num?)?.toInt() ?? 10,
       maxImageBytes:
           (json['max_site_image_bytes'] as num?)?.toInt() ?? 2 * 1024 * 1024,

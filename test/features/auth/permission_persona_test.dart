@@ -49,11 +49,36 @@ void main() {
       ]);
       expect(dispatch.canDispatch, isTrue);
       expect(dispatch.canUpdateDispatch, isTrue);
+
+      final viewOnly = PermissionSet.fromJsonList([
+        {'module': 'dispatch', 'action': 'view'},
+      ]);
+      expect(viewOnly.canDispatch, isTrue);
+      expect(viewOnly.canUpdateDispatch, isFalse);
+
+      final updateOnly = PermissionSet.fromJsonList([
+        {'module': 'dispatch', 'action': 'update'},
+      ]);
+      expect(updateOnly.canDispatch, isFalse);
+      expect(updateOnly.canUpdateDispatch, isTrue);
+
       final agents = PermissionSet.fromJsonList([
         {'module': 'agents', 'action': 'create'},
       ]);
       expect(agents.canAccessAgents, isTrue);
       expect(agents.canCreateAgentSites, isTrue);
+      expect(agents.canPlaceVisitOrders, isTrue);
+
+      final agentsView = PermissionSet.fromJsonList([
+        {'module': 'agents', 'action': 'view'},
+      ]);
+      expect(agentsView.canAccessAgents, isTrue);
+      expect(agentsView.canPlaceVisitOrders, isFalse);
+
+      final byName = PermissionSet.fromJsonList([
+        {'module': '', 'action': '', 'name': 'dispatch.view'},
+      ]);
+      expect(byName.canDispatch, isTrue);
     });
   });
 

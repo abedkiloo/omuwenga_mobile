@@ -27,6 +27,33 @@ class FieldOrdersApi {
     return _parseOrder(res, 'Create failed');
   }
 
+  /// One-shot visit order: customer + products + map pin → submitted to office.
+  Future<Result<FieldOrderSummary>> place({
+    required int customerId,
+    required double latitude,
+    required double longitude,
+    required List<Map<String, dynamic>> lines,
+    double? accuracy,
+    String landmark = '',
+    String label = '',
+    String notes = '',
+  }) async {
+    final res = await _client.post(
+      'agents/field-orders/place/',
+      body: {
+        'customer_id': customerId,
+        'latitude': latitude,
+        'longitude': longitude,
+        if (accuracy != null) 'accuracy': accuracy,
+        'landmark': landmark,
+        'label': label,
+        'notes': notes,
+        'lines': lines,
+      },
+    );
+    return _parseOrder(res, 'Place order failed');
+  }
+
   Future<Result<FieldOrderSummary>> submit(int orderId) async {
     final res = await _client.post('agents/field-orders/$orderId/submit/');
     return _parseOrder(res, 'Submit failed');

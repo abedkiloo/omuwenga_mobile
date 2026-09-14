@@ -14,10 +14,13 @@ class CustomerFormPage extends ConsumerStatefulWidget {
     super.key,
     this.customerId,
     this.returnToPos = false,
+    this.returnCustomer = false,
   });
 
   final int? customerId;
   final bool returnToPos;
+  /// When true, pop with the created [CustomerSummary] instead of navigating away.
+  final bool returnCustomer;
 
   @override
   ConsumerState<CustomerFormPage> createState() => _CustomerFormPageState();
@@ -76,7 +79,9 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     result.when(
       success: (customer) {
         setState(() => _saving = false);
-        if (widget.returnToPos) {
+        if (widget.returnCustomer) {
+          Navigator.of(context).pop(customer);
+        } else if (widget.returnToPos) {
           ref.read(cartControllerProvider.notifier).attachCustomer(
                 id: customer.id,
                 name: customer.name,

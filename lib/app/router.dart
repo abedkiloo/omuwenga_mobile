@@ -4,10 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../features/dispatch/presentation/dispatch_queue_page.dart';
 import '../features/delivery/presentation/delivery_route_page.dart';
-import '../features/field_orders/presentation/field_order_review_page.dart';
 import '../features/agents/presentation/google_map_pin_picker.dart';
 import '../features/agents/presentation/map_pin_picker.dart';
-import '../features/agents/presentation/site_visit_wizard_page.dart';
+import '../features/field_orders/presentation/visit_order_page.dart';
 import '../features/auth/application/auth_controller.dart';
 import '../features/auth/presentation/login_page.dart';
 import '../features/auth/presentation/store_shell.dart';
@@ -93,11 +92,11 @@ GoRouter createAppRouter({
         return AppRoutes.home;
       }
       if (loc.startsWith(AppRoutes.siteVisit) &&
-          !(auth.session?.permissions.canCreateAgentSites ?? false)) {
+          !(auth.session?.permissions.canPlaceVisitOrders ?? false)) {
         return AppRoutes.home;
       }
       if (loc.startsWith('/agents/orders') &&
-          !(auth.session?.permissions.canAccessAgents ?? false)) {
+          !(auth.session?.permissions.canPlaceVisitOrders ?? false)) {
         return AppRoutes.home;
       }
       if (loc.startsWith(AppRoutes.dispatchQueue) &&
@@ -203,23 +202,23 @@ GoRouter createAppRouter({
           ),
           GoRoute(
             path: AppRoutes.siteVisit,
-            builder: (context, state) => SiteVisitWizardPage(
-              mapPickerBuilder: const bool.fromEnvironment('FLUTTER_TEST')
+            builder: (context, state) => VisitOrderPage(
+              mapBuilder: const bool.fromEnvironment('FLUTTER_TEST')
                   ? fakeMapPinPickerBuilder
                   : googleMapPinPickerBuilder,
             ),
           ),
           GoRoute(
             path: AppRoutes.fieldOrderCart,
-            builder: (context, state) {
-              final siteId =
-                  int.tryParse(state.uri.queryParameters['siteId'] ?? '') ?? 0;
-              return FieldOrderCartPage(siteId: siteId);
-            },
+            builder: (context, state) => VisitOrderPage(
+              mapBuilder: const bool.fromEnvironment('FLUTTER_TEST')
+                  ? fakeMapPinPickerBuilder
+                  : googleMapPinPickerBuilder,
+            ),
           ),
           GoRoute(
             path: AppRoutes.fieldOrderReview,
-            builder: (context, state) => const FieldOrderReviewPage(),
+            redirect: (context, state) => AppRoutes.siteVisit,
           ),
           GoRoute(
             path: AppRoutes.dispatchQueue,

@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/states/async_states.dart';
+import '../../auth/application/auth_controller.dart';
+import '../../field_orders/domain/field_order.dart';
 import '../application/dispatch_controllers.dart';
 
 class DispatchQueuePage extends ConsumerStatefulWidget {
@@ -27,7 +29,7 @@ class _DispatchQueuePageState extends ConsumerState<DispatchQueuePage> {
   Widget build(BuildContext context) {
     final state = ref.watch(dispatchQueueProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Dispatch queue')),
+      appBar: AppBar(title: const Text('Field sales')),
       body: state.loading && state.orders.isEmpty
           ? const LoadingState(label: 'Loading queue…')
           : state.error != null && state.orders.isEmpty
@@ -38,7 +40,7 @@ class _DispatchQueuePageState extends ConsumerState<DispatchQueuePage> {
               : state.orders.isEmpty
                   ? EmptyState(
                       title: 'Queue clear',
-                      message: 'No submitted field orders.',
+                      message: 'No visit orders waiting to be packed.',
                       primaryLabel: 'Refresh',
                       onPrimary: () =>
                           ref.read(dispatchQueueProvider.notifier).load(),
@@ -49,13 +51,23 @@ class _DispatchQueuePageState extends ConsumerState<DispatchQueuePage> {
                       separatorBuilder: (_, _) => const Divider(height: 1),
                       itemBuilder: (context, i) {
                         final order = state.orders[i];
+                        final qty = order.lines.fold<double>(
+                          0,
+                          (sum, l) => sum + l.quantity,
+                        );
                         return ListTile(
                           key: Key('dispatch_order_${order.id}'),
-                          title: Text('Order #${order.id}'),
-                          subtitle: Text(
-                            '${order.status.name} · ${order.siteLabel.isEmpty ? 'Site ${order.siteId}' : order.siteLabel}',
+                          title: Text(
+                            order.customerName?.isNotEmpty == true
+                                ? order.customerName!
+                                : 'Order #${order.id}',
                           ),
-                          onTap: () => context.push(AppRoutes.dispatchOrder(order.id)),
+                          subtitle: Text(
+                            '#${order.id} · ${order.status.name} · '
+                            '${order.lines.length} lines · qty ${qty.toStringAsFixed(0)}',
+                          ),
+                          onTap: () =>
+                              context.push(AppRoutes.dispatchOrder(order.id)),
                         );
                       },
                     ),
@@ -85,6 +97,9 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(dispatchQueueProvider);
+    final canPack =
+        ref.watch(authControllerProvider).session?.permissions.canUpdateDispatch ??
+            false;
     final order =
         state.orders.where((o) => o.id == widget.orderId).firstOrNull;
 
@@ -102,11 +117,22 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
       );
     }
 
+    final alreadyReady = order.stockAllocated ||
+        order.status == FieldOrderStatus.ready ||
+        order.status == FieldOrderStatus.outForDelivery;
+
     return Scaffold(
       appBar: AppBar(title: Text('Order #${order.id}')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Text(
+            order.customerName?.isNotEmpty == true
+                ? order.customerName!
+                : 'Order #${order.id}',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
           Container(
             key: const Key('dispatch_map'),
             height: 120,
@@ -118,44 +144,33 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
                   : '${order.latitude}, ${order.longitude}',
             ),
           ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 64,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                for (var i = 0; i < (order.photoUrls.isEmpty ? 1 : order.photoUrls.length); i++)
-                  Container(
-                    width: 64,
-                    margin: const EdgeInsets.only(right: 8),
-                    color: AppColors.secondary,
-                    child: const Icon(Icons.image_outlined),
-                  ),
-              ],
-            ),
-          ),
           const SizedBox(height: 16),
+          Text('Products to pack', style: Theme.of(context).textTheme.titleSmall),
           for (final line in order.lines)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text(line.name),
-              trailing: Text('${line.quantity}'),
+              title: Text(line.displayName),
+              subtitle: Text(
+                'Qty ${line.quantity} · ${line.unitPrice.toStringAsFixed(2)} each',
+              ),
+              trailing: Text(line.lineTotal.toStringAsFixed(2)),
             ),
           const SizedBox(height: 16),
-          DropdownButtonFormField<int>(
-            key: const Key('dispatch_agent_select'),
-            initialValue: state.selectedDeliveryAgentId,
-            decoration: const InputDecoration(
-              labelText: 'Delivery agent',
-              border: OutlineInputBorder(),
+          if (canPack)
+            DropdownButtonFormField<int>(
+              key: const Key('dispatch_agent_select'),
+              initialValue: state.selectedDeliveryAgentId,
+              decoration: const InputDecoration(
+                labelText: 'Delivery agent',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: 101, child: Text('Driver A (101)')),
+                DropdownMenuItem(value: 102, child: Text('Driver B (102)')),
+              ],
+              onChanged: (v) =>
+                  ref.read(dispatchQueueProvider.notifier).selectDeliveryAgent(v),
             ),
-            items: const [
-              DropdownMenuItem(value: 101, child: Text('Driver A (101)')),
-              DropdownMenuItem(value: 102, child: Text('Driver B (102)')),
-            ],
-            onChanged: (v) =>
-                ref.read(dispatchQueueProvider.notifier).selectDeliveryAgent(v),
-          ),
           if (state.error != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -167,31 +182,39 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
             ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CbPrimaryButton(
-                key: const Key('dispatch_pack'),
-                label: 'Pack (allocate)',
-                onPressed: state.acting
-                    ? null
-                    : () => ref.read(dispatchQueueProvider.notifier).pack(order.id),
+      bottomNavigationBar: canPack
+          ? SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CbPrimaryButton(
+                      key: const Key('dispatch_pack'),
+                      label: alreadyReady
+                          ? 'Ready for pickup'
+                          : 'Pack & mark ready for pickup',
+                      onPressed: state.acting || alreadyReady
+                          ? null
+                          : () => ref
+                              .read(dispatchQueueProvider.notifier)
+                              .pack(order.id),
+                    ),
+                    const SizedBox(height: 8),
+                    CbPrimaryButton(
+                      key: const Key('dispatch_assign'),
+                      label: 'Assign delivery agent',
+                      onPressed: state.canAssign
+                          ? () => ref
+                              .read(dispatchQueueProvider.notifier)
+                              .assign(order.id)
+                          : null,
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
-              CbPrimaryButton(
-                key: const Key('dispatch_assign'),
-                label: 'Assign delivery agent',
-                onPressed: state.canAssign
-                    ? () => ref.read(dispatchQueueProvider.notifier).assign(order.id)
-                    : null,
-              ),
-            ],
-          ),
-        ),
-      ),
+            )
+          : null,
     );
   }
 }

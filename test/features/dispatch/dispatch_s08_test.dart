@@ -4,6 +4,10 @@ import 'package:completebyte_pos_mobile/core/env/app_env.dart';
 import 'package:completebyte_pos_mobile/core/network/api_client.dart';
 import 'package:completebyte_pos_mobile/core/notifications/push_notifier.dart';
 import 'package:completebyte_pos_mobile/core/secure/token_store.dart';
+import 'package:completebyte_pos_mobile/features/auth/application/auth_controller.dart';
+import 'package:completebyte_pos_mobile/features/auth/domain/auth_session.dart';
+import 'package:completebyte_pos_mobile/features/auth/domain/permission_set.dart';
+import 'package:completebyte_pos_mobile/features/auth/domain/persona.dart';
 import 'package:completebyte_pos_mobile/features/dispatch/application/dispatch_controllers.dart';
 import 'package:completebyte_pos_mobile/features/dispatch/data/dispatch_api.dart';
 import 'package:completebyte_pos_mobile/features/dispatch/presentation/dispatch_queue_page.dart';
@@ -14,6 +18,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+
+AuthSession _dispatcherSession({bool canUpdate = true}) {
+  return AuthSession(
+    user: const AuthUser(id: 3, username: 'dispatch', firstName: 'Di', lastName: 'Patch'),
+    profile: const UserProfileSnapshot(
+      role: 'manager',
+      isSuperAdmin: false,
+      isAdmin: false,
+      isManager: true,
+    ),
+    permissions: PermissionSet([
+      const PermissionGrant(module: 'dispatch', action: 'view'),
+      if (canUpdate) const PermissionGrant(module: 'dispatch', action: 'update'),
+    ]),
+    persona: AppPersona.dispatcher,
+  );
+}
 
 Map<String, dynamic> _orderJson({
   int id = 11,
@@ -167,6 +188,7 @@ void main() {
     testWidgets('assign CTA disabled until agent selected', (tester) async {
       final container = ProviderContainer(
         overrides: [
+          authSessionSeedProvider.overrideWithValue(_dispatcherSession()),
           dispatchApiProvider.overrideWithValue(
             _api(
               MockClient((request) async {
@@ -212,6 +234,35 @@ void main() {
         ),
       );
       expect(assignEnabled.onPressed, isNotNull);
+    });
+
+    testWidgets('view-only hides mark-ready actions', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authSessionSeedProvider.overrideWithValue(
+              _dispatcherSession(canUpdate: false),
+            ),
+            dispatchApiProvider.overrideWithValue(
+              _api(
+                MockClient((request) async {
+                  if (request.url.path.contains('/queue/')) {
+                    return http.Response(jsonEncode([_orderJson()]), 200);
+                  }
+                  return http.Response(jsonEncode(_orderJson()), 200);
+                }),
+              ),
+            ),
+            pushNotifierProvider.overrideWithValue(FakePushNotifier()),
+          ],
+          child: const MaterialApp(
+            home: DispatchOrderDetailPage(orderId: 11),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('dispatch_pack')), findsNothing);
+      expect(find.byKey(const Key('dispatch_assign')), findsNothing);
     });
 
     testWidgets('queue list empty state', (tester) async {

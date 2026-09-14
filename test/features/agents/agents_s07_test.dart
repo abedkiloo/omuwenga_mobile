@@ -76,7 +76,7 @@ void main() {
     });
     expect(vm.photoUrls, ['http://x/a.jpg']);
     expect(vm.customerName, 'Debtor');
-    expect(SiteVisitConfig.fromJson({}).minPhotos, 1);
+    expect(SiteVisitConfig.fromJson({}).minPhotos, 0);
   });
 
   test('outbox media enqueue multipart payload', () async {
@@ -220,7 +220,7 @@ void main() {
     );
   });
 
-  testWidgets('agent home shows new site visit; more entry gated', (tester) async {
+  testWidgets('agent home shows new visit order; more entry gated', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: seedOverrides(agentSession()),
@@ -229,7 +229,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('home_primary_cta')), findsOneWidget);
-    expect(find.text('New site visit'), findsOneWidget);
+    expect(find.text('New visit order'), findsOneWidget);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -238,7 +238,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('more_site_visit')), findsNothing);
+    expect(find.byKey(const Key('more_visit_order')), findsNothing);
   });
 
   testWidgets('router redirects site visit without agents.create', (tester) async {

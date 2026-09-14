@@ -73,7 +73,7 @@ class StoreHomeDashboard extends ConsumerWidget {
               OutlinedButton(
                 key: const Key('home_dispatch'),
                 onPressed: () => context.go(AppRoutes.dispatchQueue),
-                child: const Text('Dispatch queue'),
+                child: const Text('Field sales'),
               ),
             ],
             if (canViewDailySales) ...[

@@ -20,9 +20,15 @@ class PermissionGrant {
   String get key => '$module.$action';
 }
 
+/// Mirrors web `hasPermission` / nav gates in `fe/src/utils/roleAccess.js`.
 class PermissionSet {
   PermissionSet(Iterable<PermissionGrant> grants)
-      : _keys = {for (final g in grants) g.key};
+      : _keys = {
+          for (final g in grants) ...[
+            g.key,
+            if (g.name != null && g.name!.trim().isNotEmpty) g.name!.trim(),
+          ],
+        };
 
   factory PermissionSet.fromJsonList(List<dynamic>? raw) {
     if (raw == null) return PermissionSet(const []);
@@ -39,7 +45,9 @@ class PermissionSet {
 
   final Set<String> _keys;
 
-  bool has(String module, String action) => _keys.contains('$module.$action');
+  /// Same as FE: `module.action` name or module+action pair.
+  bool has(String module, String action) =>
+      _keys.contains('$module.$action');
 
   bool get canViewDailySales => has('sales', 'daily_sales');
   bool get canAccessPos => has('pos', 'view') || has('pos', 'create');
@@ -48,14 +56,25 @@ class PermissionSet {
   bool get canUpdateCustomers => has('customers', 'update');
   bool get canViewSales => has('sales', 'view');
   bool get canRefundSales => has('sales', 'refund');
+
+  /// Browse agent tools / own orders (agents.view+).
   bool get canAccessAgents =>
       has('agents', 'view') || has('agents', 'create') || has('agents', 'update');
+
+  /// Place visit orders — FE/BE place requires agents.create.
   bool get canCreateAgentSites => has('agents', 'create');
-  bool get canDispatch => has('dispatch', 'view') || has('dispatch', 'update');
+  bool get canPlaceVisitOrders => canCreateAgentSites;
+
+  /// Field sales list / pack queue — FE nav: dispatch.view.
+  bool get canDispatch => has('dispatch', 'view');
+
+  /// Mark ready / assign — FE Field sales: dispatch.update.
   bool get canUpdateDispatch => has('dispatch', 'update');
+
   bool get canAccessDelivery =>
       has('delivery', 'view') || has('delivery', 'update');
   bool get canUpdateDelivery => has('delivery', 'update');
+
   bool get isEmpty => _keys.isEmpty;
   int get length => _keys.length;
 }

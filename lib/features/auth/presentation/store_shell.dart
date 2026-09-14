@@ -217,20 +217,14 @@ class _AgentHome extends StatelessWidget {
             Text('Hi, $name', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
-              'Capture the site pin and photos before taking an order.',
+              'Visit a customer, take their order, pin the location, and send it to the office to pack.',
               style: theme.textTheme.bodyLarge?.copyWith(color: AppColors.mutedForeground),
             ),
             const SizedBox(height: 32),
             CbPrimaryButton(
               key: const Key('home_primary_cta'),
-              label: 'New site visit',
+              label: 'New visit order',
               onPressed: () => context.go(AppRoutes.siteVisit),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              key: const Key('home_field_order'),
-              onPressed: () => context.go(AppRoutes.fieldOrderCartForSite(0)),
-              child: const Text('New field order'),
             ),
           ],
         ),
@@ -247,21 +241,27 @@ class MorePage extends ConsumerWidget {
     final session = ref.watch(authControllerProvider).session;
     final canDaily = session?.permissions.canViewDailySales ?? false;
     final canSales = session?.permissions.canViewSales ?? false;
-    final canAgents = session?.permissions.canCreateAgentSites ?? false;
+    final canPlaceVisit = session?.permissions.canPlaceVisitOrders ?? false;
     final canDispatch = session?.permissions.canDispatch ?? false;
     final canDelivery = session?.permissions.canAccessDelivery ?? false;
-    final canAgentOrders = session?.permissions.canAccessAgents ?? false;
 
     return Scaffold(
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (canPlaceVisit)
+              ListTile(
+                key: const Key('more_visit_order'),
+                title: const Text('New visit order'),
+                leading: const Icon(Icons.shopping_bag_outlined),
+                onTap: () => context.go(AppRoutes.siteVisit),
+              ),
             if (canDispatch)
               ListTile(
                 key: const Key('more_dispatch'),
-                title: const Text('Dispatch queue'),
-                leading: const Icon(Icons.local_shipping_outlined),
+                title: const Text('Field sales'),
+                leading: const Icon(Icons.inventory_2_outlined),
                 onTap: () => context.go(AppRoutes.dispatchQueue),
               ),
             if (canDelivery)
@@ -270,20 +270,6 @@ class MorePage extends ConsumerWidget {
                 title: const Text('Today’s route'),
                 leading: const Icon(Icons.map_outlined),
                 onTap: () => context.go(AppRoutes.deliveryRoute),
-              ),
-            if (canAgentOrders)
-              ListTile(
-                key: const Key('more_field_order'),
-                title: const Text('New field order'),
-                leading: const Icon(Icons.shopping_bag_outlined),
-                onTap: () => context.go(AppRoutes.fieldOrderCartForSite(0)),
-              ),
-            if (canAgents)
-              ListTile(
-                key: const Key('more_site_visit'),
-                title: const Text('New site visit'),
-                leading: const Icon(Icons.add_location_alt_outlined),
-                onTap: () => context.go(AppRoutes.siteVisit),
               ),
             if (canSales)
               ListTile(
