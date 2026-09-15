@@ -4,10 +4,29 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_status_pill.dart';
+import '../../../design_system/chrome/cb_sticky_action_bar.dart';
+import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../design_system/states/async_states.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../field_orders/domain/field_order.dart';
 import '../application/dispatch_controllers.dart';
+
+CbStatusPillVariant _dispatchStatusVariant(FieldOrderStatus status) {
+  switch (status) {
+    case FieldOrderStatus.ready:
+    case FieldOrderStatus.outForDelivery:
+    case FieldOrderStatus.done:
+      return CbStatusPillVariant.success;
+    case FieldOrderStatus.cancelled:
+      return CbStatusPillVariant.warning;
+    case FieldOrderStatus.draft:
+    case FieldOrderStatus.submitted:
+    case FieldOrderStatus.packing:
+      return CbStatusPillVariant.info;
+  }
+}
 
 class DispatchQueuePage extends ConsumerStatefulWidget {
   const DispatchQueuePage({super.key});
@@ -29,6 +48,7 @@ class _DispatchQueuePageState extends ConsumerState<DispatchQueuePage> {
   Widget build(BuildContext context) {
     final state = ref.watch(dispatchQueueProvider);
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Field sales')),
       body: state.loading && state.orders.isEmpty
           ? const LoadingState(label: 'Loading queue…')
@@ -45,29 +65,55 @@ class _DispatchQueuePageState extends ConsumerState<DispatchQueuePage> {
                       onPrimary: () =>
                           ref.read(dispatchQueueProvider.notifier).load(),
                     )
-                  : ListView.separated(
+                  : ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: state.orders.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
                       itemBuilder: (context, i) {
                         final order = state.orders[i];
                         final qty = order.lines.fold<double>(
                           0,
                           (sum, l) => sum + l.quantity,
                         );
-                        return ListTile(
-                          key: Key('dispatch_order_${order.id}'),
-                          title: Text(
-                            order.customerName?.isNotEmpty == true
-                                ? order.customerName!
-                                : 'Order #${order.id}',
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: CbSurfaceCard(
+                            key: Key('dispatch_order_${order.id}'),
+                            padding: const EdgeInsets.all(14),
+                            onTap: () =>
+                                context.push(AppRoutes.dispatchOrder(order.id)),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        order.customerName?.isNotEmpty == true
+                                            ? order.customerName!
+                                            : 'Order #${order.id}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall
+                                            ?.copyWith(fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                    CbStatusPill(
+                                      label: order.status.name,
+                                      variant: _dispatchStatusVariant(order.status),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '#${order.id} · ${order.lines.length} lines · '
+                                  'qty ${qty.toStringAsFixed(0)}',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: AppColors.mutedForeground,
+                                      ),
+                                ),
+                              ],
+                            ),
                           ),
-                          subtitle: Text(
-                            '#${order.id} · ${order.status.name} · '
-                            '${order.lines.length} lines · qty ${qty.toStringAsFixed(0)}',
-                          ),
-                          onTap: () =>
-                              context.push(AppRoutes.dispatchOrder(order.id)),
                         );
                       },
                     ),
@@ -122,6 +168,7 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
         order.status == FieldOrderStatus.outForDelivery;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(title: Text('Order #${order.id}')),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -183,35 +230,32 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
         ],
       ),
       bottomNavigationBar: canPack
-          ? SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CbPrimaryButton(
-                      key: const Key('dispatch_pack'),
-                      label: alreadyReady
-                          ? 'Ready for pickup'
-                          : 'Pack & mark ready for pickup',
-                      onPressed: state.acting || alreadyReady
-                          ? null
-                          : () => ref
-                              .read(dispatchQueueProvider.notifier)
-                              .pack(order.id),
-                    ),
-                    const SizedBox(height: 8),
-                    CbPrimaryButton(
-                      key: const Key('dispatch_assign'),
-                      label: 'Assign delivery driver',
-                      onPressed: state.canAssign
-                          ? () => ref
-                              .read(dispatchQueueProvider.notifier)
-                              .assign(order.id)
-                          : null,
-                    ),
-                  ],
-                ),
+          ? CbStickyActionBar(
+              primaryLabel: 'Actions',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CbPrimaryButton(
+                    key: const Key('dispatch_pack'),
+                    label: alreadyReady
+                        ? 'Ready for pickup'
+                        : 'Pack & mark ready for pickup',
+                    onPressed: state.acting || alreadyReady
+                        ? null
+                        : () =>
+                            ref.read(dispatchQueueProvider.notifier).pack(order.id),
+                  ),
+                  const SizedBox(height: 8),
+                  CbPrimaryButton(
+                    key: const Key('dispatch_assign'),
+                    label: 'Assign delivery driver',
+                    onPressed: state.canAssign
+                        ? () => ref
+                            .read(dispatchQueueProvider.notifier)
+                            .assign(order.id)
+                        : null,
+                  ),
+                ],
               ),
             )
           : null,

@@ -52,7 +52,7 @@ void main() {
     expect(list.single.debtAmount, 40);
   });
 
-  test('detail parses standing and orders', () async {
+  test('detail parses standing, orders and ledger', () async {
     final api = apiWith(
       MockClient((request) async {
         expect(request.url.path, contains('/detail/'));
@@ -64,13 +64,32 @@ void main() {
               'wallet_balance': '-100.00',
               'standing': 'debt',
             },
-            'standing_summary': {'standing': 'debt'},
+            'standing_summary': {
+              'standing': 'debt',
+              'wallet_debt': '100.00',
+              'wallet_credit': '0.00',
+              'total_debt_incurred': '150.00',
+              'total_debt_collected': '50.00',
+            },
             'orders': [
               {
                 'id': 9,
                 'sale_number': 'S-9',
                 'total': '50.00',
+                'debt_amount': '50.00',
+                'payment_status': 'debt',
                 'created_at': '2026-01-01',
+              },
+            ],
+            'ledger': [
+              {
+                'id': 1,
+                'transaction_type': 'credit',
+                'source_type': 'debt_settlement',
+                'amount': '50.00',
+                'payment_amount': '50.00',
+                'reference': 'MPESA',
+                'created_at': '2026-01-02T00:00:00Z',
               },
             ],
           }),
@@ -81,6 +100,9 @@ void main() {
     final detail = (await api.detail(3)).getOrThrow();
     expect(detail.debtAmount, 100);
     expect(detail.recentOrders.single.saleNumber, 'S-9');
+    expect(detail.recentOrders.single.debtAmount, 50);
+    expect(detail.ledger.single.isSettlement, isTrue);
+    expect(detail.standingSummary?.totalDebtCollected, 50);
   });
 
   test('receive wallet payment success', () async {

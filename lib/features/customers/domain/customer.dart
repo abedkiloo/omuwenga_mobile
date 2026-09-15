@@ -44,6 +44,53 @@ class CustomerSummary {
   }
 }
 
+class CustomerStandingSummary {
+  const CustomerStandingSummary({
+    required this.standing,
+    this.walletBalance,
+    this.walletDebt = 0,
+    this.walletCredit = 0,
+    this.totalOutstanding = 0,
+    this.lifetimeOrders = 0,
+    this.lifetimeSalesTotal = 0,
+    this.totalDebtIncurred = 0,
+    this.totalDebtCollected = 0,
+  });
+
+  final CustomerStanding standing;
+  final double? walletBalance;
+  final double walletDebt;
+  final double walletCredit;
+  final double totalOutstanding;
+  final int lifetimeOrders;
+  final double lifetimeSalesTotal;
+  final double totalDebtIncurred;
+  final double totalDebtCollected;
+
+  factory CustomerStandingSummary.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const CustomerStandingSummary(standing: CustomerStanding.good);
+    }
+    final standingRaw = (json['standing'] ?? '').toString().toLowerCase();
+    final standing = switch (standingRaw) {
+      'debt' => CustomerStanding.debt,
+      'credit' => CustomerStanding.credit,
+      _ => standingFromWallet(_asDouble(json['wallet_balance'])),
+    };
+    return CustomerStandingSummary(
+      standing: standing,
+      walletBalance: _asDouble(json['wallet_balance']),
+      walletDebt: _asDouble(json['wallet_debt']) ?? 0,
+      walletCredit: _asDouble(json['wallet_credit']) ?? 0,
+      totalOutstanding: _asDouble(json['total_outstanding']) ?? 0,
+      lifetimeOrders: (json['lifetime_orders'] as num?)?.toInt() ?? 0,
+      lifetimeSalesTotal: _asDouble(json['lifetime_sales_total']) ?? 0,
+      totalDebtIncurred: _asDouble(json['total_debt_incurred']) ?? 0,
+      totalDebtCollected: _asDouble(json['total_debt_collected']) ?? 0,
+    );
+  }
+}
+
 class CustomerDetail {
   const CustomerDetail({
     required this.id,
@@ -57,7 +104,9 @@ class CustomerDetail {
     this.walletBalance,
     this.totalOutstanding,
     this.standing = CustomerStanding.good,
+    this.standingSummary,
     this.recentOrders = const [],
+    this.ledger = const [],
     this.isActive = true,
   });
 
@@ -72,11 +121,20 @@ class CustomerDetail {
   final double? walletBalance;
   final double? totalOutstanding;
   final CustomerStanding standing;
+  final CustomerStandingSummary? standingSummary;
   final List<CustomerOrderLite> recentOrders;
+  final List<CustomerLedgerEntry> ledger;
   final bool isActive;
 
-  double get debtAmount => debtAmountFromWalletBalance(walletBalance);
+  double get debtAmount {
+    final fromSummary = standingSummary?.walletDebt;
+    if (fromSummary != null && fromSummary > 0) return fromSummary;
+    return debtAmountFromWalletBalance(walletBalance);
+  }
+
   double get creditAmount {
+    final fromSummary = standingSummary?.walletCredit;
+    if (fromSummary != null && fromSummary > 0) return fromSummary;
     final bal = walletBalance;
     if (bal == null || bal <= 0) return 0;
     return bal;
@@ -88,15 +146,27 @@ class CustomerDetail {
         credit: creditAmount,
       );
 
+  String get locationLine {
+    final parts = [
+      if (address != null && address!.trim().isNotEmpty) address!.trim(),
+      if (city != null && city!.trim().isNotEmpty) city!.trim(),
+    ];
+    return parts.join(', ');
+  }
+
   factory CustomerDetail.fromDetailJson(Map<String, dynamic> json) {
     final customer = Map<String, dynamic>.from(
-      json['customer'] is Map ? Map<String, dynamic>.from(json['customer'] as Map) : json,
+      json['customer'] is Map
+          ? Map<String, dynamic>.from(json['customer'] as Map)
+          : json,
     );
-    final summary = json['standing_summary'];
-    final standingRaw = (summary is Map ? summary['standing'] : customer['standing'])
-            ?.toString()
-            .toLowerCase() ??
-        '';
+    final summaryMap = json['standing_summary'] is Map
+        ? Map<String, dynamic>.from(json['standing_summary'] as Map)
+        : null;
+    final summary = CustomerStandingSummary.fromJson(summaryMap);
+    final standingRaw =
+        (summaryMap?['standing'] ?? customer['standing'])?.toString().toLowerCase() ??
+            '';
     final standing = switch (standingRaw) {
       'debt' => CustomerStanding.debt,
       'credit' => CustomerStanding.credit,
@@ -113,6 +183,16 @@ class CustomerDetail {
       }
     }
 
+    final ledger = <CustomerLedgerEntry>[];
+    final rawLedger = json['ledger'];
+    if (rawLedger is List) {
+      for (final item in rawLedger) {
+        if (item is Map) {
+          ledger.add(CustomerLedgerEntry.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
+    }
+
     return CustomerDetail(
       id: (customer['id'] as num).toInt(),
       name: (customer['name'] ?? '').toString(),
@@ -125,7 +205,9 @@ class CustomerDetail {
       walletBalance: _asDouble(customer['wallet_balance']),
       totalOutstanding: _asDouble(customer['total_outstanding']),
       standing: standing,
+      standingSummary: summary,
       recentOrders: orders,
+      ledger: ledger,
       isActive: customer['is_active'] != false,
     );
   }
@@ -137,20 +219,128 @@ class CustomerOrderLite {
     required this.saleNumber,
     required this.total,
     this.createdAt,
+    this.debtAmount = 0,
+    this.paidAmount = 0,
+    this.paymentStatus = 'paid',
+    this.notes,
+    this.itemCount,
   });
 
   final int id;
   final String saleNumber;
   final double total;
   final String? createdAt;
+  final double debtAmount;
+  final double paidAmount;
+  final String paymentStatus;
+  final String? notes;
+  final int? itemCount;
+
+  bool get hasOpenDebt => debtAmount > 0.009;
 
   factory CustomerOrderLite.fromJson(Map<String, dynamic> json) {
     return CustomerOrderLite(
       id: (json['id'] as num?)?.toInt() ?? 0,
       saleNumber: (json['sale_number'] ?? json['id'] ?? '').toString(),
       total: _asDouble(json['total']) ?? 0,
-      createdAt: json['created_at']?.toString() ?? json['sale_date']?.toString(),
+      createdAt: json['occurred_at']?.toString() ??
+          json['created_at']?.toString() ??
+          json['sale_date']?.toString(),
+      debtAmount: _asDouble(json['debt_amount']) ?? 0,
+      paidAmount: _asDouble(json['paid_amount']) ?? _asDouble(json['amount_paid']) ?? 0,
+      paymentStatus: (json['payment_status'] ?? 'paid').toString(),
+      notes: json['notes']?.toString(),
+      itemCount: (json['item_count'] as num?)?.toInt(),
     );
+  }
+}
+
+class CustomerLedgerEntry {
+  const CustomerLedgerEntry({
+    required this.id,
+    required this.transactionType,
+    required this.sourceType,
+    required this.amount,
+    this.reference = '',
+    this.notes = '',
+    this.saleNumber,
+    this.createdAt,
+    this.previousDebt,
+    this.newDebt,
+    this.paymentAmount,
+    this.debtAdded,
+  });
+
+  final int id;
+  final String transactionType;
+  final String sourceType;
+  final double amount;
+  final String reference;
+  final String notes;
+  final String? saleNumber;
+  final String? createdAt;
+  final double? previousDebt;
+  final double? newDebt;
+  final double? paymentAmount;
+  final double? debtAdded;
+
+  bool get isSettlement =>
+      sourceType == 'debt_settlement' ||
+      (transactionType == 'credit' && sourceType != 'debt');
+
+  factory CustomerLedgerEntry.fromJson(Map<String, dynamic> json) {
+    return CustomerLedgerEntry(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      transactionType: (json['transaction_type'] ?? '').toString(),
+      sourceType: (json['source_type'] ?? '').toString(),
+      amount: _asDouble(json['amount']) ?? 0,
+      reference: (json['reference'] ?? '').toString(),
+      notes: (json['notes'] ?? '').toString(),
+      saleNumber: json['sale_number']?.toString(),
+      createdAt: json['created_at']?.toString(),
+      previousDebt: _asDouble(json['previous_debt']),
+      newDebt: _asDouble(json['new_debt']),
+      paymentAmount: _asDouble(json['payment_amount']),
+      debtAdded: _asDouble(json['debt_added']),
+    );
+  }
+}
+
+class DebtAgingBuckets {
+  const DebtAgingBuckets({
+    this.current = 0,
+    this.pending = 0,
+    this.overdue = 0,
+  });
+
+  final double current;
+  final double pending;
+  final double overdue;
+
+  double get total => current + pending + overdue;
+
+  /// Buckets open debt on recent orders by age of [CustomerOrderLite.createdAt].
+  static DebtAgingBuckets fromOrders(
+    List<CustomerOrderLite> orders, {
+    DateTime? now,
+  }) {
+    final clock = now ?? DateTime.now();
+    var current = 0.0;
+    var pending = 0.0;
+    var overdue = 0.0;
+    for (final order in orders) {
+      if (!order.hasOpenDebt) continue;
+      final when = DateTime.tryParse(order.createdAt ?? '');
+      final days = when == null ? 0 : clock.difference(when).inDays;
+      if (days <= 14) {
+        current += order.debtAmount;
+      } else if (days <= 30) {
+        pending += order.debtAmount;
+      } else {
+        overdue += order.debtAmount;
+      }
+    }
+    return DebtAgingBuckets(current: current, pending: pending, overdue: overdue);
   }
 }
 

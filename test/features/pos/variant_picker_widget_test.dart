@@ -45,20 +45,6 @@ void main() {
     tester,
   ) async {
     final client = MockClient((request) async {
-      if (request.url.path.contains('/products/search/')) {
-        return http.Response(
-          jsonEncode([
-            {
-              'id': 12,
-              'name': 'T-Shirt',
-              'selling_price': 20,
-              'has_variants': true,
-              'sku': 'TEE',
-            },
-          ]),
-          200,
-        );
-      }
       if (request.url.path.contains('/products/variants/')) {
         return http.Response(
           jsonEncode({
@@ -89,6 +75,40 @@ void main() {
               },
             ],
           }),
+          200,
+        );
+      }
+      if (request.url.path.contains('/products/') &&
+          !request.url.path.contains('/search/')) {
+        return http.Response(
+          jsonEncode({
+            'count': 1,
+            'next': null,
+            'previous': null,
+            'results': [
+              {
+                'id': 12,
+                'name': 'T-Shirt',
+                'selling_price': 20,
+                'has_variants': true,
+                'sku': 'TEE',
+              },
+            ],
+          }),
+          200,
+        );
+      }
+      if (request.url.path.contains('/products/search/')) {
+        return http.Response(
+          jsonEncode([
+            {
+              'id': 12,
+              'name': 'T-Shirt',
+              'selling_price': 20,
+              'has_variants': true,
+              'sku': 'TEE',
+            },
+          ]),
           200,
         );
       }

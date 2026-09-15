@@ -33,7 +33,7 @@ void main() {
     expect(find.text('Enter your username and password.'), findsOneWidget);
   });
 
-  testWidgets('cashier home shows New sale primary CTA', (tester) async {
+  testWidgets('cashier home shows Start New Sale primary CTA', (tester) async {
     final router = GoRouter(
       initialLocation: AppRoutes.home,
       routes: [
@@ -50,7 +50,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('home_primary_cta')), findsOneWidget);
-    expect(find.text('New sale'), findsOneWidget);
+    expect(find.text('Start New Sale'), findsOneWidget);
   });
 
   testWidgets('manager home shows daily sales only when permitted', (tester) async {
@@ -74,7 +74,7 @@ void main() {
 
     await pumpManager(managerSession(dailySales: false));
     expect(find.text('Open debtors'), findsNothing);
-    expect(find.text('New sale'), findsOneWidget);
+    expect(find.text('Start New Sale'), findsOneWidget);
     expect(find.byKey(const Key('home_daily_sales')), findsNothing);
 
     await pumpManager(managerSession(dailySales: true));

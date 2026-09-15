@@ -6,16 +6,33 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_flow_header.dart';
+import '../../../design_system/chrome/cb_search_field.dart';
+import '../../../design_system/chrome/cb_section_label.dart';
+import '../../../design_system/chrome/cb_status_pill.dart';
+import '../../../design_system/chrome/cb_step_progress.dart';
+import '../../../design_system/chrome/cb_sticky_action_bar.dart';
+import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../design_system/states/async_states.dart';
-import '../domain/site_pin.dart';
-import 'map_pin_picker.dart';
 import '../../customers/application/customers_controllers.dart';
 import '../../customers/domain/customer.dart';
+import '../../customers/domain/wallet_debt.dart';
 import '../../customers/presentation/customer_form_page.dart';
 import '../../pos/application/pos_controllers.dart';
+import '../../pos/application/product_catalog_paging.dart';
 import '../../pos/domain/cart.dart';
 import '../../pos/presentation/variant_picker_sheet.dart';
 import '../application/visit_order_controller.dart';
+import '../domain/site_pin.dart';
+import 'map_pin_picker.dart';
+
+String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
+
+String _shortName(String name) {
+  final parts = name.trim().split(RegExp(r'\s+'));
+  if (parts.length <= 2) return name.trim();
+  return parts.take(2).join(' ');
+}
 
 /// Sales visit: customer → products → map location → place order for the office.
 class VisitOrderPage extends ConsumerStatefulWidget {
@@ -31,48 +48,15 @@ class VisitOrderPage extends ConsumerStatefulWidget {
 }
 
 class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
-  final _search = TextEditingController();
   final _landmark = TextEditingController();
   final _notes = TextEditingController();
-  List<CatalogProduct> _results = const [];
-  bool _searching = false;
-  String? _searchError;
   bool _locating = false;
 
   @override
   void dispose() {
-    _search.dispose();
     _landmark.dispose();
     _notes.dispose();
     super.dispose();
-  }
-
-  Future<void> _runProductSearch([String? raw]) async {
-    final q = (raw ?? _search.text).trim();
-    if (q.isEmpty) {
-      setState(() {
-        _results = const [];
-        _searchError = null;
-      });
-      return;
-    }
-    setState(() {
-      _searching = true;
-      _searchError = null;
-    });
-    final result = await ref.read(posApiProvider).searchProducts(q);
-    if (!mounted) return;
-    result.when(
-      success: (list) => setState(() {
-        _results = list;
-        _searching = false;
-      }),
-      failure: (e, _) => setState(() {
-        _searching = false;
-        _searchError = e.toString();
-        _results = const [];
-      }),
-    );
   }
 
   Future<void> _selectProduct(CatalogProduct product) async {
@@ -98,10 +82,6 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
     } else {
       ref.read(visitOrderProvider.notifier).addProduct(product);
     }
-    setState(() {
-      _results = const [];
-      _search.clear();
-    });
   }
 
   Future<void> _useCurrentLocation() async {
@@ -137,6 +117,36 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
     } finally {
       if (mounted) setState(() => _locating = false);
     }
+  }
+
+  void _exitVisit() {
+    ref.read(visitOrderProvider.notifier).reset();
+    final router = GoRouter.maybeOf(context);
+    if (router != null) {
+      context.go(AppRoutes.home);
+    } else {
+      Navigator.of(context).maybePop();
+    }
+  }
+
+  String _stepHeadline(VisitOrderStep step) {
+    return switch (step) {
+      VisitOrderStep.customer => 'Step 1 of 4: Select Customer & Verify Debt',
+      VisitOrderStep.products => 'Step 2 of 4: Order Items & Packs',
+      VisitOrderStep.location => 'Step 3 of 4: Pin Delivery Drop & Landmark',
+      VisitOrderStep.review => 'Step 4 of 4: Final Review & Handoff',
+    };
+  }
+
+  String _stepCaption(VisitOrderStep step) {
+    return switch (step) {
+      VisitOrderStep.customer =>
+        'Verify store standing before placing the booking.',
+      VisitOrderStep.products => 'Search the catalog and set pack quantities.',
+      VisitOrderStep.location =>
+        'Drop a pin so dispatch can find the outlet.',
+      VisitOrderStep.review => 'Ready to submit — sent to the packing queue.',
+    };
   }
 
   Future<void> _place() async {
@@ -183,34 +193,45 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
       }
     });
 
+    const stepLabels = ['Customer', 'Products', 'Pin Drop', 'Review'];
+    final stepIndex = VisitOrderStep.values.indexOf(state.step);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Visit order'),
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () {
-            ref.read(visitOrderProvider.notifier).reset();
-            final router = GoRouter.maybeOf(context);
-            if (router != null) {
-              context.go(AppRoutes.home);
-            } else {
-              Navigator.of(context).maybePop();
-            }
-          },
-        ),
+      backgroundColor: AppColors.background,
+      appBar: CbFlowHeader(
+        title: 'Field Visit Order',
+        leadingIcon: Icons.assignment_outlined,
+        subtitle: 'Sales visit',
+        onBack: _exitVisit,
       ),
       body: Column(
         children: [
-          _StepHeader(step: state.step),
+          CbStepProgress(labels: stepLabels, currentIndex: stepIndex),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _stepHeadline(state.step),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _stepCaption(state.step),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.mutedForeground,
+                      ),
+                ),
+              ],
+            ),
+          ),
           Expanded(child: _buildStep(state)),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: _bottomBar(state),
-        ),
-      ),
+      bottomNavigationBar: _bottomBar(state),
     );
   }
 
@@ -224,12 +245,8 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
         );
       case VisitOrderStep.products:
         return _ProductsStep(
-          search: _search,
-          searching: _searching,
-          searchError: _searchError,
-          results: _results,
+          customer: state.customer,
           lines: state.lines,
-          onSearch: _runProductSearch,
           onSelectProduct: _selectProduct,
           onSetQuantity: (key, qty) =>
               ref.read(visitOrderProvider.notifier).setQuantity(key, qty),
@@ -239,6 +256,9 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
       case VisitOrderStep.location:
         return _LocationStep(
           mapBuilder: widget.mapBuilder,
+          customer: state.customer,
+          lines: state.lines,
+          subtotal: state.subtotal,
           pin: state.pin,
           landmarkController: _landmark,
           locating: _locating,
@@ -257,130 +277,100 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
   }
 
   Widget _bottomBar(VisitOrderState state) {
+    Widget? back;
+    late String label;
+    Key? primaryKey;
+    VoidCallback? onPrimary;
+    String? summary;
+    String? summaryTrailing;
+
     switch (state.step) {
       case VisitOrderStep.customer:
-        return CbPrimaryButton(
-          key: const Key('visit_next_customer'),
-          label: 'Continue',
-          onPressed: state.hasCustomer
-              ? () => ref
-                  .read(visitOrderProvider.notifier)
-                  .goTo(VisitOrderStep.products)
-              : null,
-        );
+        final name = state.customer == null
+            ? null
+            : _shortName(state.customer!.name);
+        label = name == null
+            ? 'Select a customer'
+            : 'Confirm $name & Add Products';
+        primaryKey = const Key('visit_next_customer');
+        onPrimary = state.hasCustomer
+            ? () => ref
+                .read(visitOrderProvider.notifier)
+                .goTo(VisitOrderStep.products)
+            : null;
+        if (state.customer != null) {
+          summary = _customerLedgerSummary(state.customer!);
+        }
       case VisitOrderStep.products:
-        return Row(
-          children: [
-            TextButton(
-              onPressed: () => ref
-                  .read(visitOrderProvider.notifier)
-                  .goTo(VisitOrderStep.customer),
-              child: const Text('Back'),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: CbPrimaryButton(
-                key: const Key('visit_next_products'),
-                label: 'Continue',
-                onPressed: state.hasProducts
-                    ? () => ref
-                        .read(visitOrderProvider.notifier)
-                        .goTo(VisitOrderStep.location)
-                    : null,
-              ),
-            ),
-          ],
+        label = 'Proceed to Delivery Pin';
+        primaryKey = const Key('visit_next_products');
+        onPrimary = state.hasProducts
+            ? () => ref
+                .read(visitOrderProvider.notifier)
+                .goTo(VisitOrderStep.location)
+            : null;
+        summary =
+            '${state.lines.length} SKU · ${state.lines.fold<double>(0, (s, l) => s + l.quantity).round()} packs';
+        summaryTrailing = _kes(state.subtotal);
+        back = TextButton(
+          onPressed: () => ref
+              .read(visitOrderProvider.notifier)
+              .goTo(VisitOrderStep.customer),
+          child: const Text('Back'),
         );
       case VisitOrderStep.location:
-        return Row(
-          children: [
-            TextButton(
-              onPressed: () => ref
-                  .read(visitOrderProvider.notifier)
-                  .goTo(VisitOrderStep.products),
-              child: const Text('Back'),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: CbPrimaryButton(
-                key: const Key('visit_next_location'),
-                label: 'Review',
-                onPressed: state.hasPin
-                    ? () => ref
-                        .read(visitOrderProvider.notifier)
-                        .goTo(VisitOrderStep.review)
-                    : null,
-              ),
-            ),
-          ],
+        label = 'Save Location & Review Order';
+        primaryKey = const Key('visit_next_location');
+        onPrimary = state.hasPin
+            ? () => ref
+                .read(visitOrderProvider.notifier)
+                .goTo(VisitOrderStep.review)
+            : null;
+        back = TextButton(
+          onPressed: () => ref
+              .read(visitOrderProvider.notifier)
+              .goTo(VisitOrderStep.products),
+          child: const Text('Back'),
         );
       case VisitOrderStep.review:
-        return Row(
-          children: [
-            TextButton(
-              onPressed: state.submitting
-                  ? null
-                  : () => ref
-                      .read(visitOrderProvider.notifier)
-                      .goTo(VisitOrderStep.location),
-              child: const Text('Back'),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: CbPrimaryButton(
-                key: const Key('visit_place_order'),
-                label: state.submitting ? 'Placing…' : 'Place order',
-                onPressed: state.canPlace ? _place : null,
-              ),
-            ),
-          ],
+        label = state.submitting
+            ? 'Placing…'
+            : 'Submit Order to Pack Queue';
+        primaryKey = const Key('visit_place_order');
+        onPrimary = state.canPlace ? _place : null;
+        summary = '${state.lines.length} items';
+        summaryTrailing = _kes(state.subtotal);
+        back = TextButton(
+          onPressed: state.submitting
+              ? null
+              : () => ref
+                  .read(visitOrderProvider.notifier)
+                  .goTo(VisitOrderStep.location),
+          child: const Text('Back'),
         );
     }
+
+    return CbStickyActionBar(
+      summary: summary,
+      summaryTrailing: summaryTrailing,
+      primaryLabel: label,
+      primaryKey: primaryKey,
+      onPrimary: onPrimary,
+      secondary: back == null
+          ? null
+          : Align(alignment: Alignment.centerLeft, child: back),
+    );
   }
 }
 
-class _StepHeader extends StatelessWidget {
-  const _StepHeader({required this.step});
-  final VisitOrderStep step;
-
-  @override
-  Widget build(BuildContext context) {
-    final labels = ['Customer', 'Products', 'Location', 'Review'];
-    final index = VisitOrderStep.values.indexOf(step);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Row(
-        children: [
-          for (var i = 0; i < labels.length; i++) ...[
-            if (i > 0) const SizedBox(width: 6),
-            Expanded(
-              child: Column(
-                children: [
-                  Container(
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: i <= index
-                          ? AppColors.primary
-                          : AppColors.secondary,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    labels[i],
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: i <= index
-                              ? AppColors.foreground
-                              : AppColors.mutedForeground,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
+String _customerLedgerSummary(CustomerSummary c) {
+  switch (c.standing) {
+    case CustomerStanding.debt:
+      return '${_shortName(c.name)} · Outstanding ${_kes(c.debtAmount)}';
+    case CustomerStanding.credit:
+      return '${_shortName(c.name)} · Credit ${_kes(c.walletBalance ?? 0)}';
+    case CustomerStanding.good:
+      return '${_shortName(c.name)} · Good standing';
   }
 }
 
@@ -446,209 +436,691 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final selected = widget.selected;
+    final alternates = selected == null
+        ? _items
+        : _items.where((c) => c.id != selected.id).toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            'Who are you visiting?',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ),
-        if (widget.selected != null)
-          ListTile(
-            key: const Key('visit_selected_customer'),
-            leading: const Icon(Icons.check_circle, color: AppColors.primary),
-            title: Text(widget.selected!.name),
-            subtitle: Text(widget.selected!.phone ?? 'Selected customer'),
-          ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: TextField(
-            key: const Key('visit_customer_search'),
-            controller: _search,
-            decoration: InputDecoration(
-              labelText: 'Search customers',
-              border: const OutlineInputBorder(),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () => _load(),
-              ),
-            ),
-            onSubmitted: _load,
-          ),
+        CbSearchField(
+          fieldKey: const Key('visit_customer_search'),
+          controller: _search,
+          hintText: 'Search shop, owner, or phone',
+          onSubmitted: _load,
+          onSearchTap: () => _load(),
         ),
         const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: OutlinedButton.icon(
-            key: const Key('visit_add_customer'),
-            onPressed: _addCustomer,
-            icon: const Icon(Icons.person_add_outlined),
-            label: const Text('Add new customer'),
-          ),
+        OutlinedButton.icon(
+          key: const Key('visit_add_customer'),
+          onPressed: _addCustomer,
+          icon: const Icon(Icons.person_add_outlined),
+          label: const Text('Add new customer'),
         ),
         if (_loading) const LinearProgressIndicator(minHeight: 2),
         if (_error != null)
           Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text(
+              _error!,
+              style: const TextStyle(color: AppColors.destructive),
+            ),
+          ),
+        if (selected != null) ...[
+          const SizedBox(height: 16),
+          _ActiveStoreCard(customer: selected),
+        ],
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: CbSectionLabel(
+                label: selected == null
+                    ? 'Customers'
+                    : 'Alternate stores',
+                icon: Icons.storefront_outlined,
+              ),
+            ),
+            Text(
+              '${_items.length} stores',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        for (final c in (selected == null ? _items : alternates))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _CustomerListCard(
+              customer: c,
+              onTap: () => widget.onSelected(c),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ActiveStoreCard extends StatelessWidget {
+  const _ActiveStoreCard({required this.customer});
+
+  final CustomerSummary customer;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final standing = customer.standing;
+    final debt = customer.debtAmount;
+    final credit = customer.walletBalance != null && customer.walletBalance! > 0
+        ? customer.walletBalance!
+        : 0.0;
+
+    return CbSurfaceCard(
+      key: const Key('visit_selected_customer'),
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            decoration: const BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppColors.radius),
+              ),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  'ACTIVE STORE SELECTED',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const Spacer(),
+                const Icon(Icons.check_circle, color: AppColors.success, size: 18),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  customer.name,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (customer.phone != null && customer.phone!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.person_outline,
+                          size: 16, color: AppColors.mutedForeground),
+                      const SizedBox(width: 6),
+                      Text(
+                        customer.phone!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (customer.customerCode != null &&
+                    customer.customerCode!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  CbStatusPill(
+                    label: customer.customerCode!,
+                    variant: CbStatusPillVariant.info,
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Text(
+                  'ACCOUNT LEDGER',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _LedgerStat(
+                        label: 'Outstanding debt',
+                        value: _kes(debt),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _LedgerStat(
+                        label: 'Wallet credit',
+                        value: _kes(credit),
+                      ),
+                    ),
+                  ],
+                ),
+                if (customer.totalOutstanding != null) ...[
+                  const SizedBox(height: 8),
+                  _LedgerStat(
+                    label: 'Total outstanding',
+                    value: _kes(customer.totalOutstanding!),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentSoft,
+                    borderRadius: BorderRadius.circular(AppColors.radius - 2),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        standing == CustomerStanding.debt
+                            ? 'OUTSTANDING BALANCE'
+                            : standing == CustomerStanding.credit
+                                ? 'AVAILABLE WALLET CREDIT'
+                                : 'ACCOUNT STANDING',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.mutedForeground,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        standing == CustomerStanding.debt
+                            ? _kes(debt)
+                            : standing == CustomerStanding.credit
+                                ? _kes(credit)
+                                : 'Cleared for booking',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        standingLabel(
+                          standing,
+                          debtAmount: debt,
+                          credit: credit,
+                        ),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LedgerStat extends StatelessWidget {
+  const _LedgerStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppColors.radius - 4),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.mutedForeground,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomerListCard extends StatelessWidget {
+  const _CustomerListCard({required this.customer, required this.onTap});
+
+  final CustomerSummary customer;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final standing = customer.standing;
+    final pill = switch (standing) {
+      CustomerStanding.debt => CbStatusPill(
+          label: 'Owes ${_kes(customer.debtAmount)}',
+          variant: CbStatusPillVariant.warning,
+        ),
+      CustomerStanding.credit => CbStatusPill(
+          label: 'Credit ${_kes(customer.walletBalance ?? 0)}',
+          variant: CbStatusPillVariant.success,
+        ),
+      CustomerStanding.good => const CbStatusPill(
+          label: 'Clean ledger',
+          variant: CbStatusPillVariant.info,
+        ),
+    };
+
+    return CbSurfaceCard(
+      key: Key('visit_customer_${customer.id}'),
+      padding: const EdgeInsets.all(12),
+      onTap: onTap,
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  customer.name,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  [
+                    if (customer.phone != null && customer.phone!.isNotEmpty)
+                      customer.phone,
+                    if (customer.customerCode != null &&
+                        customer.customerCode!.isNotEmpty)
+                      customer.customerCode,
+                  ].whereType<String>().join(' · '),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                pill,
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: AppColors.mutedForeground),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductsStep extends ConsumerStatefulWidget {
+  const _ProductsStep({
+    required this.customer,
+    required this.lines,
+    required this.onSelectProduct,
+    required this.onSetQuantity,
+    required this.onRemove,
+  });
+
+  final CustomerSummary? customer;
+  final List<CartLine> lines;
+  final ValueChanged<CatalogProduct> onSelectProduct;
+  final void Function(String lineKey, double qty) onSetQuantity;
+  final ValueChanged<String> onRemove;
+
+  @override
+  ConsumerState<_ProductsStep> createState() => _ProductsStepState();
+}
+
+class _ProductsStepState extends ConsumerState<_ProductsStep> {
+  final _search = TextEditingController();
+  final _catalog = ProductCatalogPaging();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadCatalog());
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCatalog([String? raw]) async {
+    await _catalog.refresh(
+      ref.read(posApiProvider),
+      search: raw ?? _search.text,
+      onUpdate: () {
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  Future<void> _loadMore() async {
+    await _catalog.loadMore(
+      ref.read(posApiProvider),
+      onUpdate: () {
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  bool _onScroll(ScrollNotification notification) {
+    if (notification.metrics.extentAfter < 240) {
+      _loadMore();
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final customer = widget.customer;
+    final lines = widget.lines;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (customer != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.accentSoft,
+                borderRadius: BorderRadius.circular(AppColors.radius),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.storefront_outlined,
+                      color: AppColors.primary, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      customer.name,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  CbStatusPill(
+                    label: standingLabel(
+                      customer.standing,
+                      debtAmount: customer.debtAmount,
+                      credit: customer.walletBalance != null &&
+                              customer.walletBalance! > 0
+                          ? customer.walletBalance!
+                          : 0,
+                    ),
+                    variant: customer.standing == CustomerStanding.debt
+                        ? CbStatusPillVariant.warning
+                        : CbStatusPillVariant.success,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: CbSearchField(
+            fieldKey: const Key('visit_product_search'),
+            controller: _search,
+            hintText: 'Search SKU, brand, or barcode…',
+            onSubmitted: _loadCatalog,
+            onSearchTap: _catalog.loading ? null : () => _loadCatalog(),
+          ),
+        ),
+        if (_catalog.loading && _catalog.items.isEmpty)
+          const LinearProgressIndicator(minHeight: 2),
+        if (_catalog.error != null)
+          Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(_error!, style: const TextStyle(color: AppColors.destructive)),
+            child: Text(
+              _catalog.error!,
+              style: const TextStyle(color: AppColors.destructive),
+            ),
           ),
         Expanded(
-          child: ListView.separated(
-            itemCount: _items.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, i) {
-              final c = _items[i];
-              return ListTile(
-                key: Key('visit_customer_${c.id}'),
-                title: Text(c.name),
-                subtitle: Text(c.phone ?? c.customerCode ?? ''),
-                onTap: () => widget.onSelected(c),
-              );
-            },
-          ),
+          child: _catalog.isEmpty && !_catalog.loading
+              ? const EmptyState(
+                  key: Key('visit_empty_products'),
+                  title: 'No products yet',
+                  message: 'Browse the catalog or search by SKU.',
+                  primaryLabel: 'OK',
+                  onPrimary: _noop,
+                )
+              : NotificationListener<ScrollNotification>(
+                  onNotification: _onScroll,
+                  child: ListView(
+                    key: const Key('visit_product_results'),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    children: [
+                      if (lines.isNotEmpty) ...[
+                        for (final line in lines) ...[
+                          _ProductLineCard(
+                            line: line,
+                            onSetQuantity: widget.onSetQuantity,
+                            onRemove: widget.onRemove,
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ],
+                      CbSectionLabel(
+                        label: _catalog.query.isEmpty
+                            ? 'Products'
+                            : 'Search results',
+                        icon: Icons.inventory_2_outlined,
+                      ),
+                      const SizedBox(height: 8),
+                      for (final p in _catalog.items) ...[
+                        CbSurfaceCard(
+                          key: Key('visit_product_${p.id}'),
+                          padding: const EdgeInsets.all(12),
+                          onTap: () => widget.onSelectProduct(p),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      p.name,
+                                      style:
+                                          theme.textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      [
+                                        if (p.hasVariants) 'Has variants',
+                                        if (p.sku != null &&
+                                            p.sku!.isNotEmpty)
+                                          p.sku!,
+                                        if (p.stockQuantity != null)
+                                          'Stock ${p.stockQuantity!.round()}',
+                                      ].join(' · '),
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color: AppColors.mutedForeground,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                _kes(p.price),
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Icon(
+                                p.hasVariants
+                                    ? Icons.layers_outlined
+                                    : Icons.add_circle_outline,
+                                color: AppColors.primary,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      if (_catalog.loadingMore)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
         ),
       ],
     );
   }
 }
 
-class _ProductsStep extends StatelessWidget {
-  const _ProductsStep({
-    required this.search,
-    required this.searching,
-    required this.searchError,
-    required this.results,
-    required this.lines,
-    required this.onSearch,
-    required this.onSelectProduct,
+class _ProductLineCard extends StatelessWidget {
+  const _ProductLineCard({
+    required this.line,
     required this.onSetQuantity,
     required this.onRemove,
   });
 
-  final TextEditingController search;
-  final bool searching;
-  final String? searchError;
-  final List<CatalogProduct> results;
-  final List<CartLine> lines;
-  final ValueChanged<String?> onSearch;
-  final ValueChanged<CatalogProduct> onSelectProduct;
+  final CartLine line;
   final void Function(String lineKey, double qty) onSetQuantity;
   final ValueChanged<String> onRemove;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text(
-            'What do they need?',
-            style: Theme.of(context).textTheme.titleMedium,
+    final theme = Theme.of(context);
+    return CbSurfaceCard(
+      key: Key('visit_line_${line.lineKey}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      line.displayName,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (line.sku != null && line.sku!.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        line.sku!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const CbStatusPill(
+                label: 'ADDED',
+                variant: CbStatusPillVariant.info,
+              ),
+            ],
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: TextField(
-            key: const Key('visit_product_search'),
-            controller: search,
-            textInputAction: TextInputAction.search,
-            decoration: InputDecoration(
-              labelText: 'Search products',
-              border: const OutlineInputBorder(),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: searching ? null : () => onSearch(null),
+          if (line.stockQuantity != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.secondary,
+                borderRadius: BorderRadius.circular(AppColors.radius - 4),
+              ),
+              child: Text(
+                'In stock: ${line.stockQuantity!.round()}',
+                style: theme.textTheme.bodySmall,
               ),
             ),
-            onSubmitted: onSearch,
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Text(
+                '${_kes(line.unitPrice)} / unit',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: () =>
+                    onSetQuantity(line.lineKey, line.quantity - 1),
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
+              Text(
+                '${line.quantity.round()}',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              IconButton(
+                onPressed: () =>
+                    onSetQuantity(line.lineKey, line.quantity + 1),
+                icon: const Icon(Icons.add_circle_outline),
+              ),
+              IconButton(
+                onPressed: () => onRemove(line.lineKey),
+                icon: const Icon(Icons.delete_outline,
+                    color: AppColors.destructive),
+              ),
+            ],
           ),
-        ),
-        if (searching) const LinearProgressIndicator(minHeight: 2),
-        if (searchError != null)
-          Padding(
-            padding: const EdgeInsets.all(16),
+          Align(
+            alignment: Alignment.centerRight,
             child: Text(
-              searchError!,
-              style: const TextStyle(color: AppColors.destructive),
+              'Pack total ${_kes(line.lineTotal)}',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
             ),
           ),
-        if (results.isNotEmpty)
-          Expanded(
-            child: ListView.separated(
-              key: const Key('visit_product_results'),
-              itemCount: results.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, i) {
-                final p = results[i];
-                return ListTile(
-                  key: Key('visit_product_${p.id}'),
-                  title: Text(p.name),
-                  subtitle: Text(
-                    [
-                      if (p.hasVariants) 'Has variants',
-                      if (p.sku != null && p.sku!.isNotEmpty) p.sku!,
-                      p.price.toStringAsFixed(2),
-                    ].join(' · '),
-                  ),
-                  trailing: Icon(
-                    p.hasVariants
-                        ? Icons.layers_outlined
-                        : Icons.add_circle_outline,
-                  ),
-                  onTap: () => onSelectProduct(p),
-                );
-              },
-            ),
-          )
-        else
-          Expanded(
-            child: lines.isEmpty
-                ? const EmptyState(
-                    key: Key('visit_empty_products'),
-                    title: 'No products yet',
-                    message: 'Search the catalog and add what they need.',
-                    primaryLabel: 'OK',
-                    onPrimary: _noop,
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: lines.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, i) {
-                      final line = lines[i];
-                      return ListTile(
-                        key: Key('visit_line_${line.lineKey}'),
-                        title: Text(line.displayName),
-                        subtitle: Text(line.unitPrice.toStringAsFixed(2)),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              onPressed: () =>
-                                  onSetQuantity(line.lineKey, line.quantity - 1),
-                              icon: const Icon(Icons.remove_circle_outline),
-                            ),
-                            Text(line.quantity.round().toString()),
-                            IconButton(
-                              onPressed: () =>
-                                  onSetQuantity(line.lineKey, line.quantity + 1),
-                              icon: const Icon(Icons.add_circle_outline),
-                            ),
-                            IconButton(
-                              onPressed: () => onRemove(line.lineKey),
-                              icon: const Icon(Icons.delete_outline),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -658,6 +1130,9 @@ void _noop() {}
 class _LocationStep extends StatelessWidget {
   const _LocationStep({
     required this.mapBuilder,
+    required this.customer,
+    required this.lines,
+    required this.subtotal,
     required this.pin,
     required this.landmarkController,
     required this.locating,
@@ -667,6 +1142,9 @@ class _LocationStep extends StatelessWidget {
   });
 
   final MapPinPickerBuilder mapBuilder;
+  final CustomerSummary? customer;
+  final List<CartLine> lines;
+  final double subtotal;
   final SitePin? pin;
   final TextEditingController landmarkController;
   final bool locating;
@@ -676,71 +1154,129 @@ class _LocationStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final theme = Theme.of(context);
+    final packCount =
+        lines.fold<double>(0, (s, l) => s + l.quantity).round();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: Text(
-            'Where are they located?',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: CbPrimaryButton(
-            key: const Key('visit_use_current_location'),
-            label: locating ? 'Getting location…' : 'Use current location',
-            onPressed: locating ? null : onUseCurrent,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Or tap the map to drop a pin',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.mutedForeground,
+        CbSurfaceCard(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  customer?.name ?? 'Customer',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+              ),
+              CbStatusPill(
+                label: '$packCount packs',
+                variant: CbStatusPillVariant.info,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _kes(subtotal),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 240,
+          child: CbSurfaceCard(
+            padding: EdgeInsets.zero,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: mapBuilder(
-                context,
-                selected: pin,
-                onChanged: onPin,
+              borderRadius: BorderRadius.circular(AppColors.radius),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: mapBuilder(
+                      context,
+                      selected: pin,
+                      onChanged: onPin,
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: CbStatusPill(
+                      label: pin == null ? 'Drop pin on map' : 'Pin placed',
+                      variant: pin == null
+                          ? CbStatusPillVariant.warning
+                          : CbStatusPillVariant.success,
+                      showOnlineDot: pin != null,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: TextField(
-            key: const Key('visit_landmark'),
-            controller: landmarkController,
-            decoration: const InputDecoration(
-              labelText: 'Landmark / place name (optional)',
-              hintText: 'e.g. Near Kenya Power, blue gate',
-              border: OutlineInputBorder(),
+        const SizedBox(height: 10),
+        CbPrimaryButton(
+          key: const Key('visit_use_current_location'),
+          label: locating
+              ? 'Getting location…'
+              : 'Snap to Current GPS Location',
+          onPressed: locating ? null : onUseCurrent,
+        ),
+        if (pin != null) ...[
+          const SizedBox(height: 10),
+          Container(
+            key: const Key('visit_pin_coords'),
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(AppColors.radius - 2),
             ),
-            onChanged: onLandmark,
+            child: Text(
+              '${pin!.latitude.toStringAsFixed(6)}, ${pin!.longitude.toStringAsFixed(6)}'
+              '${pin!.label.isNotEmpty ? ' · ${pin!.label}' : ''}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.primaryForeground,
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+        CbSurfaceCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const CbSectionLabel(
+                label: 'Physical Landmark & Access Details',
+                icon: Icons.place_outlined,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Helps riders and dispatch find the outlet.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const Key('visit_landmark'),
+                controller: landmarkController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText:
+                      'e.g. Behind TotalEnergies, blue gates next to ATM',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: onLandmark,
+              ),
+            ],
           ),
         ),
-        if (pin != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              key: const Key('visit_pin_coords'),
-              '${pin!.latitude.toStringAsFixed(5)}, ${pin!.longitude.toStringAsFixed(5)}'
-              '${pin!.label.isNotEmpty ? ' · ${pin!.label}' : ''}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
       ],
     );
   }
@@ -760,12 +1296,14 @@ class _ReviewStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pin = state.pin;
+    final theme = Theme.of(context);
+    final packCount =
+        state.lines.fold<double>(0, (s, l) => s + l.quantity).round();
+
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: [
-        Text('Review & place', style: Theme.of(context).textTheme.titleMedium),
         if (state.error != null) ...[
-          const SizedBox(height: 12),
           Text(
             state.error!,
             key: const Key('visit_place_error'),
@@ -773,36 +1311,170 @@ class _ReviewStep extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(color: AppColors.destructive),
           ),
+          const SizedBox(height: 12),
         ],
+        CbSurfaceCard(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.storefront_outlined,
+                    color: AppColors.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'VERIFIED OUTLET',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      state.customer?.name ?? '—',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (state.customer?.phone != null &&
+                        state.customer!.phone!.isNotEmpty)
+                      Text(
+                        state.customer!.phone!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    if (state.customer?.customerCode != null &&
+                        state.customer!.customerCode!.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      CbStatusPill(
+                        label: state.customer!.customerCode!,
+                        variant: CbStatusPillVariant.info,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 12),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Customer'),
-          subtitle: Text(state.customer?.name ?? '—'),
-        ),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Location'),
-          subtitle: Text(
-            pin == null
-                ? '—'
-                : '${pin.latitude.toStringAsFixed(5)}, ${pin.longitude.toStringAsFixed(5)}'
-                    '${state.landmark.isNotEmpty ? '\n${state.landmark}' : ''}',
+        CbSurfaceCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const CbSectionLabel(
+                label: 'Delivery pin',
+                icon: Icons.local_shipping_outlined,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                pin == null
+                    ? '—'
+                    : '${pin.latitude.toStringAsFixed(5)}, ${pin.longitude.toStringAsFixed(5)}',
+                style: theme.textTheme.bodyMedium,
+              ),
+              if (state.landmark.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  state.landmark,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        const Divider(),
-        Text('Products', style: Theme.of(context).textTheme.titleSmall),
-        for (final line in state.lines)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(line.displayName),
-            subtitle: Text('${line.quantity} × ${line.unitPrice.toStringAsFixed(2)}'),
-            trailing: Text(line.lineTotal.toStringAsFixed(2)),
+        const SizedBox(height: 12),
+        CbSurfaceCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: CbSectionLabel(
+                      label: 'Itemized Bill of Goods',
+                      icon: Icons.inventory_2_outlined,
+                    ),
+                  ),
+                  Text(
+                    '${state.lines.length} SKUS · $packCount PACKS',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.mutedForeground,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              for (final line in state.lines)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(line.displayName),
+                            Text(
+                              '${line.quantity.round()} × ${_kes(line.unitPrice)}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.mutedForeground,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        _kes(line.lineTotal),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(AppColors.radius - 2),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'TOTAL PAYABLE',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      _kes(state.subtotal),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        const SizedBox(height: 8),
-        Text(
-          'Subtotal ${state.subtotal.toStringAsFixed(2)}',
-          style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 16),
         TextField(
@@ -816,11 +1488,24 @@ class _ReviewStep extends StatelessWidget {
           onChanged: onNotes,
         ),
         const SizedBox(height: 12),
-        Text(
-          'This order goes to the office to pack and mark ready for pickup.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.mutedForeground,
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.accentSoft,
+            borderRadius: BorderRadius.circular(AppColors.radius),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.cloud_done_outlined, color: AppColors.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'This order goes to the office to pack and mark ready for pickup.',
+                  style: theme.textTheme.bodySmall,
+                ),
               ),
+            ],
+          ),
         ),
       ],
     );

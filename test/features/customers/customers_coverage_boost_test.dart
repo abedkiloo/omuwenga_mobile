@@ -363,6 +363,8 @@ void main() {
 
     await tester.tap(find.byKey(const Key('customer_row_7')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('customer_open_7')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('customer_standing_hero')), findsOneWidget);
     expect(find.text('S-1'), findsOneWidget);
 
@@ -377,7 +379,7 @@ void main() {
     await tester.tap(find.byKey(const Key('customer_settle')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('settle_amount')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('settle_method_mpesa')));
+    await tester.tap(find.byKey(const Key('settle_method_card')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('settle_reference')), 'ABC');
     await tester.tap(find.byKey(const Key('settle_confirm')));
@@ -503,7 +505,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('greater than zero'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('settle_method_mpesa')));
+    await tester.tap(find.byKey(const Key('settle_method_card')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('settle_amount')), '5');
     await tester.tap(find.byKey(const Key('settle_confirm')));
@@ -597,7 +599,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.textContaining('Credit'), findsOneWidget);
+    expect(find.byKey(const Key('customer_standing_4')), findsOneWidget);
+    expect(find.textContaining('Credit 25.00'), findsOneWidget);
   });
 
   testWidgets('form validation failure and returnToPos', (tester) async {

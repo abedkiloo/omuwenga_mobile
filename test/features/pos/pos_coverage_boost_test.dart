@@ -245,6 +245,34 @@ void main() {
 
   testWidgets('success pay opens receipt; qty and mpesa ref', (tester) async {
     final client = MockClient((request) async {
+      if (request.url.path.contains('/products/') &&
+          !request.url.path.contains('/search/') &&
+          !request.url.path.contains('/variants/')) {
+        final q = request.url.queryParameters['search'] ?? '';
+        final rows = [
+          {'id': 5, 'name': 'Nail', 'selling_price': 20, 'stock_quantity': 5},
+        ];
+        if (q.isNotEmpty && !q.toLowerCase().contains('nail') && q != '12345678') {
+          return http.Response(
+            jsonEncode({
+              'count': 0,
+              'next': null,
+              'previous': null,
+              'results': [],
+            }),
+            200,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'count': 1,
+            'next': null,
+            'previous': null,
+            'results': rows,
+          }),
+          200,
+        );
+      }
       if (request.url.path.contains('/products/search/')) {
         return http.Response(
           jsonEncode([
@@ -284,12 +312,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Search products'));
-    await tester.pump();
 
-    await tester.enterText(find.byKey(const Key('pos_search')), '12345678');
-    await tester.tap(find.byKey(const Key('pos_search_button')));
-    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_product_5')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_inc_5')));
@@ -298,6 +321,8 @@ void main() {
     await tester.tap(find.byKey(const Key('pos_pay')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_method_cash')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('pos_confirm_pay')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_confirm_pay')));
     await tester.pumpAndSettle();
@@ -340,7 +365,21 @@ void main() {
 
   testWidgets('decrement qty and empty search clears', (tester) async {
     final client = MockClient((request) async {
-      if (request.url.path.contains('search')) {
+      if (request.url.path.contains('/products/') &&
+          !request.url.path.contains('/variants/')) {
+        return http.Response(
+          jsonEncode({
+            'count': 1,
+            'next': null,
+            'previous': null,
+            'results': [
+              {'id': 3, 'name': 'Bolt', 'selling_price': 5},
+            ],
+          }),
+          200,
+        );
+      }
+      if (request.url.path.contains('/products/search/')) {
         return http.Response(
           jsonEncode([
             {'id': 3, 'name': 'Bolt', 'selling_price': 5},
@@ -356,9 +395,6 @@ void main() {
         child: const MaterialApp(home: PosPage()),
       ),
     );
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('pos_search')), 'bolt');
-    await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_product_3')));
     await tester.pumpAndSettle();
@@ -394,7 +430,8 @@ void main() {
       ..addProduct(const CatalogProduct(id: 1, name: 'X', price: 1))
       ..attachCustomer(id: 2, name: 'Ada');
     await tester.pumpAndSettle();
-    expect(find.textContaining('Customer: Ada'), findsOneWidget);
+    expect(find.text('Ada'), findsOneWidget);
+    expect(find.text('ACCOUNT ACTIVE'), findsOneWidget);
   });
 
   testWidgets('offline pay shows queued receipt', (tester) async {
@@ -422,6 +459,8 @@ void main() {
         );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_pay')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('pos_confirm_pay')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_confirm_pay')));
     await tester.pumpAndSettle();
@@ -465,8 +504,8 @@ void main() {
       ),
     );
     expect(find.textContaining('waiting to sync'), findsOneWidget);
-    expect(find.text('A'), findsOneWidget);
-    expect(find.text('B'), findsOneWidget);
+    expect(find.text('1x A'), findsOneWidget);
+    expect(find.text('1x B'), findsOneWidget);
   });
 
   testWidgets('leave via GoRouter', (tester) async {

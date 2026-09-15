@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../design_system/states/async_states.dart';
+import '../../../design_system/design_system.dart';
 import '../application/payment_controllers.dart';
 import '../domain/payment_intent.dart';
 
@@ -50,66 +50,91 @@ class _StkWaitPageState extends ConsumerState<StkWaitPage> {
 
     String title;
     String body;
+    CbStatusPillVariant statusVariant;
     if (state.offlineBlocked) {
       title = 'Offline';
       body = state.error ?? 'Connect to send an M-Pesa prompt.';
+      statusVariant = CbStatusPillVariant.warning;
     } else if (state.isPaid) {
       title = 'Payment confirmed';
       body = intent?.smsSent == true
           ? 'SMS receipt queued/sent with invoice link.'
           : 'M-Pesa confirmed on the server.';
+      statusVariant = CbStatusPillVariant.success;
     } else if (state.isFailed) {
       title = 'Payment not completed';
       body = intent?.failureReason?.isNotEmpty == true
           ? intent!.failureReason!
           : 'Customer cancelled or prompt expired.';
+      statusVariant = CbStatusPillVariant.warning;
     } else {
       title = 'Waiting for M-Pesa';
       body =
           'We asked ${widget.phone} to pay KES ${widget.amount.toStringAsFixed(2)}. '
           'Money is real only when confirmed.';
+      statusVariant = CbStatusPillVariant.info;
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('M-Pesa prompt')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        title: const Text('M-Pesa prompt'),
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title, key: const Key('stk_title'), style: theme.textTheme.titleLarge),
-            const SizedBox(height: 12),
-            Text(
-              body,
-              key: const Key('stk_body'),
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: AppColors.mutedForeground,
+            CbSurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CbStatusPill(label: title, variant: statusVariant),
+                  const SizedBox(height: 12),
+                  Text(
+                    title,
+                    key: const Key('stk_title'),
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    body,
+                    key: const Key('stk_body'),
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                  if (state.polling) ...[
+                    const SizedBox(height: 24),
+                    const Center(
+                      child: CircularProgressIndicator(key: Key('stk_spinner')),
+                    ),
+                  ],
+                  if (state.isPaid && state.showSmsSent)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 16),
+                      child: Text(
+                        'SMS sent',
+                        key: Key('stk_sms_sent'),
+                        style: TextStyle(color: AppColors.success),
+                      ),
+                    ),
+                  if (state.error != null && !state.offlineBlocked)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        state.error!,
+                        key: const Key('stk_error'),
+                        style: const TextStyle(color: AppColors.destructive),
+                      ),
+                    ),
+                ],
               ),
             ),
-            if (state.polling) ...[
-              const SizedBox(height: 24),
-              const Center(
-                child: CircularProgressIndicator(key: Key('stk_spinner')),
-              ),
-            ],
-            if (state.isPaid && state.showSmsSent)
-              const Padding(
-                padding: EdgeInsets.only(top: 16),
-                child: Text(
-                  'SMS sent',
-                  key: Key('stk_sms_sent'),
-                  style: TextStyle(color: AppColors.success),
-                ),
-              ),
-            if (state.error != null && !state.offlineBlocked)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  state.error!,
-                  key: const Key('stk_error'),
-                  style: const TextStyle(color: AppColors.destructive),
-                ),
-              ),
             const Spacer(),
             if (!state.isPaid && !state.offlineBlocked)
               CbPrimaryButton(

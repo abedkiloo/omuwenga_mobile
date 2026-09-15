@@ -82,7 +82,6 @@ class VisitOrderController extends StateNotifier<VisitOrderState> {
   void selectCustomer(CustomerSummary customer) {
     state = state.copyWith(
       customer: customer,
-      step: VisitOrderStep.products,
       clearError: true,
     );
   }

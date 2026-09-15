@@ -51,13 +51,27 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: _posOverrides(
-          httpClient: MockClient((_) async => http.Response('[]', 200)),
+          httpClient: MockClient((request) async {
+            if (request.url.path.contains('/products/') &&
+                !request.url.path.contains('/search/')) {
+              return http.Response(
+                jsonEncode({
+                  'count': 0,
+                  'next': null,
+                  'previous': null,
+                  'results': [],
+                }),
+                200,
+              );
+            }
+            return http.Response('[]', 200);
+          }),
         ),
         child: const MaterialApp(home: PosPage()),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Cart is empty'), findsOneWidget);
+    expect(find.text('No products yet'), findsOneWidget);
     final button = tester.widget<FilledButton>(
       find.descendant(
         of: find.byKey(const Key('pos_pay')),
@@ -69,6 +83,26 @@ void main() {
 
   testWidgets('add product enables pay and checkout stock error', (tester) async {
     final client = MockClient((request) async {
+      if (request.url.path.contains('/products/') &&
+          !request.url.path.contains('/search/') &&
+          !request.url.path.contains('/variants/')) {
+        return http.Response(
+          jsonEncode({
+            'count': 1,
+            'next': null,
+            'previous': null,
+            'results': [
+              {
+                'id': 12,
+                'name': 'Cement 50kg',
+                'selling_price': 150,
+                'stock_quantity': 0,
+              },
+            ],
+          }),
+          200,
+        );
+      }
       if (request.url.path.contains('/products/search/')) {
         return http.Response(
           jsonEncode([
@@ -99,13 +133,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byKey(const Key('pos_search')), 'cement');
-    await tester.testTextInput.receiveAction(TextInputAction.search);
-    await tester.pumpAndSettle();
+    expect(find.text('No products yet'), findsNothing);
     await tester.tap(find.byKey(const Key('pos_product_12')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Cart is empty'), findsNothing);
     final payBtn = tester.widget<FilledButton>(
       find.descendant(
         of: find.byKey(const Key('pos_pay')),
@@ -116,8 +147,10 @@ void main() {
 
     await tester.tap(find.byKey(const Key('pos_pay')));
     await tester.pumpAndSettle();
-    expect(find.text('Take payment'), findsOneWidget);
+    expect(find.text('Checkout & Tender'), findsOneWidget);
 
+    await tester.ensureVisible(find.byKey(const Key('pos_confirm_pay')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_confirm_pay')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('pos_checkout_error')), findsOneWidget);
@@ -147,7 +180,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Sale complete'), findsOneWidget);
+    expect(find.textContaining('Payment Confirmed'), findsOneWidget);
     expect(find.byKey(const Key('receipt_total')), findsOneWidget);
     await tester.tap(find.byKey(const Key('receipt_done')));
     await tester.pumpAndSettle();

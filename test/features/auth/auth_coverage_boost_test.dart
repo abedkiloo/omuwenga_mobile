@@ -218,7 +218,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('New sale'), findsOneWidget);
+    expect(find.text('Start New Sale'), findsOneWidget);
   });
 
   testWidgets('cashier navigates POS and Customers', (tester) async {
@@ -361,7 +361,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.textContaining('New sale'), findsOneWidget);
+    expect(find.textContaining('Start New Sale'), findsOneWidget);
 
     router.go(AppRoutes.customers);
     await tester.pumpAndSettle();
@@ -408,6 +408,6 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('New sale'), findsOneWidget);
+    expect(find.text('Start New Sale'), findsOneWidget);
   });
 }

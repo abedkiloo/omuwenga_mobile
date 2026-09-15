@@ -32,6 +32,27 @@ void main() {
           200,
         );
       }
+      if (path.contains('/products/') &&
+          !path.contains('/search/') &&
+          !path.contains('/variants/') &&
+          request.method == 'GET') {
+        return http.Response(
+          jsonEncode({
+            'count': 1,
+            'next': null,
+            'previous': null,
+            'results': [
+              {
+                'id': 12,
+                'name': 'Cement',
+                'selling_price': 150,
+                'has_variants': false,
+              },
+            ],
+          }),
+          200,
+        );
+      }
       if (path.contains('/products/search/')) {
         return http.Response(
           jsonEncode([
@@ -98,10 +119,9 @@ void main() {
 
     await tester.tap(find.byKey(const Key('visit_customer_9')));
     await tester.pumpAndSettle();
-
-    await tester.enterText(find.byKey(const Key('visit_product_search')), 'cem');
-    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.tap(find.byKey(const Key('visit_next_customer')));
     await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const Key('visit_product_12')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('visit_next_products')));

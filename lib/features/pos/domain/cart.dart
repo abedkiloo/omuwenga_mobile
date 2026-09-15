@@ -13,6 +13,9 @@ class CatalogProduct {
     this.stockQuantity,
     this.unit,
     this.hasVariants = false,
+    this.categoryId,
+    this.categoryName,
+    this.imageUrl,
   });
 
   final int id;
@@ -23,12 +26,21 @@ class CatalogProduct {
   final double? stockQuantity;
   final String? unit;
   final bool hasVariants;
+  final int? categoryId;
+  final String? categoryName;
+  final String? imageUrl;
 
   factory CatalogProduct.fromJson(Map<String, dynamic> json) {
     double? asDouble(Object? v) {
       if (v == null) return null;
       if (v is num) return v.toDouble();
       return double.tryParse(v.toString());
+    }
+
+    int? asInt(Object? v) {
+      if (v == null) return null;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString());
     }
 
     return CatalogProduct(
@@ -40,6 +52,9 @@ class CatalogProduct {
       stockQuantity: asDouble(json['stock_quantity']),
       unit: json['unit']?.toString(),
       hasVariants: json['has_variants'] == true,
+      categoryId: asInt(json['category']),
+      categoryName: json['category_name']?.toString(),
+      imageUrl: json['image_url']?.toString(),
     );
   }
 }

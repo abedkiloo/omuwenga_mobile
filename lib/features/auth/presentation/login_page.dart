@@ -46,6 +46,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final error = _localError ?? auth.message;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {

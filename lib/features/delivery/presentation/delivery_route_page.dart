@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_status_pill.dart';
+import '../../../design_system/chrome/cb_sticky_action_bar.dart';
+import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../design_system/states/async_states.dart';
 import '../../payments/presentation/stk_wait_page.dart';
 import '../application/delivery_controllers.dart';
@@ -37,6 +41,7 @@ class _DeliveryRoutePageState extends ConsumerState<DeliveryRoutePage> {
     final state = ref.watch(deliveryRouteProvider);
     final next = state.nextStop;
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Today’s route')),
       body: state.loading && state.route == null
           ? const LoadingState(label: 'Loading route…')
@@ -65,16 +70,47 @@ class _DeliveryRoutePageState extends ConsumerState<DeliveryRoutePage> {
                           ),
                         const SizedBox(height: 16),
                         for (final stop in state.route!.stops)
-                          ListTile(
-                            key: Key('delivery_route_stop_${stop.id}'),
-                            title: Text(
-                              stop.site.label.isEmpty
-                                  ? 'Stop ${stop.sequence}'
-                                  : stop.site.label,
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: CbSurfaceCard(
+                              key: Key('delivery_route_stop_${stop.id}'),
+                              padding: const EdgeInsets.all(14),
+                              onTap: () =>
+                                  context.push(AppRoutes.deliveryStop(stop.id)),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          stop.site.label.isEmpty
+                                              ? 'Stop ${stop.sequence}'
+                                              : stop.site.label,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall
+                                              ?.copyWith(fontWeight: FontWeight.w600),
+                                        ),
+                                        Text(
+                                          'Stop #${stop.sequence}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(color: AppColors.mutedForeground),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  CbStatusPill(
+                                    label: stop.status.name,
+                                    variant: stop.status == DeliveryStopStatus.completed
+                                        ? CbStatusPillVariant.success
+                                        : CbStatusPillVariant.info,
+                                  ),
+                                ],
+                              ),
                             ),
-                            subtitle: Text(stop.status.name),
-                            onTap: () =>
-                                context.push(AppRoutes.deliveryStop(stop.id)),
                           ),
                       ],
                     ),
@@ -359,63 +395,60 @@ class _DeliveryStopPageState extends ConsumerState<DeliveryStopPage> {
             ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (current.status == DeliveryStopStatus.pending)
-                CbPrimaryButton(
-                  key: const Key('del_arrive'),
-                  label: 'Arrive',
-                  onPressed: state.acting
-                      ? null
-                      : () =>
-                          ref.read(deliveryRouteProvider.notifier).arrive(current.id),
-                )
-              else if (current.status == DeliveryStopStatus.arrived)
-                CbPrimaryButton(
-                  key: const Key('del_start'),
-                  label: 'Start delivery',
-                  onPressed: state.acting
-                      ? null
-                      : () =>
-                          ref.read(deliveryRouteProvider.notifier).start(current.id),
-                )
-              else ...[
-                CbPrimaryButton(
-                  key: const Key('del_save_pod'),
-                  label:
-                      state.queuedPodOffline ? 'POD queued offline' : 'Save POD',
-                  onPressed: state.acting || !pod.isComplete
-                      ? null
-                      : () => ref
-                          .read(deliveryRouteProvider.notifier)
-                          .submitPod(current.id),
-                ),
-                const SizedBox(height: 8),
-                CbPrimaryButton(
-                  key: const Key('del_complete'),
-                  label: 'Complete stop',
-                  onPressed: state.acting || !canComplete
-                      ? null
-                      : () async {
-                          final ok = await ref
-                              .read(deliveryRouteProvider.notifier)
-                              .complete(current.id);
-                          if (!ok || !context.mounted) return;
-                          final next = ref.read(deliveryRouteProvider).nextStop;
-                          if (next != null) {
-                            context.go(AppRoutes.deliveryStop(next.id));
-                          } else {
-                            context.go(AppRoutes.deliveryRoute);
-                          }
-                        },
-                ),
-              ],
+      bottomNavigationBar: CbStickyActionBar(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (current.status == DeliveryStopStatus.pending)
+              CbPrimaryButton(
+                key: const Key('del_arrive'),
+                label: 'Arrive',
+                onPressed: state.acting
+                    ? null
+                    : () =>
+                        ref.read(deliveryRouteProvider.notifier).arrive(current.id),
+              )
+            else if (current.status == DeliveryStopStatus.arrived)
+              CbPrimaryButton(
+                key: const Key('del_start'),
+                label: 'Start delivery',
+                onPressed: state.acting
+                    ? null
+                    : () =>
+                        ref.read(deliveryRouteProvider.notifier).start(current.id),
+              )
+            else ...[
+              CbPrimaryButton(
+                key: const Key('del_save_pod'),
+                label: state.queuedPodOffline ? 'POD queued offline' : 'Save POD',
+                onPressed: state.acting || !pod.isComplete
+                    ? null
+                    : () => ref
+                        .read(deliveryRouteProvider.notifier)
+                        .submitPod(current.id),
+              ),
+              const SizedBox(height: 8),
+              CbPrimaryButton(
+                key: const Key('del_complete'),
+                label: 'Complete stop',
+                onPressed: state.acting || !canComplete
+                    ? null
+                    : () async {
+                        final ok = await ref
+                            .read(deliveryRouteProvider.notifier)
+                            .complete(current.id);
+                        if (!ok || !context.mounted) return;
+                        final next = ref.read(deliveryRouteProvider).nextStop;
+                        if (next != null) {
+                          context.go(AppRoutes.deliveryStop(next.id));
+                        } else {
+                          context.go(AppRoutes.deliveryRoute);
+                        }
+                      },
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );

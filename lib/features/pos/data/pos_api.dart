@@ -66,11 +66,117 @@ class SaleReceipt {
   }
 }
 
+/// One page from `GET /products/` (DRF page-number pagination).
+class CatalogProductPage {
+  const CatalogProductPage({
+    required this.results,
+    required this.count,
+    required this.page,
+    required this.pageSize,
+    required this.hasNext,
+  });
+
+  final List<CatalogProduct> results;
+  final int count;
+  final int page;
+  final int pageSize;
+  final bool hasNext;
+}
+
+class ProductCategory {
+  const ProductCategory({
+    required this.id,
+    required this.name,
+    this.productCount = 0,
+    this.parentId,
+    this.isActive = true,
+  });
+
+  final int id;
+  final String name;
+  final int productCount;
+  final int? parentId;
+  final bool isActive;
+
+  factory ProductCategory.fromJson(Map<String, dynamic> json) {
+    return ProductCategory(
+      id: (json['id'] as num).toInt(),
+      name: (json['name'] ?? '').toString(),
+      productCount: (json['product_count'] as num?)?.toInt() ??
+          (json['linked_product_count'] as num?)?.toInt() ??
+          0,
+      parentId: (json['parent'] as num?)?.toInt(),
+      isActive: json['is_active'] != false,
+    );
+  }
+}
+
 class PosApi {
   PosApi(this._client);
 
   final ApiClient _client;
 
+  /// Paginated catalog browse / filter. Backend default page size is 10.
+  Future<Result<CatalogProductPage>> listProducts({
+    String search = '',
+    int page = 1,
+    int pageSize = 10,
+    int? categoryId,
+  }) async {
+    final params = <String, String>{
+      'page': '$page',
+      'page_size': '$pageSize',
+      'is_active': 'true',
+    };
+    final q = search.trim();
+    if (q.isNotEmpty) params['search'] = q;
+    if (categoryId != null) params['category'] = '$categoryId';
+
+    final query = params.entries
+        .map((e) =>
+            '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}')
+        .join('&');
+    final response = await _client.get('products/?$query');
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(PosApiException(_safeError(res.body)));
+    }
+    return Success(_parseCatalogPage(res.body, page: page, pageSize: pageSize));
+  }
+
+  /// Active top-level categories for POS chips (`GET /products/categories/`).
+  Future<Result<List<ProductCategory>>> listCategories() async {
+    final response = await _client.get('products/categories/?is_active=true');
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(PosApiException(_safeError(res.body)));
+    }
+    final decoded = jsonDecode(res.body);
+    final rows = <Map<String, dynamic>>[];
+    if (decoded is List) {
+      for (final item in decoded) {
+        if (item is Map) rows.add(Map<String, dynamic>.from(item));
+      }
+    } else if (decoded is Map && decoded['results'] is List) {
+      for (final item in decoded['results'] as List) {
+        if (item is Map) rows.add(Map<String, dynamic>.from(item));
+      }
+    }
+    return Success([
+      for (final row in rows) ProductCategory.fromJson(row),
+    ].where((c) => c.isActive && c.parentId == null).toList());
+  }
+
+  /// Quick POS search (`GET /products/search/?q=`). Prefer [listProducts] when
+  /// you need pagination; this stays for barcode/short lookups.
   Future<Result<List<CatalogProduct>>> searchProducts(String query, {int limit = 20}) async {
     final q = query.trim();
     if (q.isEmpty) return const Success([]);
@@ -91,6 +197,55 @@ class PosApi {
       for (final item in decoded)
         if (item is Map) CatalogProduct.fromJson(Map<String, dynamic>.from(item)),
     ]);
+  }
+
+  static CatalogProductPage _parseCatalogPage(
+    String body, {
+    required int page,
+    required int pageSize,
+  }) {
+    final decoded = jsonDecode(body);
+    if (decoded is List) {
+      final results = [
+        for (final item in decoded)
+          if (item is Map) CatalogProduct.fromJson(Map<String, dynamic>.from(item)),
+      ];
+      return CatalogProductPage(
+        results: results,
+        count: results.length,
+        page: page,
+        pageSize: pageSize,
+        hasNext: false,
+      );
+    }
+    if (decoded is! Map) {
+      return const CatalogProductPage(
+        results: [],
+        count: 0,
+        page: 1,
+        pageSize: 10,
+        hasNext: false,
+      );
+    }
+    final map = Map<String, dynamic>.from(decoded);
+    final raw = map['results'];
+    final results = <CatalogProduct>[];
+    if (raw is List) {
+      for (final item in raw) {
+        if (item is Map) {
+          results.add(CatalogProduct.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
+    }
+    final count = (map['count'] as num?)?.toInt() ?? results.length;
+    final hasNext = map['next'] != null;
+    return CatalogProductPage(
+      results: results,
+      count: count,
+      page: page,
+      pageSize: pageSize,
+      hasNext: hasNext,
+    );
   }
 
   /// Active variants for a parent product (`GET /products/variants/?product=`).
@@ -121,8 +276,7 @@ class PosApi {
       }
     }
     return Success([
-      for (final row in rows)
-        ProductVariant.fromJson(row),
+      for (final row in rows) ProductVariant.fromJson(row),
     ].where((v) => v.isActive).toList());
   }
 

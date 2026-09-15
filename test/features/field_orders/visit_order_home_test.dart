@@ -21,9 +21,9 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('home_primary_cta')), findsOneWidget);
-    expect(find.text('New sale'), findsOneWidget);
+    expect(find.text('Start New Sale'), findsOneWidget);
     expect(find.byKey(const Key('home_visit_order')), findsOneWidget);
-    expect(find.text('New visit order'), findsOneWidget);
+    expect(find.text('Visit order'), findsOneWidget);
 
     final deliveryOnly = AuthSession(
       user: const AuthUser(id: 3, username: 'driver', firstName: 'D', lastName: 'R'),

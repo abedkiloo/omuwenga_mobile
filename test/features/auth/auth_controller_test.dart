@@ -230,6 +230,6 @@ void main() {
     await tester.enterText(find.byKey(const Key('login_password')), 'sales123');
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
-    expect(find.text('New sale'), findsOneWidget);
+    expect(find.text('Start New Sale'), findsOneWidget);
   });
 }

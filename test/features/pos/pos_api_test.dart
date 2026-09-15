@@ -54,6 +54,38 @@ void main() {
     expect(list.single.hasVariants, isFalse);
   });
 
+  test('list products maps paginated page', () async {
+    final api = apiWith(
+      MockClient((request) async {
+        expect(request.url.path, contains('/products/'));
+        expect(request.url.queryParameters['page'], '1');
+        expect(request.url.queryParameters['page_size'], '10');
+        expect(request.url.queryParameters['is_active'], 'true');
+        return http.Response(
+          jsonEncode({
+            'count': 12,
+            'next': 'http://example.com/api/products/?page=2',
+            'previous': null,
+            'results': [
+              {
+                'id': 1,
+                'name': 'Oil',
+                'selling_price': '100.00',
+                'has_variants': false,
+              },
+            ],
+          }),
+          200,
+        );
+      }),
+    );
+    final page = (await api.listProducts()).getOrThrow();
+    expect(page.results.single.id, 1);
+    expect(page.count, 12);
+    expect(page.hasNext, isTrue);
+    expect(page.page, 1);
+  });
+
   test('fetchVariants maps paginated results', () async {
     final api = apiWith(
       MockClient((request) async {

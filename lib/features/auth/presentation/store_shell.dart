@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../sync/presentation/sync_failures_sheet.dart';
 import '../../../sync/presentation/sync_status_chip.dart';
 import '../../../sync/providers.dart';
@@ -39,6 +40,7 @@ class StoreShellPage extends ConsumerWidget {
     final sync = ref.watch(syncStatusProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -96,6 +98,35 @@ class _NavDest {
   final String label;
   final IconData icon;
   final String route;
+}
+
+class _MoreTile extends StatelessWidget {
+  const _MoreTile({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String title;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: CbSurfaceCard(
+        padding: EdgeInsets.zero,
+        onTap: onTap,
+        child: ListTile(
+          leading: Icon(icon, color: AppColors.primary),
+          title: Text(title),
+          trailing: const Icon(Icons.chevron_right, color: AppColors.mutedForeground),
+        ),
+      ),
+    );
+  }
 }
 
 class PersonaHomePage extends ConsumerWidget {
@@ -214,54 +245,55 @@ class MorePage extends ConsumerWidget {
     final canDelivery = session?.permissions.canAccessDelivery ?? false;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             if (canPlaceVisit)
-              ListTile(
+              _MoreTile(
                 key: const Key('more_visit_order'),
-                title: const Text('New visit order'),
-                leading: const Icon(Icons.shopping_bag_outlined),
+                title: 'New visit order',
+                icon: Icons.shopping_bag_outlined,
                 onTap: () => context.go(AppRoutes.siteVisit),
               ),
             if (canDispatch)
-              ListTile(
+              _MoreTile(
                 key: const Key('more_dispatch'),
-                title: const Text('Field sales'),
-                leading: const Icon(Icons.inventory_2_outlined),
+                title: 'Field sales',
+                icon: Icons.inventory_2_outlined,
                 onTap: () => context.go(AppRoutes.dispatchQueue),
               ),
             if (canDelivery)
-              ListTile(
+              _MoreTile(
                 key: const Key('more_delivery'),
-                title: const Text('Today’s route'),
-                leading: const Icon(Icons.map_outlined),
+                title: 'Today’s route',
+                icon: Icons.map_outlined,
                 onTap: () => context.go(AppRoutes.deliveryRoute),
               ),
             if (canSales)
-              ListTile(
+              _MoreTile(
                 key: const Key('more_sales_history'),
-                title: const Text('Sales history'),
-                leading: const Icon(Icons.receipt_long_outlined),
+                title: 'Sales history',
+                icon: Icons.receipt_long_outlined,
                 onTap: () => context.go(AppRoutes.salesHistory),
               ),
             if (canDaily)
-              ListTile(
+              _MoreTile(
                 key: const Key('more_daily_sales'),
-                title: const Text('Daily sales'),
-                leading: const Icon(Icons.calendar_today_outlined),
+                title: 'Daily sales',
+                icon: Icons.calendar_today_outlined,
                 onTap: () => context.go(AppRoutes.dailySales),
               ),
-            ListTile(
-              title: const Text('API health'),
-              leading: const Icon(Icons.monitor_heart_outlined),
+            _MoreTile(
+              title: 'API health',
+              icon: Icons.monitor_heart_outlined,
               onTap: () => context.go(AppRoutes.health),
             ),
-            ListTile(
+            _MoreTile(
               key: const Key('more_logout'),
-              title: const Text('Sign out'),
-              leading: const Icon(Icons.logout),
+              title: 'Sign out',
+              icon: Icons.logout,
               onTap: () => ref.read(authControllerProvider.notifier).logout(),
             ),
           ],
