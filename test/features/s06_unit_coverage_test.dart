@@ -25,7 +25,10 @@ void main() {
       'payment_status': 'debt',
       'customer': {'id': 9, 'name': 'A'},
     });
-    expect(dailyOrderRoute(withCustomer, date: '2026-09-14'), contains('/customer/9'));
+    expect(
+      dailyOrderRoute(withCustomer, date: '2026-09-14'),
+      contains('/customer/9'),
+    );
 
     final walkIn = DailyOrder.fromJson({
       'id': 2,
@@ -59,7 +62,10 @@ void main() {
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final api = SalesHistoryApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: MockClient((request) async {
           if (request.url.path.contains('/refund/')) {
@@ -87,7 +93,10 @@ void main() {
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final api = DailySalesApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: MockClient((request) async {
           if (request.url.path.contains('/customer/')) {

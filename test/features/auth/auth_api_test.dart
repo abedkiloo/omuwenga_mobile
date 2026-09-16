@@ -49,7 +49,10 @@ void main() {
 
   test('login success stores tokens and builds session', () async {
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((request) async {
         expect(request.url.path, endsWith('/accounts/auth/login/'));
@@ -68,14 +71,22 @@ void main() {
 
   test('login failure invalid credentials', () async {
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
-      httpClient: MockClient((_) async => http.Response('{"error":"Invalid credentials"}', 401)),
+      httpClient: MockClient(
+        (_) async => http.Response('{"error":"Invalid credentials"}', 401),
+      ),
     );
     final api = AuthApi(client: client, tokenStore: tokens);
     final result = await api.login(username: 'x', password: 'y');
     expect(result.isFailure, isTrue);
-    expect(result.when(success: (_) => '', failure: (e, _) => e.toString()), contains('Invalid'));
+    expect(
+      result.when(success: (_) => '', failure: (e, _) => e.toString()),
+      contains('Invalid'),
+    );
     expect(await tokens.readAccess(), isNull);
     client.close();
   });
@@ -84,12 +95,18 @@ void main() {
     await tokens.writeTokens(access: 'a', refresh: 'r');
     var logoutCalled = false;
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((request) async {
         if (request.url.path.contains('/me/')) {
           expect(request.headers['Authorization'], 'Bearer a');
-          return http.Response(jsonEncode(_loginPayload(role: 'manager', dailySales: true)), 200);
+          return http.Response(
+            jsonEncode(_loginPayload(role: 'manager', dailySales: true)),
+            200,
+          );
         }
         if (request.url.path.contains('/logout/')) {
           logoutCalled = true;
@@ -112,7 +129,10 @@ void main() {
     await tokens.writeTokens(access: 'old', refresh: 'refresh-token');
     var calls = 0;
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((request) async {
         calls++;
@@ -144,22 +164,32 @@ void main() {
 
   test('login missing tokens and bad JSON', () async {
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
-      httpClient: MockClient((_) async => http.Response('{"access":"only"}', 200)),
+      httpClient: MockClient(
+        (_) async => http.Response('{"access":"only"}', 200),
+      ),
     );
     final api = AuthApi(client: client, tokenStore: tokens);
     expect((await api.login(username: 'a', password: 'b')).isFailure, isTrue);
     client.close();
 
     final bad = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((_) async => http.Response('not-json', 200)),
     );
     expect(
-      (await AuthApi(client: bad, tokenStore: tokens).login(username: 'a', password: 'b'))
-          .isFailure,
+      (await AuthApi(
+        client: bad,
+        tokenStore: tokens,
+      ).login(username: 'a', password: 'b')).isFailure,
       isTrue,
     );
     bad.close();
@@ -168,7 +198,10 @@ void main() {
   test('me session expired and server errors', () async {
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((_) async => http.Response('{}', 401)),
     );
@@ -182,7 +215,10 @@ void main() {
     await tokens.writeTokens(access: 'old', refresh: 'bad');
     var expired = false;
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       onSessionExpired: () => expired = true,
       httpClient: MockClient((request) async {
@@ -201,7 +237,10 @@ void main() {
 
   test('logout without refresh token still clears', () async {
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((_) async => http.Response('{}', 200)),
     );

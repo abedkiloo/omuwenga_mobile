@@ -32,13 +32,9 @@ class SyncStatus {
   String get label {
     switch (tone) {
       case SyncChipTone.error:
-        return failedCount == 1
-            ? '1 sync failed'
-            : '$failedCount syncs failed';
+        return failedCount == 1 ? '1 sync failed' : '$failedCount syncs failed';
       case SyncChipTone.offline:
-        return pendingCount > 0
-            ? 'Offline · $pendingCount waiting'
-            : 'Offline';
+        return pendingCount > 0 ? 'Offline · $pendingCount waiting' : 'Offline';
       case SyncChipTone.pending:
         return '$pendingCount waiting to sync';
       case SyncChipTone.online:
@@ -52,16 +48,12 @@ class SyncStatusController extends StateNotifier<SyncStatus> {
     required OutboxStore store,
     required ConnectivityMonitor connectivity,
     required SyncEngine engine,
-  })  : _store = store,
-        _connectivity = connectivity,
-        _engine = engine,
-        super(
-          const SyncStatus(
-            isOnline: true,
-            pendingCount: 0,
-            failedCount: 0,
-          ),
-        ) {
+  }) : _store = store,
+       _connectivity = connectivity,
+       _engine = engine,
+       super(
+         const SyncStatus(isOnline: true, pendingCount: 0, failedCount: 0),
+       ) {
     _init();
   }
 
@@ -73,16 +65,20 @@ class SyncStatusController extends StateNotifier<SyncStatus> {
   Future<void> _init() async {
     final online = await _connectivity.isOnline;
     await _refresh(isOnline: online);
-    _subs.add(_connectivity.online.listen((online) async {
-      await _refresh(isOnline: online);
-      if (online) {
-        await _engine.drainOnce();
-        await _refresh(isOnline: true);
-      }
-    }));
-    _subs.add(_store.watchActive().listen((_) async {
-      await _refresh();
-    }));
+    _subs.add(
+      _connectivity.online.listen((online) async {
+        await _refresh(isOnline: online);
+        if (online) {
+          await _engine.drainOnce();
+          await _refresh(isOnline: true);
+        }
+      }),
+    );
+    _subs.add(
+      _store.watchActive().listen((_) async {
+        await _refresh();
+      }),
+    );
   }
 
   Future<void> _refresh({bool? isOnline}) async {

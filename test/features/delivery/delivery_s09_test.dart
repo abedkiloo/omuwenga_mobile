@@ -52,28 +52,27 @@ Map<String, dynamic> _stopJson({
       },
     ],
     'pod': podComplete
-        ? {
-            'is_complete': true,
-            'latitude': '-1.29',
-            'longitude': '36.82',
-          }
+        ? {'is_complete': true, 'latitude': '-1.29', 'longitude': '36.82'}
         : null,
     'next_stop_id': null,
   };
 }
 
 Map<String, dynamic> _routeJson(List<Map<String, dynamic>> stops) => {
-      'id': 1,
-      'route_date': '2026-09-14',
-      'delivery_agent_id': 5,
-      'stops': stops,
-      'next_stop_id': stops.isEmpty ? null : stops.first['id'],
-    };
+  'id': 1,
+  'route_date': '2026-09-14',
+  'delivery_agent_id': 5,
+  'stops': stops,
+  'next_stop_id': stops.isEmpty ? null : stops.first['id'],
+};
 
 DeliveryApi _api(MockClient client) {
   return DeliveryApi(
     ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: InMemoryTokenStore(),
       httpClient: client,
     ),
@@ -83,10 +82,17 @@ DeliveryApi _api(MockClient client) {
 void main() {
   group('domain', () {
     test('status parse, next stop, canComplete, config', () {
-      expect(DeliveryStopStatus.parse('collected'), DeliveryStopStatus.collected);
+      expect(
+        DeliveryStopStatus.parse('collected'),
+        DeliveryStopStatus.collected,
+      );
       expect(DeliveryStopStatus.parse(null), DeliveryStopStatus.pending);
-      final a = DeliveryStop.fromJson(_stopJson(id: 1, sequence: 2, status: 'completed'));
-      final b = DeliveryStop.fromJson(_stopJson(id: 2, sequence: 1, status: 'pending'));
+      final a = DeliveryStop.fromJson(
+        _stopJson(id: 1, sequence: 2, status: 'completed'),
+      );
+      final b = DeliveryStop.fromJson(
+        _stopJson(id: 2, sequence: 1, status: 'pending'),
+      );
       expect(selectNextStop([a, b])!.id, 2);
       expect(selectNextStop([a]), isNull);
       final collected = DeliveryStop.fromJson(
@@ -127,21 +133,16 @@ void main() {
             );
           }
           if (request.url.path.contains('/routes/today')) {
-            return http.Response(
-              jsonEncode(_routeJson([_stopJson()])),
-              200,
-            );
+            return http.Response(jsonEncode(_routeJson([_stopJson()])), 200);
           }
           if (request.url.path.contains('/arrive')) {
-            return http.Response(
-              jsonEncode(_stopJson(status: 'arrived')),
-              200,
-            );
+            return http.Response(jsonEncode(_stopJson(status: 'arrived')), 200);
           }
           if (request.url.path.contains('/pod')) {
             return http.Response(jsonEncode({'is_complete': true}), 200);
           }
-          if (request.url.path.contains('/stops/1') && request.method == 'GET') {
+          if (request.url.path.contains('/stops/1') &&
+              request.method == 'GET') {
             return http.Response(
               jsonEncode(_stopJson(status: 'collected', podComplete: true)),
               200,
@@ -154,20 +155,32 @@ void main() {
             );
           }
           if (request.url.path.contains('/lines')) {
-            return http.Response(jsonEncode(_stopJson(status: 'delivering')), 200);
+            return http.Response(
+              jsonEncode(_stopJson(status: 'delivering')),
+              200,
+            );
           }
           if (request.url.path.contains('/collect')) {
-            return http.Response(jsonEncode(_stopJson(status: 'collected')), 200);
+            return http.Response(
+              jsonEncode(_stopJson(status: 'collected')),
+              200,
+            );
           }
           if (request.url.path.contains('/start')) {
-            return http.Response(jsonEncode(_stopJson(status: 'delivering')), 200);
+            return http.Response(
+              jsonEncode(_stopJson(status: 'delivering')),
+              200,
+            );
           }
           return http.Response('{}', 404);
         }),
       );
       expect((await api.config()).getOrThrow().requirePodToComplete, isTrue);
       expect((await api.todayRoute()).getOrThrow().stops.single.id, 1);
-      expect((await api.arrive(1)).getOrThrow().status, DeliveryStopStatus.arrived);
+      expect(
+        (await api.arrive(1)).getOrThrow().status,
+        DeliveryStopStatus.arrived,
+      );
       expect((await api.start(1)).isSuccess, isTrue);
       expect(
         (await api.updateLines(1, [
@@ -180,7 +193,10 @@ void main() {
         ])).isSuccess,
         isTrue,
       );
-      expect((await api.collect(1, method: 'cash', amount: 10)).isSuccess, isTrue);
+      expect(
+        (await api.collect(1, method: 'cash', amount: 10)).isSuccess,
+        isTrue,
+      );
       expect(
         (await api.submitPod(
           1,
@@ -193,7 +209,10 @@ void main() {
         )).getOrThrow().podComplete,
         isTrue,
       );
-      expect((await api.complete(1)).getOrThrow().status, DeliveryStopStatus.completed);
+      expect(
+        (await api.complete(1)).getOrThrow().status,
+        DeliveryStopStatus.completed,
+      );
 
       final bad = _api(MockClient((_) async => http.Response('x', 500)));
       expect((await bad.config()).isFailure, isTrue);
@@ -221,16 +240,17 @@ void main() {
           }
           if (request.url.path.contains('/routes/today')) {
             return http.Response(
-              jsonEncode(_routeJson([
-                _stopJson(status: stopStatus, podComplete: false),
-              ])),
+              jsonEncode(
+                _routeJson([_stopJson(status: stopStatus, podComplete: false)]),
+              ),
               200,
             );
           }
           if (request.url.path.contains('/pod')) {
             return http.Response(jsonEncode({'is_complete': true}), 200);
           }
-          if (request.url.path.contains('/stops/1') && request.method == 'GET') {
+          if (request.url.path.contains('/stops/1') &&
+              request.method == 'GET') {
             return http.Response(
               jsonEncode(_stopJson(status: 'collected', podComplete: true)),
               200,
@@ -277,7 +297,9 @@ void main() {
   });
 
   group('widgets', () {
-    testWidgets('map and photos render above lines; complete disabled', (tester) async {
+    testWidgets('map and photos render above lines; complete disabled', (
+      tester,
+    ) async {
       final api = _api(
         MockClient((request) async {
           if (request.url.path.contains('/config')) {
@@ -290,9 +312,9 @@ void main() {
             );
           }
           return http.Response(
-            jsonEncode(_routeJson([
-              _stopJson(status: 'collected', podComplete: false),
-            ])),
+            jsonEncode(
+              _routeJson([_stopJson(status: 'collected', podComplete: false)]),
+            ),
             200,
           );
         }),
@@ -322,7 +344,9 @@ void main() {
       await tester.pumpAndSettle();
 
       final mapY = tester.getTopLeft(find.byKey(const Key('del_stop_map'))).dy;
-      final photosY = tester.getTopLeft(find.byKey(const Key('del_stop_photos'))).dy;
+      final photosY = tester
+          .getTopLeft(find.byKey(const Key('del_stop_photos')))
+          .dy;
       final lineY = tester.getTopLeft(find.byKey(const Key('del_line_2'))).dy;
       expect(mapY < photosY, isTrue);
       expect(photosY < lineY, isTrue);
@@ -369,10 +393,12 @@ void main() {
                     );
                   }
                   return http.Response(
-                    jsonEncode(_routeJson([
-                      _stopJson(id: 1, sequence: 1),
-                      _stopJson(id: 2, sequence: 2, status: 'pending'),
-                    ])),
+                    jsonEncode(
+                      _routeJson([
+                        _stopJson(id: 1, sequence: 1),
+                        _stopJson(id: 2, sequence: 2, status: 'pending'),
+                      ]),
+                    ),
                     200,
                   );
                 }),
@@ -383,7 +409,10 @@ void main() {
             ),
             outboxStoreProvider.overrideWithValue(MemoryOutboxStore()),
             appEnvProvider.overrideWithValue(
-              const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+              const AppEnv(
+                flavor: AppFlavor.dev,
+                apiBaseUrl: 'http://example.com/api',
+              ),
             ),
           ],
           child: MaterialApp.router(routerConfig: router),

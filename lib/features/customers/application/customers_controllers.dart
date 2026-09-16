@@ -11,7 +11,9 @@ final customersApiProvider = Provider<CustomersApi>((ref) {
   return CustomersApi(ref.watch(apiClientProvider));
 });
 
-final customersSettingsProvider = FutureProvider<CustomersModuleSettings>((ref) async {
+final customersSettingsProvider = FutureProvider<CustomersModuleSettings>((
+  ref,
+) async {
   final result = await ref.watch(customersApiProvider).loadSettings();
   return result.getOrNull() ?? const CustomersModuleSettings();
 });
@@ -67,8 +69,8 @@ class CustomersListController extends StateNotifier<CustomersListState> {
 
 final customersListProvider =
     StateNotifierProvider<CustomersListController, CustomersListState>((ref) {
-  return CustomersListController(ref.watch(customersApiProvider));
-});
+      return CustomersListController(ref.watch(customersApiProvider));
+    });
 
 class CustomerDetailState {
   const CustomerDetailState({
@@ -101,7 +103,7 @@ class CustomerDetailState {
 
 class CustomerDetailController extends StateNotifier<CustomerDetailState> {
   CustomerDetailController(this._api, this._ids)
-      : super(const CustomerDetailState());
+    : super(const CustomerDetailState());
 
   final CustomersApi _api;
   final ClientUuid _ids;
@@ -110,8 +112,10 @@ class CustomerDetailController extends StateNotifier<CustomerDetailState> {
     state = state.copyWith(loading: true, clearError: true);
     final result = await _api.detail(id);
     result.when(
-      success: (detail) => state = state.copyWith(detail: detail, loading: false),
-      failure: (e, _) => state = state.copyWith(loading: false, error: e.toString()),
+      success: (detail) =>
+          state = state.copyWith(detail: detail, loading: false),
+      failure: (e, _) =>
+          state = state.copyWith(loading: false, error: e.toString()),
     );
   }
 
@@ -145,14 +149,14 @@ class CustomerDetailController extends StateNotifier<CustomerDetailState> {
 
 final customerDetailProvider = StateNotifierProvider.autoDispose
     .family<CustomerDetailController, CustomerDetailState, int>((ref, id) {
-  final controller = CustomerDetailController(
-    ref.watch(customersApiProvider),
-    ClientUuid(),
-  );
-  // ignore: discarded_futures
-  controller.load(id);
-  return controller;
-});
+      final controller = CustomerDetailController(
+        ref.watch(customersApiProvider),
+        ClientUuid(),
+      );
+      // ignore: discarded_futures
+      controller.load(id);
+      return controller;
+    });
 
 bool canSettleCustomerDebt({
   required AuthState auth,
@@ -160,7 +164,7 @@ bool canSettleCustomerDebt({
   required double debtAmount,
 }) {
   final perms = auth.session?.permissions;
-  if (perms == null || !perms.canUpdateCustomers) return false;
+  if (perms == null || !perms.canUpdateDebtManagement) return false;
   if (debtAmount <= 0) return false;
   return settings.canSettleDebt(hasUpdatePermission: true);
 }

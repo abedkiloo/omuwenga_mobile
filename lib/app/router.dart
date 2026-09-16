@@ -41,11 +41,7 @@ class _SplashPageState extends ConsumerState<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: BrandLogo(height: 220),
-      ),
-    );
+    return const Scaffold(body: Center(child: BrandLogo(height: 220)));
   }
 }
 
@@ -87,20 +83,45 @@ GoRouter createAppRouter({
       if (loggingIn || splashing) {
         return AppRoutes.home;
       }
+      final permissions = auth.session?.permissions;
+      if (loc == AppRoutes.pos &&
+          !(permissions?.canAccessPos ?? false)) {
+        return AppRoutes.home;
+      }
+      if (loc == AppRoutes.customerNew &&
+          !(permissions?.canCreateCustomers ?? false)) {
+        return AppRoutes.home;
+      }
+      if (RegExp(r'^/customers/\d+/edit$').hasMatch(loc) &&
+          !(permissions?.canUpdateCustomers ?? false)) {
+        return AppRoutes.home;
+      }
+      if (RegExp(r'^/customers/\d+/settle$').hasMatch(loc) &&
+          !(permissions?.canUpdateDebtManagement ?? false)) {
+        return AppRoutes.home;
+      }
+      if (loc.startsWith(AppRoutes.customers) &&
+          !(permissions?.canViewCustomers ?? false)) {
+        return AppRoutes.home;
+      }
+      if (loc.startsWith(AppRoutes.salesHistory) &&
+          !(permissions?.canViewSales ?? false)) {
+        return AppRoutes.home;
+      }
       if (loc.startsWith(AppRoutes.dailySales) &&
-          !(auth.session?.permissions.canViewDailySales ?? false)) {
+          !(permissions?.canViewDailySales ?? false)) {
         return AppRoutes.home;
       }
       if (loc.startsWith('/visit-orders') &&
-          !(auth.session?.permissions.canPlaceVisitOrders ?? false)) {
+          !(permissions?.canPlaceVisitOrders ?? false)) {
         return AppRoutes.home;
       }
       if (loc.startsWith(AppRoutes.dispatchQueue) &&
-          !(auth.session?.permissions.canDispatch ?? false)) {
+          !(permissions?.canDispatch ?? false)) {
         return AppRoutes.home;
       }
       if (loc.startsWith(AppRoutes.deliveryRoute) &&
-          !(auth.session?.permissions.canAccessDelivery ?? false)) {
+          !(permissions?.canAccessDelivery ?? false)) {
         return AppRoutes.home;
       }
       return null;
@@ -108,17 +129,13 @@ GoRouter createAppRouter({
     routes: [
       GoRoute(
         path: AppRoutes.splash,
-        pageBuilder: (context, state) => _fadePage(
-          key: state.pageKey,
-          child: const SplashPage(),
-        ),
+        pageBuilder: (context, state) =>
+            _fadePage(key: state.pageKey, child: const SplashPage()),
       ),
       GoRoute(
         path: AppRoutes.login,
-        pageBuilder: (context, state) => _fadePage(
-          key: state.pageKey,
-          child: const LoginPage(),
-        ),
+        pageBuilder: (context, state) =>
+            _fadePage(key: state.pageKey, child: const LoginPage()),
       ),
       GoRoute(
         path: AppRoutes.health,

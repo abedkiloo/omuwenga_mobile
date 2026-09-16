@@ -25,9 +25,7 @@ class CustomerDayPage extends ConsumerWidget {
     final detail = state.detail;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(detail?.customerName ?? 'Customer day'),
-      ),
+      appBar: AppBar(title: Text(detail?.customerName ?? 'Customer day')),
       body: () {
         if (state.loading && detail == null) {
           return const LoadingState(label: 'Loading customer day…');
@@ -60,8 +58,8 @@ class CustomerDayPage extends ConsumerWidget {
             Text(
               '${detail.ordersCount} orders on $date',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.mutedForeground,
-                  ),
+                color: AppColors.mutedForeground,
+              ),
             ),
             const SizedBox(height: 16),
             for (final order in detail.orders)

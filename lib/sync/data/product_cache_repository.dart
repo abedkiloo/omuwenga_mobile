@@ -35,7 +35,9 @@ class ProductCacheRepository {
     if (product.sensitiveNote != null && _cipher != null) {
       encrypted = await _cipher.encryptUtf8(product.sensitiveNote!);
     }
-    await _db.into(_db.cachedProducts).insertOnConflictUpdate(
+    await _db
+        .into(_db.cachedProducts)
+        .insertOnConflictUpdate(
           CachedProductsCompanion.insert(
             id: product.id,
             serverId: Value(product.serverId),
@@ -49,8 +51,9 @@ class ProductCacheRepository {
   }
 
   Future<ProductCacheEntry?> findById(String id) async {
-    final row = await (_db.select(_db.cachedProducts)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.cachedProducts,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     if (row == null) return null;
     String? note;
     if (row.encryptedPayload != null && _cipher != null) {

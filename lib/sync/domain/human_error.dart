@@ -1,8 +1,5 @@
 /// Turns transport / HTTP failures into short user-facing copy.
-String humanizeSyncError({
-  required int? statusCode,
-  required Object error,
-}) {
+String humanizeSyncError({required int? statusCode, required Object error}) {
   if (statusCode == 401 || statusCode == 403) {
     return 'Sign in again to sync this change.';
   }

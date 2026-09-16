@@ -42,8 +42,9 @@ List<Override> _base(MockClient client) {
 }
 
 void main() {
-  testWidgets('sale detail error, refund cancel, then refund error banner',
-      (tester) async {
+  testWidgets('sale detail error, refund cancel, then refund error banner', (
+    tester,
+  ) async {
     var detailCalls = 0;
     final client = MockClient((request) async {
       if (request.url.path.contains('/refund/')) {

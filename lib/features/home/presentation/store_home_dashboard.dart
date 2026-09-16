@@ -128,9 +128,7 @@ class StoreHomeDashboard extends ConsumerWidget {
   }
 
   bool get _hasQuickActions =>
-      (canViewCustomers && canAccessPos) ||
-      canPlaceVisitOrders ||
-      canDispatch;
+      (canViewCustomers && canAccessPos) || canPlaceVisitOrders || canDispatch;
 }
 
 class _QuickActionsRow extends StatelessWidget {
@@ -225,9 +223,9 @@ class _QuickAction extends StatelessWidget {
           Text(
             label,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -253,7 +251,9 @@ class _SummarySection extends StatelessWidget {
       return Text(
         key: const Key('home_summary_error'),
         state.error!,
-        style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.destructive),
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: AppColors.destructive,
+        ),
       );
     }
     final summary = state.summary?.summary;
@@ -342,7 +342,7 @@ class _MetricCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (trailing != null) trailing!,
+              ?trailing,
             ],
           ),
           const SizedBox(height: 6),
@@ -392,8 +392,9 @@ class _OrderTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final saleLabel =
-        order.saleNumber.isEmpty ? '#${order.id}' : order.saleNumber;
+    final saleLabel = order.saleNumber.isEmpty
+        ? '#${order.id}'
+        : order.saleNumber;
 
     return CbSurfaceCard(
       margin: const EdgeInsets.only(bottom: 8),
@@ -412,7 +413,8 @@ class _OrderTile extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (order.customerName != null && order.customerName!.isNotEmpty) ...[
+                if (order.customerName != null &&
+                    order.customerName!.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     order.customerName!,

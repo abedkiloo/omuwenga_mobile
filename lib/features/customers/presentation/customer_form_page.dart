@@ -19,6 +19,7 @@ class CustomerFormPage extends ConsumerStatefulWidget {
 
   final int? customerId;
   final bool returnToPos;
+
   /// When true, pop with the created [CustomerSummary] instead of navigating away.
   final bool returnCustomer;
 
@@ -82,10 +83,9 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
         if (widget.returnCustomer) {
           Navigator.of(context).pop(customer);
         } else if (widget.returnToPos) {
-          ref.read(cartControllerProvider.notifier).attachCustomer(
-                id: customer.id,
-                name: customer.name,
-              );
+          ref
+              .read(cartControllerProvider.notifier)
+              .attachCustomer(id: customer.id, name: customer.name);
           context.go(AppRoutes.pos);
         } else if (_isEdit) {
           context.pop();
@@ -110,7 +110,9 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
         _seedFromDetail(state.detail!);
       } else if (state.loading) {
         return Scaffold(
-          appBar: AppBar(title: Text(_isEdit ? 'Edit customer' : 'New customer')),
+          appBar: AppBar(
+            title: Text(_isEdit ? 'Edit customer' : 'New customer'),
+          ),
           body: const LoadingState(),
         );
       }
@@ -162,10 +164,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
-            Text(
-              _error!,
-              style: const TextStyle(color: AppColors.destructive),
-            ),
+            Text(_error!, style: const TextStyle(color: AppColors.destructive)),
           ],
           const SizedBox(height: 24),
           CbPrimaryButton(

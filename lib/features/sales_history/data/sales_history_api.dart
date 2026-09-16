@@ -23,17 +23,25 @@ class SalesHistoryApi {
     if (res.statusCode < 200 || res.statusCode >= 300) {
       return Failure(SalesHistoryApiException(_safeError(res.body)));
     }
-    final decoded = jsonDecode(res.body);
-    final list = <dynamic>[];
-    if (decoded is List) {
-      list.addAll(decoded);
-    } else if (decoded is Map && decoded['results'] is List) {
-      list.addAll(decoded['results'] as List);
+    try {
+      final decoded = jsonDecode(res.body);
+      final list = <dynamic>[];
+      if (decoded is List) {
+        list.addAll(decoded);
+      } else if (decoded is Map && decoded['results'] is List) {
+        list.addAll(decoded['results'] as List);
+      }
+      return Success([
+        for (final item in list)
+          if (item is Map)
+            SaleSummary.fromJson(Map<String, dynamic>.from(item)),
+      ]);
+    } on Object catch (error, stackTrace) {
+      return Failure(
+        SalesHistoryApiException('Unable to read sales history: $error'),
+        stackTrace,
+      );
     }
-    return Success([
-      for (final item in list)
-        if (item is Map) SaleSummary.fromJson(Map<String, dynamic>.from(item)),
-    ]);
   }
 
   Future<Result<SaleDetail>> detail(int id) async {
@@ -46,11 +54,18 @@ class SalesHistoryApi {
     if (res.statusCode < 200 || res.statusCode >= 300) {
       return Failure(SalesHistoryApiException(_safeError(res.body)));
     }
-    final decoded = jsonDecode(res.body);
-    if (decoded is! Map) {
-      return Failure(SalesHistoryApiException('Unexpected sale detail.'));
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) {
+        return Failure(SalesHistoryApiException('Unexpected sale detail.'));
+      }
+      return Success(SaleDetail.fromJson(Map<String, dynamic>.from(decoded)));
+    } on Object catch (error, stackTrace) {
+      return Failure(
+        SalesHistoryApiException('Unable to read sale detail: $error'),
+        stackTrace,
+      );
     }
-    return Success(SaleDetail.fromJson(Map<String, dynamic>.from(decoded)));
   }
 
   Future<Result<void>> refund({
@@ -61,10 +76,7 @@ class SalesHistoryApi {
   }) async {
     final response = await _client.post(
       'sales/$saleId/refund/',
-      body: {
-        'reason': reason.trim(),
-        'full': full,
-      },
+      body: {'reason': reason.trim(), 'full': full},
       idempotencyKey: idempotencyKey,
     );
     if (response.isFailure) {

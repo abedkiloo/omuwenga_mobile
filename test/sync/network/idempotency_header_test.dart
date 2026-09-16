@@ -11,7 +11,10 @@ void main() {
     final tokens = InMemoryTokenStore();
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((request) async {
         seen.add(request.headers['Idempotency-Key']);

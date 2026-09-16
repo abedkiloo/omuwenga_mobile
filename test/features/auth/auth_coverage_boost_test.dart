@@ -26,17 +26,31 @@ void main() {
   test('PermissionSet from plain Map and name', () {
     expect(PermissionSet.fromJsonList(null).isEmpty, isTrue);
     final set = PermissionSet.fromJsonList([
-      <dynamic, dynamic>{'module': 'sales', 'action': 'view', 'name': 'sales.view'},
+      <dynamic, dynamic>{
+        'module': 'sales',
+        'action': 'view',
+        'name': 'sales.view',
+      },
     ]);
     expect(set.canViewSales, isTrue);
-    expect(PermissionGrant.fromJson({'module': 'x', 'action': 'y', 'name': 'x.y'}).name, 'x.y');
+    expect(
+      PermissionGrant.fromJson({
+        'module': 'x',
+        'action': 'y',
+        'name': 'x.y',
+      }).name,
+      'x.y',
+    );
   });
 
   test('AuthApi me unexpected body', () async {
     final tokens = InMemoryTokenStore();
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((_) async => http.Response('[]', 200)),
     );
@@ -59,7 +73,10 @@ void main() {
     final tokens = InMemoryTokenStore();
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((request) async {
         if (request.url.path.contains('/me/')) {
@@ -92,7 +109,10 @@ void main() {
     final tokens = InMemoryTokenStore();
     await tokens.writeTokens(access: 'old', refresh: 'r');
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((request) async {
         if (request.url.path.contains('/token/refresh/')) {
@@ -107,7 +127,10 @@ void main() {
     );
     expect((await client.get('x/')).isFailure, isTrue);
     await client.get('healthz/', auth: false);
-    expect(AuthSessionExpiredException().toString(), contains('Session expired'));
+    expect(
+      AuthSessionExpiredException().toString(),
+      contains('Session expired'),
+    );
     client.close();
   });
 
@@ -117,13 +140,18 @@ void main() {
       overrides: [
         tokenStoreProvider.overrideWithValue(tokens),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
         apiClientProvider.overrideWith((ref) {
           return ApiClient(
             env: ref.watch(appEnvProvider),
             tokenStore: tokens,
-            httpClient: MockClient((_) async => throw Exception('network down')),
+            httpClient: MockClient(
+              (_) async => throw Exception('network down'),
+            ),
           );
         }),
       ],
@@ -156,12 +184,27 @@ void main() {
         ShellRoute(
           builder: (context, state, child) => StoreShellPage(child: child),
           routes: [
-            GoRoute(path: AppRoutes.home, builder: (_, _) => const PersonaHomePage()),
-            GoRoute(path: AppRoutes.pos, builder: (_, _) => const Text('pos-body')),
-            GoRoute(path: AppRoutes.customers, builder: (_, _) => const Text('cust-body')),
+            GoRoute(
+              path: AppRoutes.home,
+              builder: (_, _) => const PersonaHomePage(),
+            ),
+            GoRoute(
+              path: AppRoutes.pos,
+              builder: (_, _) => const Text('pos-body'),
+            ),
+            GoRoute(
+              path: AppRoutes.customers,
+              builder: (_, _) => const Text('cust-body'),
+            ),
             GoRoute(path: AppRoutes.more, builder: (_, _) => const MorePage()),
-            GoRoute(path: AppRoutes.dailySales, builder: (_, _) => const Text('daily-body')),
-            GoRoute(path: AppRoutes.health, builder: (_, _) => const Text('health-body')),
+            GoRoute(
+              path: AppRoutes.dailySales,
+              builder: (_, _) => const Text('daily-body'),
+            ),
+            GoRoute(
+              path: AppRoutes.health,
+              builder: (_, _) => const Text('health-body'),
+            ),
           ],
         ),
       ],
@@ -174,17 +217,29 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('Admin'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('home_daily_sales')),
+      200,
+    );
     expect(find.byKey(const Key('home_daily_sales')), findsOneWidget);
     await tester.tap(find.byKey(const Key('home_primary_cta')));
     await tester.pumpAndSettle();
     expect(find.text('pos-body'), findsOneWidget);
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('home_customers')),
+      200,
+    );
     await tester.tap(find.byKey(const Key('home_customers')));
     await tester.pumpAndSettle();
     expect(find.text('cust-body'), findsOneWidget);
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('home_daily_sales')),
+      200,
+    );
     await tester.tap(find.byKey(const Key('home_daily_sales')));
     await tester.pumpAndSettle();
     expect(find.text('daily-body'), findsOneWidget);
@@ -228,9 +283,18 @@ void main() {
         ShellRoute(
           builder: (context, state, child) => StoreShellPage(child: child),
           routes: [
-            GoRoute(path: AppRoutes.home, builder: (_, _) => const PersonaHomePage()),
-            GoRoute(path: AppRoutes.pos, builder: (_, _) => const Text('pos-body')),
-            GoRoute(path: AppRoutes.customers, builder: (_, _) => const Text('cust-body')),
+            GoRoute(
+              path: AppRoutes.home,
+              builder: (_, _) => const PersonaHomePage(),
+            ),
+            GoRoute(
+              path: AppRoutes.pos,
+              builder: (_, _) => const Text('pos-body'),
+            ),
+            GoRoute(
+              path: AppRoutes.customers,
+              builder: (_, _) => const Text('cust-body'),
+            ),
             GoRoute(path: AppRoutes.more, builder: (_, _) => const MorePage()),
           ],
         ),
@@ -262,7 +326,10 @@ void main() {
 
     await tester.pumpWidget(
       const MaterialApp(
-        home: FeaturePlaceholderPage(title: 'POS', message: 'Coming in a later sprint.'),
+        home: FeaturePlaceholderPage(
+          title: 'POS',
+          message: 'Coming in a later sprint.',
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -271,7 +338,9 @@ void main() {
   });
 
   test('routerProvider builds', () {
-    final container = ProviderContainer(overrides: seedOverrides(cashierSession()));
+    final container = ProviderContainer(
+      overrides: seedOverrides(cashierSession()),
+    );
     addTearDown(container.dispose);
     expect(container.read(routerProvider), isA<GoRouter>());
   });
@@ -280,15 +349,22 @@ void main() {
     final tokens = InMemoryTokenStore();
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((_) async => http.Response('{}', 403)),
     );
-    expect((await AuthApi(client: client, tokenStore: tokens).me()).isFailure, isTrue);
     expect(
-      (await AuthApi(client: client, tokenStore: InMemoryTokenStore())
-              .login(username: 'a', password: 'b'))
-          .isFailure,
+      (await AuthApi(client: client, tokenStore: tokens).me()).isFailure,
+      isTrue,
+    );
+    expect(
+      (await AuthApi(
+        client: client,
+        tokenStore: InMemoryTokenStore(),
+      ).login(username: 'a', password: 'b')).isFailure,
       isTrue,
     );
     client.close();
@@ -300,13 +376,18 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(InMemoryTokenStore()),
           appEnvProvider.overrideWithValue(
-            const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+            const AppEnv(
+              flavor: AppFlavor.dev,
+              apiBaseUrl: 'http://example.com/api',
+            ),
           ),
           apiClientProvider.overrideWith((ref) {
             return ApiClient(
               env: ref.watch(appEnvProvider),
               tokenStore: ref.watch(tokenStoreProvider),
-              httpClient: MockClient((_) async => http.Response('{"error":"no"}', 401)),
+              httpClient: MockClient(
+                (_) async => http.Response('{"error":"no"}', 401),
+              ),
             );
           }),
         ],
@@ -327,7 +408,10 @@ void main() {
       overrides: [
         tokenStoreProvider.overrideWithValue(tokens),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
         httpClientProvider.overrideWithValue(
           MockClient((request) async {
@@ -341,7 +425,10 @@ void main() {
     );
     addTearDown(container.dispose);
     await container.read(apiClientProvider).get('accounts/auth/me/');
-    expect(container.read(authControllerProvider).message, contains('Session expired'));
+    expect(
+      container.read(authControllerProvider).message,
+      contains('Session expired'),
+    );
   });
 
   testWidgets('createAppRouter shell placeholders and health', (tester) async {
@@ -361,7 +448,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.textContaining('Start New Sale'), findsOneWidget);
+    expect(find.byKey(const Key('pos_cart_icon')), findsOneWidget);
 
     router.go(AppRoutes.customers);
     await tester.pumpAndSettle();

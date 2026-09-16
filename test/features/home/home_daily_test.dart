@@ -48,7 +48,10 @@ void main() {
     final tokens = InMemoryTokenStore();
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((request) async {
         expect(request.url.queryParameters['cashier_id'], '2');
@@ -111,7 +114,10 @@ void main() {
     await tokens.writeTokens(access: 'a', refresh: 'r');
     String? cashierParam;
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((request) async {
         cashierParam = request.url.queryParameters['cashier_id'];

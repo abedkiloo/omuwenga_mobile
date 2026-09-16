@@ -10,18 +10,30 @@ void main() {
   group('ApiClient + HealthApi', () {
     test('resolve joins base and path', () {
       final client = ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: InMemoryTokenStore(),
       );
-      expect(client.resolve('healthz/').toString(), 'http://example.com/api/healthz/');
-      expect(client.resolve('/healthz/').toString(), 'http://example.com/api/healthz/');
+      expect(
+        client.resolve('healthz/').toString(),
+        'http://example.com/api/healthz/',
+      );
+      expect(
+        client.resolve('/healthz/').toString(),
+        'http://example.com/api/healthz/',
+      );
       client.close();
     });
 
     test('get success and failure', () async {
       final tokens = InMemoryTokenStore();
       final okClient = ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: MockClient((request) async => http.Response('ok', 200)),
       );
@@ -30,7 +42,10 @@ void main() {
       okClient.close();
 
       final badClient = ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: MockClient((request) async => throw Exception('network')),
       );
@@ -43,9 +58,14 @@ void main() {
       final tokens = InMemoryTokenStore();
       final api = HealthApi(
         ApiClient(
-          env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          env: const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
           tokenStore: tokens,
-          httpClient: MockClient((request) async => http.Response('{"status":"ok"}', 200)),
+          httpClient: MockClient(
+            (request) async => http.Response('{"status":"ok"}', 200),
+          ),
         ),
       );
       final result = await api.check();
@@ -55,7 +75,10 @@ void main() {
 
       final badApi = HealthApi(
         ApiClient(
-          env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          env: const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
           tokenStore: tokens,
           httpClient: MockClient((request) async => http.Response('nope', 503)),
         ),

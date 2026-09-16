@@ -66,8 +66,8 @@ class DeliveryRouteController extends StateNotifier<DeliveryRouteState> {
     this._connectivity,
     this._outbox, {
     ClientUuid? ids,
-  })  : _ids = ids ?? ClientUuid(),
-        super(const DeliveryRouteState());
+  }) : _ids = ids ?? ClientUuid(),
+       super(const DeliveryRouteState());
 
   final DeliveryApi _api;
   final ConnectivityMonitor _connectivity;
@@ -78,13 +78,12 @@ class DeliveryRouteController extends StateNotifier<DeliveryRouteState> {
     state = state.copyWith(loading: true, clearError: true);
     final cfg = await _api.config();
     final config = cfg.getOrNull() ?? const DeliveryConfig();
-    final result = await _api.todayRoute(requirePod: config.requirePodToComplete);
+    final result = await _api.todayRoute(
+      requirePod: config.requirePodToComplete,
+    );
     result.when(
-      success: (route) => state = state.copyWith(
-        route: route,
-        config: config,
-        loading: false,
-      ),
+      success: (route) =>
+          state = state.copyWith(route: route, config: config, loading: false),
       failure: (e, _) =>
           state = state.copyWith(loading: false, error: e.toString()),
     );
@@ -118,15 +117,14 @@ class DeliveryRouteController extends StateNotifier<DeliveryRouteState> {
     int stopId, {
     required double amount,
     String receipt = '',
-  }) =>
-      _act(
-        () => _api.collect(
-          stopId,
-          method: 'defer_stk',
-          amount: amount,
-          notes: receipt,
-        ),
-      );
+  }) => _act(
+    () => _api.collect(
+      stopId,
+      method: 'defer_stk',
+      amount: amount,
+      notes: receipt,
+    ),
+  );
 
   Future<bool> submitPod(int stopId) async {
     final draft = state.pod;
@@ -207,9 +205,9 @@ class DeliveryRouteController extends StateNotifier<DeliveryRouteState> {
 
 final deliveryRouteProvider =
     StateNotifierProvider<DeliveryRouteController, DeliveryRouteState>(
-  (ref) => DeliveryRouteController(
-    ref.watch(deliveryApiProvider),
-    ref.watch(connectivityMonitorProvider),
-    ref.watch(outboxStoreProvider),
-  ),
-);
+      (ref) => DeliveryRouteController(
+        ref.watch(deliveryApiProvider),
+        ref.watch(connectivityMonitorProvider),
+        ref.watch(outboxStoreProvider),
+      ),
+    );

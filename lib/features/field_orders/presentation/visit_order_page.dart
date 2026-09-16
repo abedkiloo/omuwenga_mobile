@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../design_system/buttons/cb_primary_button.dart';
 import '../../../design_system/chrome/cb_flow_header.dart';
 import '../../../design_system/chrome/cb_search_field.dart';
 import '../../../design_system/chrome/cb_section_label.dart';
@@ -36,10 +35,8 @@ String _shortName(String name) {
 
 /// Sales visit: customer → products → map location → place order for the office.
 class VisitOrderPage extends ConsumerStatefulWidget {
-  VisitOrderPage({
-    super.key,
-    MapPinPickerBuilder? mapBuilder,
-  }) : mapBuilder = mapBuilder ?? defaultMapPinPickerBuilder;
+  VisitOrderPage({super.key, MapPinPickerBuilder? mapBuilder})
+    : mapBuilder = mapBuilder ?? defaultMapPinPickerBuilder;
 
   final MapPinPickerBuilder mapBuilder;
 
@@ -65,8 +62,9 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
         context: context,
         product: product,
         loadVariants: () async {
-          final result =
-              await ref.read(posApiProvider).fetchVariants(product.id);
+          final result = await ref
+              .read(posApiProvider)
+              .fetchVariants(product.id);
           return result.when(
             success: (list) => list,
             failure: (e, _) => throw e,
@@ -74,11 +72,9 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
         },
       );
       if (!mounted || pick == null) return;
-      ref.read(visitOrderProvider.notifier).addProduct(
-            pick.product,
-            variant: pick.variant,
-            qty: pick.quantity,
-          );
+      ref
+          .read(visitOrderProvider.notifier)
+          .addProduct(pick.product, variant: pick.variant, qty: pick.quantity);
     } else {
       ref.read(visitOrderProvider.notifier).addProduct(product);
     }
@@ -101,7 +97,9 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
       }
       final pos = await Geolocator.getCurrentPosition();
       if (!mounted) return;
-      ref.read(visitOrderProvider.notifier).setPin(
+      ref
+          .read(visitOrderProvider.notifier)
+          .setPin(
             SitePin(
               latitude: pos.latitude,
               longitude: pos.longitude,
@@ -111,9 +109,9 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
           );
     } on Object catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not get location: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not get location: $e')));
     } finally {
       if (mounted) setState(() => _locating = false);
     }
@@ -143,8 +141,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
       VisitOrderStep.customer =>
         'Verify store standing before placing the booking.',
       VisitOrderStep.products => 'Search the catalog and set pack quantities.',
-      VisitOrderStep.location =>
-        'Drop a pin so dispatch can find the outlet.',
+      VisitOrderStep.location => 'Drop a pin so dispatch can find the outlet.',
       VisitOrderStep.review => 'Ready to submit — sent to the packing queue.',
     };
   }
@@ -214,16 +211,16 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
               children: [
                 Text(
                   _stepHeadline(state.step),
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   _stepCaption(state.step),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.mutedForeground,
-                      ),
+                    color: AppColors.mutedForeground,
+                  ),
                 ),
               ],
             ),
@@ -295,8 +292,8 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
         primaryKey = const Key('visit_next_customer');
         onPrimary = state.hasCustomer
             ? () => ref
-                .read(visitOrderProvider.notifier)
-                .goTo(VisitOrderStep.products)
+                  .read(visitOrderProvider.notifier)
+                  .goTo(VisitOrderStep.products)
             : null;
         if (state.customer != null) {
           summary = _customerLedgerSummary(state.customer!);
@@ -306,8 +303,8 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
         primaryKey = const Key('visit_next_products');
         onPrimary = state.hasProducts
             ? () => ref
-                .read(visitOrderProvider.notifier)
-                .goTo(VisitOrderStep.location)
+                  .read(visitOrderProvider.notifier)
+                  .goTo(VisitOrderStep.location)
             : null;
         summary =
             '${state.lines.length} SKU · ${state.lines.fold<double>(0, (s, l) => s + l.quantity).round()} packs';
@@ -323,8 +320,8 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
         primaryKey = const Key('visit_next_location');
         onPrimary = state.hasPin
             ? () => ref
-                .read(visitOrderProvider.notifier)
-                .goTo(VisitOrderStep.review)
+                  .read(visitOrderProvider.notifier)
+                  .goTo(VisitOrderStep.review)
             : null;
         back = TextButton(
           onPressed: () => ref
@@ -333,9 +330,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
           child: const Text('Back'),
         );
       case VisitOrderStep.review:
-        label = state.submitting
-            ? 'Placing…'
-            : 'Submit Order to Pack Queue';
+        label = state.submitting ? 'Placing…' : 'Submit Order to Pack Queue';
         primaryKey = const Key('visit_place_order');
         onPrimary = state.canPlace ? _place : null;
         summary = '${state.lines.length} items';
@@ -344,8 +339,8 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
           onPressed: state.submitting
               ? null
               : () => ref
-                  .read(visitOrderProvider.notifier)
-                  .goTo(VisitOrderStep.location),
+                    .read(visitOrderProvider.notifier)
+                    .goTo(VisitOrderStep.location),
           child: const Text('Back'),
         );
     }
@@ -407,8 +402,9 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
       _loading = true;
       _error = null;
     });
-    final result =
-        await ref.read(customersApiProvider).list(search: q ?? _search.text);
+    final result = await ref
+        .read(customersApiProvider)
+        .list(search: q ?? _search.text);
     if (!mounted) return;
     result.when(
       success: (items) => setState(() {
@@ -476,17 +472,15 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
           children: [
             Expanded(
               child: CbSectionLabel(
-                label: selected == null
-                    ? 'Customers'
-                    : 'Alternate stores',
+                label: selected == null ? 'Customers' : 'Alternate stores',
                 icon: Icons.storefront_outlined,
               ),
             ),
             Text(
               '${_items.length} stores',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.mutedForeground,
-                  ),
+                color: AppColors.mutedForeground,
+              ),
             ),
           ],
         ),
@@ -543,7 +537,11 @@ class _ActiveStoreCard extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                const Icon(Icons.check_circle, color: AppColors.success, size: 18),
+                const Icon(
+                  Icons.check_circle,
+                  color: AppColors.success,
+                  size: 18,
+                ),
               ],
             ),
           ),
@@ -562,8 +560,11 @@ class _ActiveStoreCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.person_outline,
-                          size: 16, color: AppColors.mutedForeground),
+                      const Icon(
+                        Icons.person_outline,
+                        size: 16,
+                        color: AppColors.mutedForeground,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         customer.phone!,
@@ -631,8 +632,8 @@ class _ActiveStoreCard extends StatelessWidget {
                         standing == CustomerStanding.debt
                             ? 'OUTSTANDING BALANCE'
                             : standing == CustomerStanding.credit
-                                ? 'AVAILABLE WALLET CREDIT'
-                                : 'ACCOUNT STANDING',
+                            ? 'AVAILABLE WALLET CREDIT'
+                            : 'ACCOUNT STANDING',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: AppColors.mutedForeground,
                           fontWeight: FontWeight.w600,
@@ -643,8 +644,8 @@ class _ActiveStoreCard extends StatelessWidget {
                         standing == CustomerStanding.debt
                             ? _kes(debt)
                             : standing == CustomerStanding.credit
-                                ? _kes(credit)
-                                : 'Cleared for booking',
+                            ? _kes(credit)
+                            : 'Cleared for booking',
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: AppColors.primary,
@@ -722,17 +723,17 @@ class _CustomerListCard extends StatelessWidget {
     final standing = customer.standing;
     final pill = switch (standing) {
       CustomerStanding.debt => CbStatusPill(
-          label: 'Owes ${_kes(customer.debtAmount)}',
-          variant: CbStatusPillVariant.warning,
-        ),
+        label: 'Owes ${_kes(customer.debtAmount)}',
+        variant: CbStatusPillVariant.warning,
+      ),
       CustomerStanding.credit => CbStatusPill(
-          label: 'Credit ${_kes(customer.walletBalance ?? 0)}',
-          variant: CbStatusPillVariant.success,
-        ),
+        label: 'Credit ${_kes(customer.walletBalance ?? 0)}',
+        variant: CbStatusPillVariant.success,
+      ),
       CustomerStanding.good => const CbStatusPill(
-          label: 'Clean ledger',
-          variant: CbStatusPillVariant.info,
-        ),
+        label: 'Clean ledger',
+        variant: CbStatusPillVariant.info,
+      ),
     };
 
     return CbSurfaceCard(
@@ -857,8 +858,11 @@ class _ProductsStepState extends ConsumerState<_ProductsStep> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.storefront_outlined,
-                      color: AppColors.primary, size: 20),
+                  const Icon(
+                    Icons.storefront_outlined,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -872,7 +876,8 @@ class _ProductsStepState extends ConsumerState<_ProductsStep> {
                     label: standingLabel(
                       customer.standing,
                       debtAmount: customer.debtAmount,
-                      credit: customer.walletBalance != null &&
+                      credit:
+                          customer.walletBalance != null &&
                               customer.walletBalance! > 0
                           ? customer.walletBalance!
                           : 0,
@@ -950,25 +955,24 @@ class _ProductsStepState extends ConsumerState<_ProductsStep> {
                                   children: [
                                     Text(
                                       p.name,
-                                      style:
-                                          theme.textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
                                       [
                                         if (p.hasVariants) 'Has variants',
-                                        if (p.sku != null &&
-                                            p.sku!.isNotEmpty)
+                                        if (p.sku != null && p.sku!.isNotEmpty)
                                           p.sku!,
                                         if (p.stockQuantity != null)
                                           'Stock ${p.stockQuantity!.round()}',
                                       ].join(' · '),
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color: AppColors.mutedForeground,
-                                      ),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: AppColors.mutedForeground,
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -998,8 +1002,7 @@ class _ProductsStepState extends ConsumerState<_ProductsStep> {
                             child: SizedBox(
                               width: 24,
                               height: 24,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           ),
                         ),
@@ -1087,8 +1090,7 @@ class _ProductLineCard extends StatelessWidget {
               ),
               const Spacer(),
               IconButton(
-                onPressed: () =>
-                    onSetQuantity(line.lineKey, line.quantity - 1),
+                onPressed: () => onSetQuantity(line.lineKey, line.quantity - 1),
                 icon: const Icon(Icons.remove_circle_outline),
               ),
               Text(
@@ -1098,14 +1100,15 @@ class _ProductLineCard extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () =>
-                    onSetQuantity(line.lineKey, line.quantity + 1),
+                onPressed: () => onSetQuantity(line.lineKey, line.quantity + 1),
                 icon: const Icon(Icons.add_circle_outline),
               ),
               IconButton(
                 onPressed: () => onRemove(line.lineKey),
-                icon: const Icon(Icons.delete_outline,
-                    color: AppColors.destructive),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: AppColors.destructive,
+                ),
               ),
             ],
           ),
@@ -1155,8 +1158,7 @@ class _LocationStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final packCount =
-        lines.fold<double>(0, (s, l) => s + l.quantity).round();
+    final packCount = lines.fold<double>(0, (s, l) => s + l.quantity).round();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -1197,11 +1199,7 @@ class _LocationStep extends StatelessWidget {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: mapBuilder(
-                      context,
-                      selected: pin,
-                      onChanged: onPin,
-                    ),
+                    child: mapBuilder(context, selected: pin, onChanged: onPin),
                   ),
                   Positioned(
                     top: 12,
@@ -1268,8 +1266,7 @@ class _LocationStep extends StatelessWidget {
                 controller: landmarkController,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  hintText:
-                      'e.g. Behind TotalEnergies, blue gates next to ATM',
+                  hintText: 'e.g. Behind TotalEnergies, blue gates next to ATM',
                   border: OutlineInputBorder(),
                 ),
                 onChanged: onLandmark,
@@ -1297,8 +1294,9 @@ class _ReviewStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final pin = state.pin;
     final theme = Theme.of(context);
-    final packCount =
-        state.lines.fold<double>(0, (s, l) => s + l.quantity).round();
+    final packCount = state.lines
+        .fold<double>(0, (s, l) => s + l.quantity)
+        .round();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -1323,8 +1321,10 @@ class _ReviewStep extends StatelessWidget {
                   color: AppColors.accentSoft,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.storefront_outlined,
-                    color: AppColors.primary),
+                child: const Icon(
+                  Icons.storefront_outlined,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(

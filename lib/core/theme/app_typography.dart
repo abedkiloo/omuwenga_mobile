@@ -21,11 +21,26 @@ abstract final class AppTypography {
 
   static TextTheme _scale(TextTheme base) {
     return base.copyWith(
-      displayLarge: base.displayLarge?.copyWith(fontSize: 32, fontWeight: FontWeight.w700),
-      headlineMedium: base.headlineMedium?.copyWith(fontSize: 22, fontWeight: FontWeight.w600),
-      titleLarge: base.titleLarge?.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
-      bodyLarge: base.bodyLarge?.copyWith(fontSize: 16, fontWeight: FontWeight.w400),
-      labelLarge: base.labelLarge?.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+      displayLarge: base.displayLarge?.copyWith(
+        fontSize: 32,
+        fontWeight: FontWeight.w700,
+      ),
+      headlineMedium: base.headlineMedium?.copyWith(
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
+      ),
+      titleLarge: base.titleLarge?.copyWith(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+      ),
+      bodyLarge: base.bodyLarge?.copyWith(
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+      ),
+      labelLarge: base.labelLarge?.copyWith(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+      ),
     );
   }
 }

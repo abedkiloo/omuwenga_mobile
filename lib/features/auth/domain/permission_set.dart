@@ -23,12 +23,12 @@ class PermissionGrant {
 /// Mirrors web `hasPermission` / nav gates in `fe/src/utils/roleAccess.js`.
 class PermissionSet {
   PermissionSet(Iterable<PermissionGrant> grants)
-      : _keys = {
-          for (final g in grants) ...[
-            g.key,
-            if (g.name != null && g.name!.trim().isNotEmpty) g.name!.trim(),
-          ],
-        };
+    : _keys = {
+        for (final g in grants) ...[
+          g.key,
+          if (g.name != null && g.name!.trim().isNotEmpty) g.name!.trim(),
+        ],
+      };
 
   factory PermissionSet.fromJsonList(List<dynamic>? raw) {
     if (raw == null) return PermissionSet(const []);
@@ -46,14 +46,15 @@ class PermissionSet {
   final Set<String> _keys;
 
   /// Same as FE: `module.action` name or module+action pair.
-  bool has(String module, String action) =>
-      _keys.contains('$module.$action');
+  bool has(String module, String action) => _keys.contains('$module.$action');
 
   bool get canViewDailySales => has('sales', 'daily_sales');
   bool get canAccessPos => has('pos', 'view') || has('pos', 'create');
   bool get canViewCustomers => has('customers', 'view');
   bool get canCreateCustomers => has('customers', 'create');
   bool get canUpdateCustomers => has('customers', 'update');
+  bool get canViewDebtManagement => has('debt_management', 'view');
+  bool get canUpdateDebtManagement => has('debt_management', 'update');
   bool get canViewSales => has('sales', 'view');
   bool get canRefundSales => has('sales', 'refund');
 

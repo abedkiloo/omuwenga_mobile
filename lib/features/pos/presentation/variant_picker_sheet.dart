@@ -28,10 +28,8 @@ Future<VariantPickResult?> showVariantPickerSheet({
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (context) => _VariantPickerSheet(
-      product: product,
-      loadVariants: loadVariants,
-    ),
+    builder: (context) =>
+        _VariantPickerSheet(product: product, loadVariants: loadVariants),
   );
 }
 
@@ -71,7 +69,12 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
     });
     try {
       final list = await widget.loadVariants();
-      final active = list.where((v) => v.isActive).toList();
+      final active = list
+          .where(
+            (v) =>
+                v.isActive && v.stockQuantity != null && v.stockQuantity! > 0,
+          )
+          .toList();
       if (!mounted) return;
       setState(() {
         _variants = active;
@@ -104,10 +107,8 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
   }
 
   bool get _canAdd {
-    if (_mode == VariantPickerMode.list || _mode == VariantPickerMode.none) {
-      return _selected != null;
-    }
-    return _selected != null;
+    final stock = _selected?.stockQuantity;
+    return _selected != null && stock != null && stock >= _qty;
   }
 
   @override
@@ -137,8 +138,8 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
                           ? 'Choose a variant'
                           : '${_selected!.displayLabel} · ${_selected!.effectivePrice.toStringAsFixed(2)}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.mutedForeground,
-                          ),
+                        color: AppColors.mutedForeground,
+                      ),
                     ),
                   ],
                 ),
@@ -163,7 +164,12 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
                     ),
                     IconButton(
                       key: const Key('variant_qty_inc'),
-                      onPressed: () => setState(() => _qty += 1),
+                      onPressed:
+                          _selected == null ||
+                              _selected!.stockQuantity == null ||
+                              _qty >= _selected!.stockQuantity!
+                          ? null
+                          : () => setState(() => _qty += 1),
                       icon: const Icon(Icons.add_circle_outline),
                     ),
                     const SizedBox(width: 12),
@@ -174,13 +180,13 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
                         onPressed: !_canAdd
                             ? null
                             : () => Navigator.pop(
-                                  context,
-                                  VariantPickResult(
-                                    product: widget.product,
-                                    variant: _selected!,
-                                    quantity: _qty,
-                                  ),
+                                context,
+                                VariantPickResult(
+                                  product: widget.product,
+                                  variant: _selected!,
+                                  quantity: _qty,
                                 ),
+                              ),
                       ),
                     ),
                   ],
@@ -198,14 +204,11 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_error != null) {
-      return ErrorState(
-        message: _error!,
-        onRetry: _load,
-      );
+      return ErrorState(message: _error!, onRetry: _load);
     }
     if (_variants.isEmpty) {
       return const Center(
-        child: Text('No active variants for this product.'),
+        child: Text('No in-stock variants for this product.'),
       );
     }
 
@@ -285,8 +288,8 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
                   key: Key('variant_color_${c.id}'),
                   label: Text(c.name),
                   selected: _colorId == c.id,
-                  onSelected: _mode == VariantPickerMode.sizeColor &&
-                          _sizeId == null
+                  onSelected:
+                      _mode == VariantPickerMode.sizeColor && _sizeId == null
                       ? null
                       : (_) {
                           setState(() => _colorId = c.id);

@@ -23,42 +23,44 @@ Map<String, dynamic> stop({
   String status = 'pending',
   String label = 'Gate',
   bool pod = false,
-}) =>
+}) => {
+  'id': id,
+  'sequence': id,
+  'status': status,
+  'customer_name': 'C',
+  'customer_phone': '07',
+  'site': {
+    'id': 1,
+    'label': label,
+    'latitude': '-1',
+    'longitude': '36',
+    'landmark': '',
+    'customer_phone': '0799',
+    'media': [],
+  },
+  'lines': [
     {
-      'id': id,
-      'sequence': id,
-      'status': status,
-      'customer_name': 'C',
-      'customer_phone': '07',
-      'site': {
-        'id': 1,
-        'label': label,
-        'latitude': '-1',
-        'longitude': '36',
-        'landmark': '',
-        'customer_phone': '0799',
-        'media': [],
-      },
-      'lines': [
-        {
-          'product_id': 1,
-          'product_name': 'A',
-          'ordered_quantity': '1',
-          'delivered_quantity': '0',
-          'returned_quantity': '0',
-        },
-      ],
-      'pod': pod ? {'is_complete': true} : null,
-      'next_stop_id': null,
-    };
+      'product_id': 1,
+      'product_name': 'A',
+      'ordered_quantity': '1',
+      'delivered_quantity': '0',
+      'returned_quantity': '0',
+    },
+  ],
+  'pod': pod ? {'is_complete': true} : null,
+  'next_stop_id': null,
+};
 
 DeliveryApi api(MockClient client) => DeliveryApi(
-      ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
-        tokenStore: InMemoryTokenStore(),
-        httpClient: client,
-      ),
-    );
+  ApiClient(
+    env: const AppEnv(
+      flavor: AppFlavor.dev,
+      apiBaseUrl: 'http://example.com/api',
+    ),
+    tokenStore: InMemoryTokenStore(),
+    httpClient: client,
+  ),
+);
 
 void main() {
   test('controller happy actions and load error', () async {
@@ -258,7 +260,9 @@ void main() {
     );
     addTearDown(container.dispose);
     await container.read(deliveryRouteProvider.notifier).load();
-    container.read(deliveryRouteProvider.notifier).setPodDraft(
+    container
+        .read(deliveryRouteProvider.notifier)
+        .setPodDraft(
           const PodDraft(
             hasSignature: true,
             hasPhoto: true,
@@ -310,7 +314,9 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('empty refresh, next CTA, clear pin, complete to route', (tester) async {
+  testWidgets('empty refresh, next CTA, clear pin, complete to route', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(400, 2400);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);

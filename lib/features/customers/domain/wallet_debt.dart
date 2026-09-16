@@ -13,7 +13,11 @@ CustomerStanding standingFromWallet(double? walletBalance) {
   return CustomerStanding.credit;
 }
 
-String standingLabel(CustomerStanding standing, {required double debtAmount, required double credit}) {
+String standingLabel(
+  CustomerStanding standing, {
+  required double debtAmount,
+  required double credit,
+}) {
   switch (standing) {
     case CustomerStanding.debt:
       return 'Owes ${debtAmount.toStringAsFixed(2)}';

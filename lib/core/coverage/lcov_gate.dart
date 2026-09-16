@@ -50,8 +50,7 @@ class CoverageOptions {
     );
   }
 
-  bool passes(CoverageSummary summary) =>
-      summary.percent + 1e-9 >= minPercent;
+  bool passes(CoverageSummary summary) => summary.percent + 1e-9 >= minPercent;
 }
 
 class LcovRecord {
@@ -118,7 +117,9 @@ List<LcovRecord> filterRecords(
     final path = _normalizeSource(record.sourceFile);
     for (final ex in excludeExact) {
       final normalizedEx = _normalizeSource(ex);
-      if (path == normalizedEx || path.endsWith('/$normalizedEx') || path.endsWith(normalizedEx)) {
+      if (path == normalizedEx ||
+          path.endsWith('/$normalizedEx') ||
+          path.endsWith(normalizedEx)) {
         return false;
       }
     }

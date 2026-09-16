@@ -19,7 +19,10 @@ class InMemoryTokenStore implements TokenStore {
   Future<String?> readRefresh() async => _refresh;
 
   @override
-  Future<void> writeTokens({required String access, required String refresh}) async {
+  Future<void> writeTokens({
+    required String access,
+    required String refresh,
+  }) async {
     _access = access;
     _refresh = refresh;
   }

@@ -52,7 +52,10 @@ class PaymentsApi {
     return _parse(res, 'Query failed');
   }
 
-  Future<Result<PaymentIntent>> _parse(Result responseResult, String label) async {
+  Future<Result<PaymentIntent>> _parse(
+    Result responseResult,
+    String label,
+  ) async {
     if (responseResult.isFailure) {
       return Failure((responseResult as Failure).error);
     }

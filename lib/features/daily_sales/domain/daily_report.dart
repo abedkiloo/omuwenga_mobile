@@ -81,7 +81,8 @@ class DailyOrder {
       customerId = (customer['id'] as num?)?.toInt();
       customerName = customer['name']?.toString();
     }
-    final status = tryParsePaymentStatus(json['payment_status']?.toString()) ??
+    final status =
+        tryParsePaymentStatus(json['payment_status']?.toString()) ??
         classifyPaymentStatus(
           total: _asDouble(json['total']) ?? 0,
           amountPaid: _asDouble(json['amount_paid']) ?? 0,

@@ -53,10 +53,7 @@ class _GoogleMapPinPickerState extends State<GoogleMapPinPicker> {
   }
 }
 
-MapPinPickerBuilder get googleMapPinPickerBuilder => (
-      context, {
-      required selected,
-      required onChanged,
-    }) {
+MapPinPickerBuilder get googleMapPinPickerBuilder =>
+    (context, {required selected, required onChanged}) {
       return GoogleMapPinPicker(selected: selected, onChanged: onChanged);
     };

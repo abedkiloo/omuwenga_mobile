@@ -53,12 +53,12 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
 
 final syncStatusProvider =
     StateNotifierProvider<SyncStatusController, SyncStatus>((ref) {
-  return SyncStatusController(
-    store: ref.watch(outboxStoreProvider),
-    connectivity: ref.watch(connectivityMonitorProvider),
-    engine: ref.watch(syncEngineProvider),
-  );
-});
+      return SyncStatusController(
+        store: ref.watch(outboxStoreProvider),
+        connectivity: ref.watch(connectivityMonitorProvider),
+        engine: ref.watch(syncEngineProvider),
+      );
+    });
 
 /// Test helper: memory outbox without Drift.
 OutboxStore memoryOutboxForTests() => MemoryOutboxStore();

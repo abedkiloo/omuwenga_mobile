@@ -7,8 +7,8 @@ import 'outbox_store.dart';
 
 class DriftOutboxStore implements OutboxStore {
   DriftOutboxStore(this._db, {ClientUuid? ids, DateTime Function()? clock})
-      : _ids = ids ?? ClientUuid(),
-        _clock = clock ?? DateTime.now;
+    : _ids = ids ?? ClientUuid(),
+      _clock = clock ?? DateTime.now;
 
   final AppDatabase _db;
   final ClientUuid _ids;
@@ -55,10 +55,11 @@ class DriftOutboxStore implements OutboxStore {
   @override
   Future<List<OutboxEntry>> listPending({DateTime? readyBefore}) async {
     final now = readyBefore ?? _clock().toUtc();
-    final rows = await (_db.select(_db.outboxItems)
-          ..where((t) => t.status.equals(OutboxStatus.pending.name))
-          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
-        .get();
+    final rows =
+        await (_db.select(_db.outboxItems)
+              ..where((t) => t.status.equals(OutboxStatus.pending.name))
+              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+            .get();
     return rows
         .map(_map)
         .where((e) => e.nextAttemptAt == null || !e.nextAttemptAt!.isAfter(now))
@@ -67,51 +68,53 @@ class DriftOutboxStore implements OutboxStore {
 
   @override
   Future<List<OutboxEntry>> listFailed() async {
-    final rows = await (_db.select(_db.outboxItems)
-          ..where((t) => t.status.equals(OutboxStatus.failed.name)))
-        .get();
+    final rows = await (_db.select(
+      _db.outboxItems,
+    )..where((t) => t.status.equals(OutboxStatus.failed.name))).get();
     return rows.map(_map).toList();
   }
 
   @override
   Future<int> pendingCount() async {
-    final rows = await (_db.select(_db.outboxItems)
-          ..where(
-            (t) =>
-                t.status.equals(OutboxStatus.pending.name) |
-                t.status.equals(OutboxStatus.inFlight.name),
-          ))
-        .get();
+    final rows =
+        await (_db.select(_db.outboxItems)..where(
+              (t) =>
+                  t.status.equals(OutboxStatus.pending.name) |
+                  t.status.equals(OutboxStatus.inFlight.name),
+            ))
+            .get();
     return rows.length;
   }
 
   @override
   Future<OutboxEntry?> findById(String id) async {
-    final row = await (_db.select(_db.outboxItems)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.outboxItems,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     return row == null ? null : _map(row);
   }
 
   Future<void> _update(String id, OutboxItemsCompanion companion) async {
-    await (_db.update(_db.outboxItems)..where((t) => t.id.equals(id)))
-        .write(companion);
+    await (_db.update(
+      _db.outboxItems,
+    )..where((t) => t.id.equals(id))).write(companion);
   }
 
   @override
   Future<void> markInFlight(String id) => _update(
-        id,
-        OutboxItemsCompanion(status: Value(OutboxStatus.inFlight.name)),
-      );
+    id,
+    OutboxItemsCompanion(status: Value(OutboxStatus.inFlight.name)),
+  );
 
   @override
   Future<void> markSynced(String id) => _update(
-        id,
-        OutboxItemsCompanion(
-          status: Value(OutboxStatus.synced.name),
-          lastError: const Value(null),
-          humanError: const Value(null),
-        ),
-      );
+    id,
+    OutboxItemsCompanion(
+      status: Value(OutboxStatus.synced.name),
+      lastError: const Value(null),
+      humanError: const Value(null),
+    ),
+  );
 
   @override
   Future<void> markRetry({
@@ -120,32 +123,30 @@ class DriftOutboxStore implements OutboxStore {
     required DateTime nextAttemptAt,
     required String lastError,
     required String humanError,
-  }) =>
-      _update(
-        id,
-        OutboxItemsCompanion(
-          status: Value(OutboxStatus.pending.name),
-          attemptCount: Value(attemptCount),
-          nextAttemptAt: Value(nextAttemptAt),
-          lastError: Value(lastError),
-          humanError: Value(humanError),
-        ),
-      );
+  }) => _update(
+    id,
+    OutboxItemsCompanion(
+      status: Value(OutboxStatus.pending.name),
+      attemptCount: Value(attemptCount),
+      nextAttemptAt: Value(nextAttemptAt),
+      lastError: Value(lastError),
+      humanError: Value(humanError),
+    ),
+  );
 
   @override
   Future<void> markFailed({
     required String id,
     required String lastError,
     required String humanError,
-  }) =>
-      _update(
-        id,
-        OutboxItemsCompanion(
-          status: Value(OutboxStatus.failed.name),
-          lastError: Value(lastError),
-          humanError: Value(humanError),
-        ),
-      );
+  }) => _update(
+    id,
+    OutboxItemsCompanion(
+      status: Value(OutboxStatus.failed.name),
+      lastError: Value(lastError),
+      humanError: Value(humanError),
+    ),
+  );
 
   @override
   Future<void> discard(String id) async {
@@ -154,15 +155,15 @@ class DriftOutboxStore implements OutboxStore {
 
   @override
   Future<void> requeue(String id) => _update(
-        id,
-        OutboxItemsCompanion(
-          status: Value(OutboxStatus.pending.name),
-          attemptCount: const Value(0),
-          nextAttemptAt: Value(_clock().toUtc()),
-          lastError: const Value(null),
-          humanError: const Value(null),
-        ),
-      );
+    id,
+    OutboxItemsCompanion(
+      status: Value(OutboxStatus.pending.name),
+      attemptCount: const Value(0),
+      nextAttemptAt: Value(_clock().toUtc()),
+      lastError: const Value(null),
+      humanError: const Value(null),
+    ),
+  );
 
   @override
   Stream<List<OutboxEntry>> watchActive() {

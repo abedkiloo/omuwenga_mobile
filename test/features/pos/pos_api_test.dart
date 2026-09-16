@@ -21,7 +21,10 @@ void main() {
   PosApi apiWith(MockClient client) {
     return PosApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: client,
       ),
@@ -144,7 +147,9 @@ void main() {
           );
         }
         return http.Response(
-          jsonEncode({'error': 'Insufficient stock for Cement 50kg. Available: 0'}),
+          jsonEncode({
+            'error': 'Insufficient stock for Cement 50kg. Available: 0',
+          }),
           400,
         );
       }),
@@ -155,7 +160,10 @@ void main() {
     );
     final ok = await api.createSale(
       cart: cart,
-      draft: const CheckoutDraft(method: PosPaymentMethod.cash, amountPaid: 150),
+      draft: const CheckoutDraft(
+        method: PosPaymentMethod.cash,
+        amountPaid: 150,
+      ),
       idempotencyKey: 'k1',
     );
     expect(ok.isSuccess, isTrue);
@@ -163,17 +171,21 @@ void main() {
 
     final bad = await api.createSale(
       cart: cart,
-      draft: const CheckoutDraft(method: PosPaymentMethod.cash, amountPaid: 150),
+      draft: const CheckoutDraft(
+        method: PosPaymentMethod.cash,
+        amountPaid: 150,
+      ),
       idempotencyKey: 'k2',
     );
     expect(bad.isFailure, isTrue);
-    expect(bad.when(success: (_) => '', failure: (e, _) => e.toString()), contains('Insufficient'));
+    expect(
+      bad.when(success: (_) => '', failure: (e, _) => e.toString()),
+      contains('Insufficient'),
+    );
   });
 
   test('loadSettings falls back safely', () async {
-    final api = apiWith(
-      MockClient((_) async => http.Response('nope', 500)),
-    );
+    final api = apiWith(MockClient((_) async => http.Response('nope', 500)));
     final settings = (await api.loadSettings()).getOrThrow();
     expect(settings.enabledPaymentMethods, isNotEmpty);
   });

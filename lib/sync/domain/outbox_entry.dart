@@ -1,9 +1,4 @@
-enum OutboxStatus {
-  pending,
-  inFlight,
-  synced,
-  failed,
-}
+enum OutboxStatus { pending, inFlight, synced, failed }
 
 /// One queued mutation waiting to reach the server.
 class OutboxEntry {

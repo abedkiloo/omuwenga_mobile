@@ -8,7 +8,9 @@ import '../../pos/domain/product_variant.dart';
 import '../data/field_orders_api.dart';
 import '../domain/field_order.dart';
 
-final pushNotifierProvider = Provider<PushNotifier>((ref) => FakePushNotifier());
+final pushNotifierProvider = Provider<PushNotifier>(
+  (ref) => FakePushNotifier(),
+);
 
 final fieldOrdersApiProvider = Provider<FieldOrdersApi>((ref) {
   return FieldOrdersApi(ref.watch(apiClientProvider));
@@ -47,7 +49,7 @@ class FieldOrderCartState {
 
 class FieldOrderCartController extends StateNotifier<FieldOrderCartState> {
   FieldOrderCartController(this._api, this._push)
-      : super(const FieldOrderCartState());
+    : super(const FieldOrderCartState());
 
   final FieldOrdersApi _api;
   final PushNotifier _push;
@@ -128,9 +130,12 @@ class FieldOrderCartController extends StateNotifier<FieldOrderCartState> {
 }
 
 final fieldOrderCartProvider =
-    StateNotifierProvider.autoDispose<FieldOrderCartController, FieldOrderCartState>(
-  (ref) => FieldOrderCartController(
-    ref.watch(fieldOrdersApiProvider),
-    ref.watch(pushNotifierProvider),
-  ),
-);
+    StateNotifierProvider.autoDispose<
+      FieldOrderCartController,
+      FieldOrderCartState
+    >(
+      (ref) => FieldOrderCartController(
+        ref.watch(fieldOrdersApiProvider),
+        ref.watch(pushNotifierProvider),
+      ),
+    );

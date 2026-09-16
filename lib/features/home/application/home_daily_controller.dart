@@ -26,11 +26,7 @@ class HomeDailySummary {
 }
 
 class HomeDailyState {
-  const HomeDailyState({
-    this.summary,
-    this.loading = false,
-    this.error,
-  });
+  const HomeDailyState({this.summary, this.loading = false, this.error});
 
   final HomeDailySummary? summary;
   final bool loading;
@@ -63,10 +59,10 @@ class HomeDailyController extends StateNotifier<HomeDailyState> {
     required DailySalesApi dailyApi,
     required SalesHistoryApi salesApi,
     required AuthSession? session,
-  })  : _dailyApi = dailyApi,
-        _salesApi = salesApi,
-        _session = session,
-        super(const HomeDailyState());
+  }) : _dailyApi = dailyApi,
+       _salesApi = salesApi,
+       _session = session,
+       super(const HomeDailyState());
 
   final DailySalesApi _dailyApi;
   final SalesHistoryApi _salesApi;
@@ -109,11 +105,7 @@ class HomeDailyController extends StateNotifier<HomeDailyState> {
       return;
     }
 
-    await _loadFromSalesHistory(
-      date: date,
-      showAll: showAll,
-      session: session,
-    );
+    await _loadFromSalesHistory(date: date, showAll: showAll, session: session);
   }
 
   Future<void> _loadFromSalesHistory({
@@ -198,14 +190,16 @@ DailySummary _summaryFromOrders(List<DailyOrder> orders) {
 }
 
 final homeDailyProvider =
-    StateNotifierProvider.autoDispose<HomeDailyController, HomeDailyState>((ref) {
-  final session = ref.watch(authControllerProvider).session;
-  final controller = HomeDailyController(
-    dailyApi: DailySalesApi(ref.watch(apiClientProvider)),
-    salesApi: SalesHistoryApi(ref.watch(apiClientProvider)),
-    session: session,
-  );
-  // ignore: discarded_futures
-  controller.load();
-  return controller;
-});
+    StateNotifierProvider.autoDispose<HomeDailyController, HomeDailyState>((
+      ref,
+    ) {
+      final session = ref.watch(authControllerProvider).session;
+      final controller = HomeDailyController(
+        dailyApi: DailySalesApi(ref.watch(apiClientProvider)),
+        salesApi: SalesHistoryApi(ref.watch(apiClientProvider)),
+        session: session,
+      );
+      // ignore: discarded_futures
+      controller.load();
+      return controller;
+    });

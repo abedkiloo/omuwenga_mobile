@@ -51,7 +51,7 @@ class DispatchQueueState {
 
 class DispatchQueueController extends StateNotifier<DispatchQueueState> {
   DispatchQueueController(this._api, this._push)
-      : super(const DispatchQueueState());
+    : super(const DispatchQueueState());
 
   final DispatchApi _api;
   final PushNotifier _push;
@@ -100,7 +100,10 @@ class DispatchQueueController extends StateNotifier<DispatchQueueState> {
       return false;
     }
     state = state.copyWith(acting: true, clearError: true);
-    final result = await _api.assign(orderId: orderId, deliveryDriverId: driverId);
+    final result = await _api.assign(
+      orderId: orderId,
+      deliveryDriverId: driverId,
+    );
     if (result.isFailure) {
       final f = result as Failure;
       state = state.copyWith(acting: false, error: f.error.toString());
@@ -118,9 +121,12 @@ class DispatchQueueController extends StateNotifier<DispatchQueueState> {
 }
 
 final dispatchQueueProvider =
-    StateNotifierProvider.autoDispose<DispatchQueueController, DispatchQueueState>(
-  (ref) => DispatchQueueController(
-    ref.watch(dispatchApiProvider),
-    ref.watch(pushNotifierProvider),
-  ),
-);
+    StateNotifierProvider.autoDispose<
+      DispatchQueueController,
+      DispatchQueueState
+    >(
+      (ref) => DispatchQueueController(
+        ref.watch(dispatchApiProvider),
+        ref.watch(pushNotifierProvider),
+      ),
+    );

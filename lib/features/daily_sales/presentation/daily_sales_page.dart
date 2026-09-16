@@ -38,8 +38,8 @@ class DailySalesPage extends ConsumerWidget {
                     onPressed: state.loading
                         ? null
                         : () => ref
-                            .read(dailySalesProvider.notifier)
-                            .goToPreviousDay(),
+                              .read(dailySalesProvider.notifier)
+                              .goToPreviousDay(),
                     icon: const Icon(Icons.chevron_left),
                   ),
                   Expanded(
@@ -54,8 +54,9 @@ class DailySalesPage extends ConsumerWidget {
                     key: const Key('daily_next_day'),
                     onPressed: state.loading
                         ? null
-                        : () =>
-                            ref.read(dailySalesProvider.notifier).goToNextDay(),
+                        : () => ref
+                              .read(dailySalesProvider.notifier)
+                              .goToNextDay(),
                     icon: const Icon(Icons.chevron_right),
                   ),
                 ],
@@ -115,11 +116,7 @@ class DailySalesPage extends ConsumerWidget {
     );
   }
 
-  Widget _body(
-    BuildContext context,
-    WidgetRef ref,
-    DailySalesState state,
-  ) {
+  Widget _body(BuildContext context, WidgetRef ref, DailySalesState state) {
     if (state.loading && state.report == null) {
       return const LoadingState(label: 'Loading daily sales…');
     }
@@ -157,9 +154,8 @@ class DailySalesPage extends ConsumerWidget {
             ].whereType<String>().join(' · '),
           ),
           trailing: Text(order.total.toStringAsFixed(2)),
-          onTap: () => context.push(
-            dailyOrderRoute(order, date: state.dateApi),
-          ),
+          onTap: () =>
+              context.push(dailyOrderRoute(order, date: state.dateApi)),
         );
       },
     );
@@ -209,9 +205,9 @@ class _SummaryStrip extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           'Paid ${summary.totalPaid.toStringAsFixed(2)} · Debt ${summary.totalDebtIncurred.toStringAsFixed(2)} · Collected ${summary.totalCollected.toStringAsFixed(2)}',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.mutedForeground,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
         ),
       ],
     );

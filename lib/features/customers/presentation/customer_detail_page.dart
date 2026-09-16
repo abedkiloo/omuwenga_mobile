@@ -35,19 +35,23 @@ class CustomerDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(customerDetailProvider(customerId));
     final auth = ref.watch(authControllerProvider);
-    final settings = ref.watch(customersSettingsProvider).maybeWhen(
+    final settings = ref
+        .watch(customersSettingsProvider)
+        .maybeWhen(
           data: (s) => s,
           orElse: () => const CustomersModuleSettings(),
         );
 
     final detail = state.detail;
-    final showSettle = detail != null &&
+    final showSettle =
+        detail != null &&
         canSettleCustomerDebt(
           auth: auth,
           settings: settings,
           debtAmount: detail.debtAmount,
         );
-    final canEdit = (auth.session?.permissions.canUpdateCustomers ?? false) &&
+    final canEdit =
+        (auth.session?.permissions.canUpdateCustomers ?? false) &&
         settings.enableCustomerEdit;
     final canVisit = auth.session?.permissions.canPlaceVisitOrders ?? false;
 
@@ -84,25 +88,21 @@ class CustomerDetailPage extends ConsumerWidget {
               canVisit: canVisit,
               debtAmount: detail.debtAmount,
               onVisit: () => context.go(AppRoutes.siteVisit),
-              onSettle: () =>
-                  context.push(AppRoutes.customerSettle(detail.id)),
+              onSettle: () => context.push(AppRoutes.customerSettle(detail.id)),
             ),
     );
   }
 
-  Widget _body(
-    BuildContext context,
-    WidgetRef ref,
-    CustomerDetailState state,
-  ) {
+  Widget _body(BuildContext context, WidgetRef ref, CustomerDetailState state) {
     if (state.loading && state.detail == null) {
       return const LoadingState(label: 'Loading customer…');
     }
     if (state.error != null && state.detail == null) {
       return ErrorState(
         message: state.error!,
-        onRetry: () =>
-            ref.read(customerDetailProvider(customerId).notifier).load(customerId),
+        onRetry: () => ref
+            .read(customerDetailProvider(customerId).notifier)
+            .load(customerId),
       );
     }
     final detail = state.detail;
@@ -131,9 +131,9 @@ class CustomerDetailPage extends ConsumerWidget {
           key: const Key('customer_standing_hero'),
           detail.standingHeadline,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: standingColor,
-                fontWeight: FontWeight.w700,
-              ),
+            color: standingColor,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: 12),
         _StandingGaugeCard(detail: detail),
@@ -232,7 +232,9 @@ class _ProfileCard extends StatelessWidget {
         .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) {
-      return parts.first.substring(0, parts.first.length.clamp(0, 2)).toUpperCase();
+      return parts.first
+          .substring(0, parts.first.length.clamp(0, 2))
+          .toUpperCase();
     }
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
@@ -342,11 +344,14 @@ class _ProfileCard extends StatelessWidget {
                   }
                   await Clipboard.setData(ClipboardData(text: phone));
                   if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Copied $phone')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Copied $phone')));
                 },
-                icon: const Icon(Icons.phone_outlined, color: AppColors.primary),
+                icon: const Icon(
+                  Icons.phone_outlined,
+                  color: AppColors.primary,
+                ),
               ),
             ],
           ),
@@ -366,7 +371,8 @@ class _StandingGaugeCard extends StatelessWidget {
     final theme = Theme.of(context);
     final debt = detail.debtAmount;
     final credit = detail.creditAmount;
-    final outstanding = detail.totalOutstanding ??
+    final outstanding =
+        detail.totalOutstanding ??
         detail.standingSummary?.totalOutstanding ??
         0;
     final incurred = detail.standingSummary?.totalDebtIncurred ?? 0;
@@ -516,17 +522,17 @@ class _MiniStat extends StatelessWidget {
         children: [
           Text(
             label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.mutedForeground,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: AppColors.mutedForeground),
           ),
           const SizedBox(height: 4),
           Text(
             value,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: valueColor,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: valueColor,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -717,35 +723,35 @@ class _LedgerRow extends StatelessWidget {
     final title = entry.saleNumber != null && entry.saleNumber!.isNotEmpty
         ? entry.saleNumber!
         : settlement
-            ? 'Payment #${entry.id}'
-            : 'Txn #${entry.id}';
+        ? 'Payment #${entry.id}'
+        : 'Txn #${entry.id}';
     final amount = settlement
         ? -(entry.paymentAmount ?? entry.amount)
         : (entry.debtAdded ?? entry.amount);
     final subtitle = entry.notes.isNotEmpty
         ? entry.notes
         : entry.reference.isNotEmpty
-            ? entry.reference
-            : settlement
-                ? 'Debt repayment'
-                : entry.sourceType.replaceAll('_', ' ');
+        ? entry.reference
+        : settlement
+        ? 'Debt repayment'
+        : entry.sourceType.replaceAll('_', ' ');
     final days = _ageDays(entry.createdAt);
     final statusLabel = settlement
         ? 'Cleared'
         : days == null
-            ? entry.sourceType
-            : days > 30
-                ? 'Overdue: $days Days'
-                : days > 14
-                    ? 'Pending: $days Days'
-                    : 'Current: $days Days';
+        ? entry.sourceType
+        : days > 30
+        ? 'Overdue: $days Days'
+        : days > 14
+        ? 'Pending: $days Days'
+        : 'Current: $days Days';
     final (statusBg, statusFg) = settlement
         ? (const Color(0xFFDCFCE7), AppColors.success)
         : days != null && days > 30
-            ? (const Color(0xFFFEE2E2), AppColors.destructive)
-            : days != null && days > 14
-                ? (const Color(0xFFFEF3C7), AppColors.warning)
-                : (AppColors.accentSoft, AppColors.primary);
+        ? (const Color(0xFFFEE2E2), AppColors.destructive)
+        : days != null && days > 14
+        ? (const Color(0xFFFEF3C7), AppColors.warning)
+        : (AppColors.accentSoft, AppColors.primary);
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -837,19 +843,19 @@ class _OrderDebtRow extends StatelessWidget {
     final statusLabel = !unpaid
         ? 'Paid'
         : days == null
-            ? order.paymentStatus
-            : days > 30
-                ? 'Overdue: $days Days'
-                : days > 14
-                    ? 'Pending: $days Days'
-                    : 'Current: $days Days';
+        ? order.paymentStatus
+        : days > 30
+        ? 'Overdue: $days Days'
+        : days > 14
+        ? 'Pending: $days Days'
+        : 'Current: $days Days';
     final (statusBg, statusFg) = !unpaid
         ? (const Color(0xFFDCFCE7), AppColors.success)
         : days != null && days > 30
-            ? (const Color(0xFFFEE2E2), AppColors.destructive)
-            : days != null && days > 14
-                ? (const Color(0xFFFEF3C7), AppColors.warning)
-                : (AppColors.accentSoft, AppColors.primary);
+        ? (const Color(0xFFFEE2E2), AppColors.destructive)
+        : days != null && days > 14
+        ? (const Color(0xFFFEF3C7), AppColors.warning)
+        : (AppColors.accentSoft, AppColors.primary);
 
     return Container(
       padding: const EdgeInsets.all(12),

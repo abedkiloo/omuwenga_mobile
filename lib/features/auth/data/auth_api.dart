@@ -9,11 +9,9 @@ import '../domain/auth_session.dart';
 
 class AuthApi {
   // ignore: prefer_initializing_formals
-  AuthApi({
-    required ApiClient client,
-    required TokenStore tokenStore,
-  })  : _client = client,
-        _tokenStore = tokenStore;
+  AuthApi({required ApiClient client, required TokenStore tokenStore})
+    : _client = client,
+      _tokenStore = tokenStore;
 
   final ApiClient _client;
   final TokenStore _tokenStore;
@@ -45,7 +43,10 @@ class AuthApi {
     }
     final access = data['access']?.toString();
     final refresh = data['refresh']?.toString();
-    if (access == null || refresh == null || access.isEmpty || refresh.isEmpty) {
+    if (access == null ||
+        refresh == null ||
+        access.isEmpty ||
+        refresh.isEmpty) {
       return Failure(AuthFailure.server('Login response missing tokens.'));
     }
     await _tokenStore.writeTokens(access: access, refresh: refresh);
@@ -75,10 +76,7 @@ class AuthApi {
   Future<Result<void>> logout() async {
     final refresh = await _tokenStore.readRefresh();
     if (refresh != null && refresh.isNotEmpty) {
-      await _client.post(
-        'accounts/auth/logout/',
-        body: {'refresh': refresh},
-      );
+      await _client.post('accounts/auth/logout/', body: {'refresh': refresh});
     }
     await _tokenStore.clear();
     return const Success(null);
@@ -112,13 +110,18 @@ class AuthApi {
 class AuthFailure implements Exception {
   AuthFailure._(this.message, {this.code = 'unknown'});
 
-  factory AuthFailure.invalidCredentials() =>
-      AuthFailure._('Invalid username or password.', code: 'invalid_credentials');
+  factory AuthFailure.invalidCredentials() => AuthFailure._(
+    'Invalid username or password.',
+    code: 'invalid_credentials',
+  );
 
-  factory AuthFailure.sessionExpired() =>
-      AuthFailure._('Session expired. Please sign in again.', code: 'session_expired');
+  factory AuthFailure.sessionExpired() => AuthFailure._(
+    'Session expired. Please sign in again.',
+    code: 'session_expired',
+  );
 
-  factory AuthFailure.server(String message) => AuthFailure._(message, code: 'server');
+  factory AuthFailure.server(String message) =>
+      AuthFailure._(message, code: 'server');
 
   final String message;
   final String code;

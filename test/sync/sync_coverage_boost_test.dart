@@ -18,13 +18,22 @@ import 'package:http/testing.dart';
 
 void main() {
   test('humanize remaining branches', () {
-    expect(humanizeSyncError(statusCode: 404, error: 'x'), contains('no longer'));
-    expect(humanizeSyncError(statusCode: 422, error: 'x'), contains('rejected'));
+    expect(
+      humanizeSyncError(statusCode: 404, error: 'x'),
+      contains('no longer'),
+    );
+    expect(
+      humanizeSyncError(statusCode: 422, error: 'x'),
+      contains('rejected'),
+    );
     expect(
       humanizeSyncError(statusCode: null, error: Exception('TimeoutException')),
       contains('timed out'),
     );
-    expect(humanizeSyncError(statusCode: null, error: 'other'), contains('Could not sync'));
+    expect(
+      humanizeSyncError(statusCode: null, error: 'other'),
+      contains('Could not sync'),
+    );
   });
 
   test('apiOutboxSender methods and unsupported', () async {
@@ -32,7 +41,10 @@ void main() {
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final methods = <String>[];
     final client = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((request) async {
         methods.add(request.method);
@@ -42,16 +54,16 @@ void main() {
     );
     final sender = apiOutboxSender(client);
     OutboxEntry entry(String method, {String body = '{}'}) => OutboxEntry(
-          id: '1',
-          clientResourceId: 'c',
-          idempotencyKey: 'ik',
-          method: method,
-          path: 'sales/',
-          bodyJson: body,
-          status: OutboxStatus.pending,
-          attemptCount: 0,
-          createdAt: DateTime.utc(2026),
-        );
+      id: '1',
+      clientResourceId: 'c',
+      idempotencyKey: 'ik',
+      method: method,
+      path: 'sales/',
+      bodyJson: body,
+      status: OutboxStatus.pending,
+      attemptCount: 0,
+      createdAt: DateTime.utc(2026),
+    );
 
     expect((await sender(entry('POST'))).isSuccess, isTrue);
     expect((await sender(entry('PUT'))).isSuccess, isTrue);
@@ -91,7 +103,10 @@ void main() {
       overrides: [
         tokenStoreProvider.overrideWithValue(InMemoryTokenStore()),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
         httpClientProvider.overrideWithValue(
           MockClient((_) async => http.Response('{}', 200)),
@@ -114,7 +129,10 @@ void main() {
       overrides: [
         tokenStoreProvider.overrideWithValue(InMemoryTokenStore()),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
         httpClientProvider.overrideWithValue(
           MockClient((_) async => http.Response('{}', 200)),
@@ -130,7 +148,10 @@ void main() {
   test('drift markRetry respects nextAttemptAt', () async {
     final db = AppDatabase.memory();
     addTearDown(db.close);
-    final store = DriftOutboxStore(db, clock: () => DateTime.utc(2026, 1, 1, 12));
+    final store = DriftOutboxStore(
+      db,
+      clock: () => DateTime.utc(2026, 1, 1, 12),
+    );
     final e = await store.enqueue(
       const EnqueueMutation(method: 'POST', path: 'x/', bodyJson: '{"a":1}'),
     );
@@ -141,8 +162,14 @@ void main() {
       lastError: 'x',
       humanError: 'Will retry',
     );
-    expect(await store.listPending(readyBefore: DateTime.utc(2026, 1, 1, 12)), isEmpty);
-    expect(await store.listPending(readyBefore: DateTime.utc(2026, 1, 1, 14)), hasLength(1));
+    expect(
+      await store.listPending(readyBefore: DateTime.utc(2026, 1, 1, 12)),
+      isEmpty,
+    );
+    expect(
+      await store.listPending(readyBefore: DateTime.utc(2026, 1, 1, 14)),
+      hasLength(1),
+    );
   });
 
   test('pii key reuse and clear', () async {

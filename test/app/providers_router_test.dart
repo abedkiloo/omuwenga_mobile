@@ -20,7 +20,10 @@ void main() {
       overrides: [
         tokenStoreProvider.overrideWithValue(InMemoryTokenStore()),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.staging, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.staging,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
       ],
     );
@@ -35,9 +38,7 @@ void main() {
 
   test('default providers dispose closes api client', () {
     final container = ProviderContainer(
-      overrides: [
-        tokenStoreProvider.overrideWithValue(InMemoryTokenStore()),
-      ],
+      overrides: [tokenStoreProvider.overrideWithValue(InMemoryTokenStore())],
     );
     final client = container.read(apiClientProvider);
     expect(client.baseUrl, isNotEmpty);
@@ -66,7 +67,10 @@ void main() {
   testWidgets('navigates to health route', (tester) async {
     final tokens = InMemoryTokenStore();
     final api = ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: MockClient((_) async => http.Response('ok', 200)),
     );
@@ -82,7 +86,10 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(tokens),
           appEnvProvider.overrideWithValue(
-            const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+            const AppEnv(
+              flavor: AppFlavor.dev,
+              apiBaseUrl: 'http://example.com/api',
+            ),
           ),
           apiClientProvider.overrideWithValue(api),
         ],

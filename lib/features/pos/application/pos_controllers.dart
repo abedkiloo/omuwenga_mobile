@@ -19,10 +19,7 @@ final posApiProvider = Provider<PosApi>((ref) {
 
 final posSettingsProvider = FutureProvider<PosSettings>((ref) async {
   final result = await ref.watch(posApiProvider).loadSettings();
-  return result.when(
-    success: (s) => s,
-    failure: (_, _) => const PosSettings(),
-  );
+  return result.when(success: (s) => s, failure: (_, _) => const PosSettings());
 });
 
 class CartController extends StateNotifier<PosCart> {
@@ -57,8 +54,9 @@ class CartController extends StateNotifier<PosCart> {
   }
 }
 
-final cartControllerProvider =
-    StateNotifierProvider<CartController, PosCart>((ref) => CartController());
+final cartControllerProvider = StateNotifierProvider<CartController, PosCart>(
+  (ref) => CartController(),
+);
 
 enum CheckoutPhase { idle, submitting, success, queued, error }
 
@@ -102,12 +100,12 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     required ConnectivityMonitor connectivity,
     required Ref ref,
     ClientUuid? ids,
-  })  : _api = api,
-        _outbox = outbox,
-        _connectivity = connectivity,
-        _ref = ref,
-        _ids = ids ?? ClientUuid(),
-        super(const CheckoutState());
+  }) : _api = api,
+       _outbox = outbox,
+       _connectivity = connectivity,
+       _ref = ref,
+       _ids = ids ?? ClientUuid(),
+       super(const CheckoutState());
 
   final PosApi _api;
   final OutboxStore _outbox;
@@ -121,10 +119,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
   Future<bool> submit() async {
     final cart = _ref.read(cartControllerProvider);
-    final settings = _ref.read(posSettingsProvider).maybeWhen(
-          data: (s) => s,
-          orElse: () => const PosSettings(),
-        );
+    final settings = _ref
+        .read(posSettingsProvider)
+        .maybeWhen(data: (s) => s, orElse: () => const PosSettings());
     final reason = validateCheckout(
       cart: cart,
       settings: settings,
@@ -171,6 +168,11 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         change: (state.draft.amountPaid - cart.total).clamp(0, double.infinity),
         items: cart.lines,
         customerName: cart.customerName,
+        subtotal: cart.subtotal,
+        taxAmount: cart.taxAmount,
+        discountAmount: cart.discountAmount,
+        paymentReference: state.draft.paymentReference,
+        createdAt: DateTime.now(),
         queuedOffline: true,
       );
       state = state.copyWith(phase: CheckoutPhase.queued, receipt: queued);
@@ -210,10 +212,10 @@ class CheckoutController extends StateNotifier<CheckoutState> {
 
 final checkoutControllerProvider =
     StateNotifierProvider<CheckoutController, CheckoutState>((ref) {
-  return CheckoutController(
-    api: ref.watch(posApiProvider),
-    outbox: ref.watch(outboxStoreProvider),
-    connectivity: ref.watch(connectivityMonitorProvider),
-    ref: ref,
-  );
-});
+      return CheckoutController(
+        api: ref.watch(posApiProvider),
+        outbox: ref.watch(outboxStoreProvider),
+        connectivity: ref.watch(connectivityMonitorProvider),
+        ref: ref,
+      );
+    });

@@ -4,6 +4,7 @@ import 'permission_set.dart';
 enum AppPersona {
   cashier,
   manager,
+
   /// Super admin uses manager-style attention home on mobile.
   admin,
   dispatcher,
@@ -53,7 +54,9 @@ AppPersona resolvePersona({
   if (isSuperuser || profile.isSuperAdmin) {
     return AppPersona.admin;
   }
-  if (profile.isManager || profile.role == 'manager' || profile.role == 'admin') {
+  if (profile.isManager ||
+      profile.role == 'manager' ||
+      profile.role == 'admin') {
     return AppPersona.manager;
   }
   if (permissions.canDispatch &&

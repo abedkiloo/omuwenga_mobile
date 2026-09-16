@@ -3,11 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 
 class CbSectionLabel extends StatelessWidget {
-  const CbSectionLabel({
-    super.key,
-    required this.label,
-    this.icon,
-  });
+  const CbSectionLabel({super.key, required this.label, this.icon});
 
   final String label;
   final IconData? icon;
@@ -23,10 +19,10 @@ class CbSectionLabel extends StatelessWidget {
         Text(
           label.toUpperCase(),
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppColors.mutedForeground,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.6,
-              ),
+            color: AppColors.mutedForeground,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+          ),
         ),
       ],
     );

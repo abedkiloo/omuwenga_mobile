@@ -56,7 +56,8 @@ class CustomersApi {
     }
     return Success([
       for (final item in list)
-        if (item is Map) CustomerSummary.fromJson(Map<String, dynamic>.from(item)),
+        if (item is Map)
+          CustomerSummary.fromJson(Map<String, dynamic>.from(item)),
     ]);
   }
 
@@ -74,16 +75,24 @@ class CustomersApi {
     if (decoded is! Map) {
       return Failure(CustomersApiException('Unexpected customer detail.'));
     }
-    return Success(CustomerDetail.fromDetailJson(Map<String, dynamic>.from(decoded)));
+    return Success(
+      CustomerDetail.fromDetailJson(Map<String, dynamic>.from(decoded)),
+    );
   }
 
   Future<Result<CustomerSummary>> create(CustomerDraft draft) async {
-    final response = await _client.post('sales/customers/', body: draft.toJson());
+    final response = await _client.post(
+      'sales/customers/',
+      body: draft.toJson(),
+    );
     return _parseCustomerWrite(response);
   }
 
   Future<Result<CustomerSummary>> update(int id, CustomerDraft draft) async {
-    final response = await _client.put('sales/customers/$id/', body: draft.toJson());
+    final response = await _client.put(
+      'sales/customers/$id/',
+      body: draft.toJson(),
+    );
     return _parseCustomerWrite(response);
   }
 
@@ -102,7 +111,9 @@ class CustomersApi {
     if (decoded is! Map) {
       return Failure(CustomersApiException('Unexpected customer response.'));
     }
-    return Success(CustomerSummary.fromJson(Map<String, dynamic>.from(decoded)));
+    return Success(
+      CustomerSummary.fromJson(Map<String, dynamic>.from(decoded)),
+    );
   }
 
   Future<Result<ReceiveWalletPaymentResult>> receiveWalletPayment({

@@ -21,7 +21,10 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(InMemoryTokenStore()),
           appEnvProvider.overrideWithValue(
-            const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+            const AppEnv(
+              flavor: AppFlavor.dev,
+              apiBaseUrl: 'http://example.com/api',
+            ),
           ),
         ],
         child: const MaterialApp(home: LoginPage()),
@@ -37,9 +40,15 @@ void main() {
     final router = GoRouter(
       initialLocation: AppRoutes.home,
       routes: [
-        GoRoute(path: AppRoutes.home, builder: (_, _) => const PersonaHomePage()),
+        GoRoute(
+          path: AppRoutes.home,
+          builder: (_, _) => const PersonaHomePage(),
+        ),
         GoRoute(path: AppRoutes.pos, builder: (_, _) => const Text('pos')),
-        GoRoute(path: AppRoutes.customers, builder: (_, _) => const Text('customers')),
+        GoRoute(
+          path: AppRoutes.customers,
+          builder: (_, _) => const Text('customers'),
+        ),
       ],
     );
     await tester.pumpWidget(
@@ -53,14 +62,25 @@ void main() {
     expect(find.text('Start New Sale'), findsOneWidget);
   });
 
-  testWidgets('manager home shows daily sales only when permitted', (tester) async {
+  testWidgets('manager home shows daily sales only when permitted', (
+    tester,
+  ) async {
     Future<void> pumpManager(AuthSession session) async {
       final router = GoRouter(
         initialLocation: AppRoutes.home,
         routes: [
-          GoRoute(path: AppRoutes.home, builder: (_, _) => const PersonaHomePage()),
-          GoRoute(path: AppRoutes.customers, builder: (_, _) => const Text('customers')),
-          GoRoute(path: AppRoutes.dailySales, builder: (_, _) => const Text('daily')),
+          GoRoute(
+            path: AppRoutes.home,
+            builder: (_, _) => const PersonaHomePage(),
+          ),
+          GoRoute(
+            path: AppRoutes.customers,
+            builder: (_, _) => const Text('customers'),
+          ),
+          GoRoute(
+            path: AppRoutes.dailySales,
+            builder: (_, _) => const Text('daily'),
+          ),
         ],
       );
       await tester.pumpWidget(
@@ -78,12 +98,17 @@ void main() {
     expect(find.byKey(const Key('home_daily_sales')), findsNothing);
 
     await pumpManager(managerSession(dailySales: true));
-    expect(managerSession(dailySales: true).permissions.canViewDailySales, isTrue);
+    expect(
+      managerSession(dailySales: true).permissions.canViewDailySales,
+      isTrue,
+    );
     expect(find.text('Full daily sales'), findsOneWidget);
     expect(find.byKey(const Key('home_daily_sales')), findsOneWidget);
   });
 
-  testWidgets('More page hides daily sales without permission and logs out', (tester) async {
+  testWidgets('More page hides daily sales without permission and logs out', (
+    tester,
+  ) async {
     final tokens = InMemoryTokenStore();
     await tokens.writeTokens(access: 'a', refresh: 'r');
     await tester.pumpWidget(
@@ -118,8 +143,14 @@ void main() {
         ShellRoute(
           builder: (context, state, child) => StoreShellPage(child: child),
           routes: [
-            GoRoute(path: AppRoutes.home, builder: (_, _) => const Text('home-body')),
-            GoRoute(path: AppRoutes.more, builder: (_, _) => const Text('more-body')),
+            GoRoute(
+              path: AppRoutes.home,
+              builder: (_, _) => const Text('home-body'),
+            ),
+            GoRoute(
+              path: AppRoutes.more,
+              builder: (_, _) => const Text('more-body'),
+            ),
           ],
         ),
       ],

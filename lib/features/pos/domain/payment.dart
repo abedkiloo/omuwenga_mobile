@@ -69,8 +69,9 @@ class PosSettings {
       requireCustomer: requireCustomer,
       showTax: showTax,
       showDiscount: showDiscount,
-      enabledPaymentMethods:
-          methods.isEmpty ? const PosSettings().enabledPaymentMethods : methods,
+      enabledPaymentMethods: methods.isEmpty
+          ? const PosSettings().enabledPaymentMethods
+          : methods,
     );
   }
 }
@@ -113,5 +114,4 @@ bool canSubmitCheckout({
   required PosCart cart,
   required PosSettings settings,
   required CheckoutDraft draft,
-}) =>
-    validateCheckout(cart: cart, settings: settings, draft: draft) == null;
+}) => validateCheckout(cart: cart, settings: settings, draft: draft) == null;

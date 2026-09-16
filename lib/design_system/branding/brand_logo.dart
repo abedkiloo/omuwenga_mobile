@@ -4,11 +4,7 @@ import '../../core/branding/brand_assets.dart';
 
 /// Hero / splash brand mark — one composition, brand first.
 class BrandLogo extends StatelessWidget {
-  const BrandLogo({
-    super.key,
-    this.height = 160,
-    this.showTagline = false,
-  });
+  const BrandLogo({super.key, this.height = 160, this.showTagline = false});
 
   final double height;
   final bool showTagline;
@@ -31,9 +27,9 @@ class BrandLogo extends StatelessWidget {
             BrandAssets.tagline,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontStyle: FontStyle.italic,
-                  color: const Color(0xFF5B2C8A),
-                ),
+              fontStyle: FontStyle.italic,
+              color: const Color(0xFF5B2C8A),
+            ),
           ),
         ],
       ],

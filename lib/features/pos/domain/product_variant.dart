@@ -56,7 +56,8 @@ class ProductVariant {
     return ProductVariant(
       id: (json['id'] as num).toInt(),
       productId: productId,
-      effectivePrice: asDouble(
+      effectivePrice:
+          asDouble(
             json['effective_price'] ?? json['selling_price'] ?? json['price'],
           ) ??
           0,
@@ -81,9 +82,15 @@ bool hasHeterogeneousVariantAttributes(List<ProductVariant> active) {
   final withSize = active.where(_usesSize).length;
   final withColor = active.where(_usesColor).length;
   final withBoth = active.where((v) => _usesSize(v) && _usesColor(v)).length;
-  final withColorOnly = active.where((v) => !_usesSize(v) && _usesColor(v)).length;
-  final withSizeOnly = active.where((v) => _usesSize(v) && !_usesColor(v)).length;
-  final withNeither = active.where((v) => !_usesSize(v) && !_usesColor(v)).length;
+  final withColorOnly = active
+      .where((v) => !_usesSize(v) && _usesColor(v))
+      .length;
+  final withSizeOnly = active
+      .where((v) => _usesSize(v) && !_usesColor(v))
+      .length;
+  final withNeither = active
+      .where((v) => !_usesSize(v) && !_usesColor(v))
+      .length;
 
   if (withBoth > 0 && (withColorOnly > 0 || withSizeOnly > 0)) return true;
   if (withSize > 0 && withSize < active.length) return true;
@@ -120,7 +127,9 @@ List<VariantAttributeOption> pickerSizes(List<ProductVariant> active) {
     if (id == null || byId.containsKey(id)) continue;
     byId[id] = VariantAttributeOption(
       id: id,
-      name: (v.sizeName != null && v.sizeName!.isNotEmpty) ? v.sizeName! : 'Size #$id',
+      name: (v.sizeName != null && v.sizeName!.isNotEmpty)
+          ? v.sizeName!
+          : 'Size #$id',
     );
   }
   return byId.values.toList();

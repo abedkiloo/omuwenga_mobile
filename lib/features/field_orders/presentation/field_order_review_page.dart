@@ -65,14 +65,18 @@ class FieldOrderReviewPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text(cart.siteLabel.isEmpty ? 'Site #${cart.siteId}' : cart.siteLabel),
+          Text(
+            cart.siteLabel.isEmpty ? 'Site #${cart.siteId}' : cart.siteLabel,
+          ),
           const SizedBox(height: 16),
           Text('Lines', style: Theme.of(context).textTheme.titleMedium),
           for (final line in cart.lines)
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(line.displayName),
-              subtitle: Text('${line.quantity} × ${line.unitPrice.toStringAsFixed(2)}'),
+              subtitle: Text(
+                '${line.quantity} × ${line.unitPrice.toStringAsFixed(2)}',
+              ),
               trailing: Text(line.lineTotal.toStringAsFixed(2)),
             ),
           if (state.error != null)
@@ -164,8 +168,9 @@ class _FieldOrderCartPageState extends ConsumerState<FieldOrderCartPage> {
         context: context,
         product: product,
         loadVariants: () async {
-          final result =
-              await ref.read(posApiProvider).fetchVariants(product.id);
+          final result = await ref
+              .read(posApiProvider)
+              .fetchVariants(product.id);
           return result.when(
             success: (list) => list,
             failure: (e, _) => throw e,
@@ -173,11 +178,9 @@ class _FieldOrderCartPageState extends ConsumerState<FieldOrderCartPage> {
         },
       );
       if (!mounted || pick == null) return;
-      ref.read(fieldOrderCartProvider.notifier).addProduct(
-            pick.product,
-            variant: pick.variant,
-            qty: pick.quantity,
-          );
+      ref
+          .read(fieldOrderCartProvider.notifier)
+          .addProduct(pick.product, variant: pick.variant, qty: pick.quantity);
     } else {
       ref.read(fieldOrderCartProvider.notifier).addProduct(product);
     }
@@ -262,30 +265,29 @@ class _FieldOrderCartPageState extends ConsumerState<FieldOrderCartPage> {
                     },
                   )
                 : cart.lines.isEmpty
-                    ? EmptyState(
-                        key: const Key('fo_empty_cart'),
-                        title: 'No products yet',
-                        message:
-                            'Search the catalog and tap a product to add it.',
-                        primaryLabel: 'Focus search',
-                        onPrimary: () {},
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                        itemCount: cart.lines.length,
-                        separatorBuilder: (_, _) => const Divider(height: 1),
-                        itemBuilder: (context, i) {
-                          final line = cart.lines[i];
-                          return ListTile(
-                            key: Key('fo_line_${line.lineKey}'),
-                            title: Text(line.displayName),
-                            subtitle: Text(
-                              '${line.quantity} × ${line.unitPrice.toStringAsFixed(2)}',
-                            ),
-                            trailing: Text(line.lineTotal.toStringAsFixed(2)),
-                          );
-                        },
-                      ),
+                ? EmptyState(
+                    key: const Key('fo_empty_cart'),
+                    title: 'No products yet',
+                    message: 'Search the catalog and tap a product to add it.',
+                    primaryLabel: 'Focus search',
+                    onPrimary: () {},
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    itemCount: cart.lines.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, i) {
+                      final line = cart.lines[i];
+                      return ListTile(
+                        key: Key('fo_line_${line.lineKey}'),
+                        title: Text(line.displayName),
+                        subtitle: Text(
+                          '${line.quantity} × ${line.unitPrice.toStringAsFixed(2)}',
+                        ),
+                        trailing: Text(line.lineTotal.toStringAsFixed(2)),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -298,10 +300,10 @@ class _FieldOrderCartPageState extends ConsumerState<FieldOrderCartPage> {
             onPressed: cart.lines.isEmpty
                 ? null
                 : () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const FieldOrderReviewPage(),
-                      ),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const FieldOrderReviewPage(),
                     ),
+                  ),
           ),
         ),
       ),

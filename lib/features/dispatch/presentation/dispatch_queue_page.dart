@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../design_system/buttons/cb_primary_button.dart';
 import '../../../design_system/chrome/cb_status_pill.dart';
 import '../../../design_system/chrome/cb_sticky_action_bar.dart';
 import '../../../design_system/chrome/cb_surface_card.dart';
@@ -53,70 +52,66 @@ class _DispatchQueuePageState extends ConsumerState<DispatchQueuePage> {
       body: state.loading && state.orders.isEmpty
           ? const LoadingState(label: 'Loading queue…')
           : state.error != null && state.orders.isEmpty
-              ? ErrorState(
-                  message: state.error!,
-                  onRetry: () => ref.read(dispatchQueueProvider.notifier).load(),
-                )
-              : state.orders.isEmpty
-                  ? EmptyState(
-                      title: 'Queue clear',
-                      message: 'No visit orders waiting to be packed.',
-                      primaryLabel: 'Refresh',
-                      onPrimary: () =>
-                          ref.read(dispatchQueueProvider.notifier).load(),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: state.orders.length,
-                      itemBuilder: (context, i) {
-                        final order = state.orders[i];
-                        final qty = order.lines.fold<double>(
-                          0,
-                          (sum, l) => sum + l.quantity,
-                        );
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: CbSurfaceCard(
-                            key: Key('dispatch_order_${order.id}'),
-                            padding: const EdgeInsets.all(14),
-                            onTap: () =>
-                                context.push(AppRoutes.dispatchOrder(order.id)),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        order.customerName?.isNotEmpty == true
-                                            ? order.customerName!
-                                            : 'Order #${order.id}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall
-                                            ?.copyWith(fontWeight: FontWeight.w600),
-                                      ),
-                                    ),
-                                    CbStatusPill(
-                                      label: order.status.name,
-                                      variant: _dispatchStatusVariant(order.status),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  '#${order.id} · ${order.lines.length} lines · '
-                                  'qty ${qty.toStringAsFixed(0)}',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: AppColors.mutedForeground,
-                                      ),
-                                ),
-                              ],
+          ? ErrorState(
+              message: state.error!,
+              onRetry: () => ref.read(dispatchQueueProvider.notifier).load(),
+            )
+          : state.orders.isEmpty
+          ? EmptyState(
+              title: 'Queue clear',
+              message: 'No visit orders waiting to be packed.',
+              primaryLabel: 'Refresh',
+              onPrimary: () => ref.read(dispatchQueueProvider.notifier).load(),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: state.orders.length,
+              itemBuilder: (context, i) {
+                final order = state.orders[i];
+                final qty = order.lines.fold<double>(
+                  0,
+                  (sum, l) => sum + l.quantity,
+                );
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: CbSurfaceCard(
+                    key: Key('dispatch_order_${order.id}'),
+                    padding: const EdgeInsets.all(14),
+                    onTap: () =>
+                        context.push(AppRoutes.dispatchOrder(order.id)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                order.customerName?.isNotEmpty == true
+                                    ? order.customerName!
+                                    : 'Order #${order.id}',
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                            CbStatusPill(
+                              label: order.status.name,
+                              variant: _dispatchStatusVariant(order.status),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '#${order.id} · ${order.lines.length} lines · '
+                          'qty ${qty.toStringAsFixed(0)}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.mutedForeground),
+                        ),
+                      ],
                     ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
@@ -131,7 +126,8 @@ class DispatchOrderDetailPage extends ConsumerStatefulWidget {
       _DispatchOrderDetailPageState();
 }
 
-class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPage> {
+class _DispatchOrderDetailPageState
+    extends ConsumerState<DispatchOrderDetailPage> {
   @override
   void initState() {
     super.initState();
@@ -144,10 +140,13 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
   Widget build(BuildContext context) {
     final state = ref.watch(dispatchQueueProvider);
     final canPack =
-        ref.watch(authControllerProvider).session?.permissions.canUpdateDispatch ??
-            false;
-    final order =
-        state.orders.where((o) => o.id == widget.orderId).firstOrNull;
+        ref
+            .watch(authControllerProvider)
+            .session
+            ?.permissions
+            .canUpdateDispatch ??
+        false;
+    final order = state.orders.where((o) => o.id == widget.orderId).firstOrNull;
 
     if (order == null) {
       return Scaffold(
@@ -163,7 +162,8 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
       );
     }
 
-    final alreadyReady = order.stockAllocated ||
+    final alreadyReady =
+        order.stockAllocated ||
         order.status == FieldOrderStatus.ready ||
         order.status == FieldOrderStatus.outForDelivery;
 
@@ -192,7 +192,10 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
             ),
           ),
           const SizedBox(height: 16),
-          Text('Products to pack', style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            'Products to pack',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           for (final line in order.lines)
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -215,8 +218,9 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
                 DropdownMenuItem(value: 101, child: Text('Driver A (101)')),
                 DropdownMenuItem(value: 102, child: Text('Driver B (102)')),
               ],
-              onChanged: (v) =>
-                  ref.read(dispatchQueueProvider.notifier).selectDeliveryDriver(v),
+              onChanged: (v) => ref
+                  .read(dispatchQueueProvider.notifier)
+                  .selectDeliveryDriver(v),
             ),
           if (state.error != null)
             Padding(
@@ -242,8 +246,9 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
                         : 'Pack & mark ready for pickup',
                     onPressed: state.acting || alreadyReady
                         ? null
-                        : () =>
-                            ref.read(dispatchQueueProvider.notifier).pack(order.id),
+                        : () => ref
+                              .read(dispatchQueueProvider.notifier)
+                              .pack(order.id),
                   ),
                   const SizedBox(height: 8),
                   CbPrimaryButton(
@@ -251,8 +256,8 @@ class _DispatchOrderDetailPageState extends ConsumerState<DispatchOrderDetailPag
                     label: 'Assign delivery driver',
                     onPressed: state.canAssign
                         ? () => ref
-                            .read(dispatchQueueProvider.notifier)
-                            .assign(order.id)
+                              .read(dispatchQueueProvider.notifier)
+                              .assign(order.id)
                         : null,
                   ),
                 ],

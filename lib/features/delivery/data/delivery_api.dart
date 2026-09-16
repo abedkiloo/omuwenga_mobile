@@ -34,7 +34,10 @@ class DeliveryApi {
     }, 'Route failed');
   }
 
-  Future<Result<DeliveryStop>> retrieve(int id, {bool requirePod = true}) async {
+  Future<Result<DeliveryStop>> retrieve(
+    int id, {
+    bool requirePod = true,
+  }) async {
     final res = await _client.get('delivery/stops/$id/');
     return _parseStop(res, requirePod: requirePod);
   }
@@ -96,7 +99,9 @@ class DeliveryApi {
     if (res.isFailure) return Failure((res as Failure).error);
     final response = res.getOrThrow();
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      return Failure(DeliveryApiException('POD failed (${response.statusCode})'));
+      return Failure(
+        DeliveryApiException('POD failed (${response.statusCode})'),
+      );
     }
     return retrieve(id);
   }

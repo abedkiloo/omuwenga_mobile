@@ -15,7 +15,6 @@ import 'package:completebyte_pos_mobile/features/daily_sales/application/daily_s
 import 'package:completebyte_pos_mobile/features/daily_sales/data/daily_sales_api.dart';
 import 'package:completebyte_pos_mobile/features/daily_sales/presentation/customer_day_page.dart';
 import 'package:completebyte_pos_mobile/features/daily_sales/presentation/daily_sales_page.dart';
-import 'package:completebyte_pos_mobile/features/sales_history/domain/payment_status.dart';
 import 'package:completebyte_pos_mobile/sync/application/connectivity_monitor.dart';
 import 'package:completebyte_pos_mobile/sync/data/memory_outbox_store.dart';
 import 'package:completebyte_pos_mobile/sync/providers.dart';
@@ -30,7 +29,12 @@ import '../auth/auth_fixtures.dart';
 
 AuthSession _manager({required bool dailySales, bool refund = false}) {
   return AuthSession(
-    user: const AuthUser(id: 2, username: 'manager', firstName: 'Mo', lastName: 'Lead'),
+    user: const AuthUser(
+      id: 2,
+      username: 'manager',
+      firstName: 'Mo',
+      lastName: 'Lead',
+    ),
     profile: const UserProfileSnapshot(
       role: 'manager',
       isSuperAdmin: false,
@@ -41,7 +45,8 @@ AuthSession _manager({required bool dailySales, bool refund = false}) {
       const PermissionGrant(module: 'sales', action: 'view'),
       const PermissionGrant(module: 'customers', action: 'view'),
       if (refund) const PermissionGrant(module: 'sales', action: 'refund'),
-      if (dailySales) const PermissionGrant(module: 'sales', action: 'daily_sales'),
+      if (dailySales)
+        const PermissionGrant(module: 'sales', action: 'daily_sales'),
     ]),
     persona: AppPersona.manager,
   );
@@ -73,10 +78,7 @@ List<Override> _overrides({
   ];
 }
 
-Map<String, dynamic> _report({
-  required String date,
-  String status = 'debt',
-}) {
+Map<String, dynamic> _report({required String date, String status = 'debt'}) {
   return {
     'date': date,
     'summary': {
@@ -134,8 +136,9 @@ void main() {
     expect(find.byKey(const Key('more_daily_sales')), findsOneWidget);
   });
 
-  testWidgets('router redirects away from daily sales without permission',
-      (tester) async {
+  testWidgets('router redirects away from daily sales without permission', (
+    tester,
+  ) async {
     final container = ProviderContainer(
       overrides: seedOverrides(_manager(dailySales: false)),
     );
@@ -161,7 +164,9 @@ void main() {
       lastDate = request.url.queryParameters['date'];
       lastStatus = request.url.queryParameters['payment_status'];
       return http.Response(
-        jsonEncode(_report(date: lastDate ?? '2026-09-14', status: lastStatus ?? 'debt')),
+        jsonEncode(
+          _report(date: lastDate ?? '2026-09-14', status: lastStatus ?? 'debt'),
+        ),
         200,
       );
     });
@@ -183,10 +188,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          ..._overrides(
-            session: _manager(dailySales: true),
-            client: client,
-          ),
+          ..._overrides(session: _manager(dailySales: true), client: client),
           dailySalesProvider.overrideWith((ref) => controller),
         ],
         child: const MaterialApp(home: DailySalesPage()),
@@ -243,10 +245,7 @@ void main() {
           200,
         );
       }
-      return http.Response(
-        jsonEncode(_report(date: '2026-09-14')),
-        200,
-      );
+      return http.Response(jsonEncode(_report(date: '2026-09-14')), 200);
     });
 
     final controller = DailySalesController(
@@ -266,19 +265,13 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          ..._overrides(
-            session: _manager(dailySales: true),
-            client: client,
-          ),
+          ..._overrides(session: _manager(dailySales: true), client: client),
           dailySalesProvider.overrideWith((ref) => controller),
         ],
         child: MaterialApp.router(
           routerConfig: GoRouter(
             routes: [
-              GoRoute(
-                path: '/',
-                builder: (_, _) => const DailySalesPage(),
-              ),
+              GoRoute(path: '/', builder: (_, _) => const DailySalesPage()),
               GoRoute(
                 path: '/daily-sales/customer/:customerId',
                 builder: (_, state) => CustomerDayPage(

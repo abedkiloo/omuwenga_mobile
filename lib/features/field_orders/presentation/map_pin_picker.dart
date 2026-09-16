@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../domain/site_pin.dart';
 
-typedef MapPinPickerBuilder = Widget Function(
-  BuildContext context, {
-  required SitePin? selected,
-  required ValueChanged<SitePin> onChanged,
-});
+typedef MapPinPickerBuilder =
+    Widget Function(
+      BuildContext context, {
+      required SitePin? selected,
+      required ValueChanged<SitePin> onChanged,
+    });
 
 /// Testable map surface — taps set a pin without Google Maps.
 class FakeMapPinPicker extends StatelessWidget {
@@ -47,11 +48,8 @@ class FakeMapPinPicker extends StatelessWidget {
   }
 }
 
-MapPinPickerBuilder get fakeMapPinPickerBuilder => (
-      context, {
-      required selected,
-      required onChanged,
-    }) {
+MapPinPickerBuilder get fakeMapPinPickerBuilder =>
+    (context, {required selected, required onChanged}) {
       return FakeMapPinPicker(selected: selected, onChanged: onChanged);
     };
 

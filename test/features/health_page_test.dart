@@ -14,7 +14,9 @@ import 'package:http/testing.dart';
 
 void main() {
   testWidgets('HealthPage shows reachable state', (tester) async {
-    final mockHttp = MockClient((request) async => http.Response('{"ok":true}', 200));
+    final mockHttp = MockClient(
+      (request) async => http.Response('{"ok":true}', 200),
+    );
     final tokens = InMemoryTokenStore();
 
     await tester.pumpWidget(
@@ -22,11 +24,17 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(tokens),
           appEnvProvider.overrideWithValue(
-            const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+            const AppEnv(
+              flavor: AppFlavor.dev,
+              apiBaseUrl: 'http://example.com/api',
+            ),
           ),
           apiClientProvider.overrideWithValue(
             ApiClient(
-              env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+              env: const AppEnv(
+                flavor: AppFlavor.dev,
+                apiBaseUrl: 'http://example.com/api',
+              ),
               tokenStore: tokens,
               httpClient: mockHttp,
             ),
@@ -66,7 +74,8 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(InMemoryTokenStore()),
           healthCheckProvider.overrideWith(
-            (ref) async => const Success(HealthStatus(ok: false, rawBody: '503')),
+            (ref) async =>
+                const Success(HealthStatus(ok: false, rawBody: '503')),
           ),
         ],
         child: const MaterialApp(home: HealthPage()),

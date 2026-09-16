@@ -81,7 +81,9 @@ void main() {
     expect(button.onPressed, isNull);
   });
 
-  testWidgets('add product enables pay and checkout stock error', (tester) async {
+  testWidgets('add product enables pay and checkout stock error', (
+    tester,
+  ) async {
     final client = MockClient((request) async {
       if (request.url.path.contains('/products/') &&
           !request.url.path.contains('/search/') &&
@@ -96,7 +98,7 @@ void main() {
                 'id': 12,
                 'name': 'Cement 50kg',
                 'selling_price': 150,
-                'stock_quantity': 0,
+                'stock_quantity': 1,
               },
             ],
           }),
@@ -110,7 +112,7 @@ void main() {
               'id': 12,
               'name': 'Cement 50kg',
               'selling_price': 150,
-              'stock_quantity': 0,
+              'stock_quantity': 1,
             },
           ]),
           200,
@@ -118,7 +120,9 @@ void main() {
       }
       if (request.url.path.endsWith('/sales/')) {
         return http.Response(
-          jsonEncode({'error': 'Insufficient stock for Cement 50kg. Available: 0'}),
+          jsonEncode({
+            'error': 'Insufficient stock for Cement 50kg. Available: 0',
+          }),
           400,
         );
       }
@@ -153,8 +157,60 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_confirm_pay')));
     await tester.pumpAndSettle();
+    expect(find.text('Confirm and close sale?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('pos_close_sale_confirm')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('pos_checkout_error')), findsOneWidget);
     expect(find.textContaining('Insufficient'), findsOneWidget);
+  });
+
+  testWidgets('products without positive stock cannot enter cart', (
+    tester,
+  ) async {
+    final client = MockClient((request) async {
+      if (request.url.path.contains('/products/') &&
+          !request.url.path.contains('/variants/')) {
+        return http.Response(
+          jsonEncode({
+            'count': 2,
+            'next': null,
+            'results': [
+              {'id': 20, 'name': 'Missing stock', 'selling_price': 10},
+              {
+                'id': 21,
+                'name': 'Zero stock',
+                'selling_price': 10,
+                'stock_quantity': 0,
+              },
+            ],
+          }),
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _posOverrides(httpClient: client),
+        child: const MaterialApp(home: PosPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stock unavailable'), findsNWidgets(2));
+    expect(find.byKey(const Key('pos_cart_icon')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('pos_product_20')));
+    await tester.tap(find.byKey(const Key('pos_product_21')));
+    await tester.pumpAndSettle();
+
+    final payBtn = tester.widget<FilledButton>(
+      find.descendant(
+        of: find.byKey(const Key('pos_pay')),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    expect(payBtn.onPressed, isNull);
   });
 
   testWidgets('receipt page renders', (tester) async {
@@ -182,6 +238,8 @@ void main() {
     );
     expect(find.textContaining('Payment Confirmed'), findsOneWidget);
     expect(find.byKey(const Key('receipt_total')), findsOneWidget);
+    expect(find.byKey(const Key('receipt_download')), findsOneWidget);
+    expect(find.byKey(const Key('receipt_share')), findsOneWidget);
     await tester.tap(find.byKey(const Key('receipt_done')));
     await tester.pumpAndSettle();
   });
@@ -213,7 +271,10 @@ void main() {
       overrides: [
         tokenStoreProvider.overrideWithValue(tokens),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
         httpClientProvider.overrideWithValue(httpClient),
         apiClientProvider.overrideWith((ref) {
@@ -230,25 +291,41 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    container.read(cartControllerProvider.notifier).addProduct(
-          const CatalogProduct(id: 1, name: 'X', price: 150),
-        );
-    container.read(checkoutControllerProvider.notifier).setDraft(
+    container
+        .read(cartControllerProvider.notifier)
+        .addProduct(const CatalogProduct(id: 1, name: 'X', price: 150));
+    container
+        .read(checkoutControllerProvider.notifier)
+        .setDraft(
           const CheckoutDraft(method: PosPaymentMethod.cash, amountPaid: 150),
         );
-    expect(await container.read(checkoutControllerProvider.notifier).submit(), isTrue);
-    expect(container.read(checkoutControllerProvider).phase, CheckoutPhase.success);
+    expect(
+      await container.read(checkoutControllerProvider.notifier).submit(),
+      isTrue,
+    );
+    expect(
+      container.read(checkoutControllerProvider).phase,
+      CheckoutPhase.success,
+    );
     expect(container.read(cartControllerProvider).isEmpty, isTrue);
 
-    container.read(cartControllerProvider.notifier).addProduct(
-          const CatalogProduct(id: 2, name: 'Y', price: 50),
-        );
-    container.read(checkoutControllerProvider.notifier).setDraft(
+    container
+        .read(cartControllerProvider.notifier)
+        .addProduct(const CatalogProduct(id: 2, name: 'Y', price: 50));
+    container
+        .read(checkoutControllerProvider.notifier)
+        .setDraft(
           const CheckoutDraft(method: PosPaymentMethod.cash, amountPaid: 50),
         );
     connectivity.setOnline(false);
-    expect(await container.read(checkoutControllerProvider.notifier).submit(), isTrue);
-    expect(container.read(checkoutControllerProvider).phase, CheckoutPhase.queued);
+    expect(
+      await container.read(checkoutControllerProvider.notifier).submit(),
+      isTrue,
+    );
+    expect(
+      container.read(checkoutControllerProvider).phase,
+      CheckoutPhase.queued,
+    );
     expect(await outbox.pendingCount(), 1);
     container.read(checkoutControllerProvider.notifier).resetPhase();
     await outbox.dispose();

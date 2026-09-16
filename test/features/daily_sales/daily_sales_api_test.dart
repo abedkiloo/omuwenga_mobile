@@ -20,7 +20,10 @@ void main() {
   DailySalesApi apiWith(MockClient client) {
     return DailySalesApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: client,
       ),
@@ -65,8 +68,7 @@ void main() {
     final report = (await api.load(
       date: '2026-09-14',
       paymentStatus: PaymentStatusDisplay.debt,
-    ))
-        .getOrThrow();
+    )).getOrThrow();
     expect(report.summary.debtOrdersCount, 2);
     expect(report.orders.single.customerName, 'Debtor');
     expect(report.orders.single.paymentStatus, PaymentStatusDisplay.debt);
@@ -79,10 +81,7 @@ void main() {
         return http.Response(
           jsonEncode({
             'customer': {'id': 9, 'name': 'Debtor', 'standing': 'debt'},
-            'day_summary': {
-              'orders_count': 1,
-              'day_standing': 'debt',
-            },
+            'day_summary': {'orders_count': 1, 'day_standing': 'debt'},
             'orders': [
               {
                 'id': 3,
@@ -97,7 +96,10 @@ void main() {
         );
       }),
     );
-    final day = (await api.customerDay(customerId: 9, date: '2026-09-14')).getOrThrow();
+    final day = (await api.customerDay(
+      customerId: 9,
+      date: '2026-09-14',
+    )).getOrThrow();
     expect(day.customerName, 'Debtor');
     expect(day.ordersCount, 1);
   });

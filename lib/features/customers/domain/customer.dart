@@ -140,11 +140,8 @@ class CustomerDetail {
     return bal;
   }
 
-  String get standingHeadline => standingLabel(
-        standing,
-        debtAmount: debtAmount,
-        credit: creditAmount,
-      );
+  String get standingHeadline =>
+      standingLabel(standing, debtAmount: debtAmount, credit: creditAmount);
 
   String get locationLine {
     final parts = [
@@ -165,8 +162,10 @@ class CustomerDetail {
         : null;
     final summary = CustomerStandingSummary.fromJson(summaryMap);
     final standingRaw =
-        (summaryMap?['standing'] ?? customer['standing'])?.toString().toLowerCase() ??
-            '';
+        (summaryMap?['standing'] ?? customer['standing'])
+            ?.toString()
+            .toLowerCase() ??
+        '';
     final standing = switch (standingRaw) {
       'debt' => CustomerStanding.debt,
       'credit' => CustomerStanding.credit,
@@ -178,7 +177,9 @@ class CustomerDetail {
     if (rawOrders is List) {
       for (final item in rawOrders) {
         if (item is Map) {
-          orders.add(CustomerOrderLite.fromJson(Map<String, dynamic>.from(item)));
+          orders.add(
+            CustomerOrderLite.fromJson(Map<String, dynamic>.from(item)),
+          );
         }
       }
     }
@@ -188,7 +189,9 @@ class CustomerDetail {
     if (rawLedger is List) {
       for (final item in rawLedger) {
         if (item is Map) {
-          ledger.add(CustomerLedgerEntry.fromJson(Map<String, dynamic>.from(item)));
+          ledger.add(
+            CustomerLedgerEntry.fromJson(Map<String, dynamic>.from(item)),
+          );
         }
       }
     }
@@ -243,11 +246,13 @@ class CustomerOrderLite {
       id: (json['id'] as num?)?.toInt() ?? 0,
       saleNumber: (json['sale_number'] ?? json['id'] ?? '').toString(),
       total: _asDouble(json['total']) ?? 0,
-      createdAt: json['occurred_at']?.toString() ??
+      createdAt:
+          json['occurred_at']?.toString() ??
           json['created_at']?.toString() ??
           json['sale_date']?.toString(),
       debtAmount: _asDouble(json['debt_amount']) ?? 0,
-      paidAmount: _asDouble(json['paid_amount']) ?? _asDouble(json['amount_paid']) ?? 0,
+      paidAmount:
+          _asDouble(json['paid_amount']) ?? _asDouble(json['amount_paid']) ?? 0,
       paymentStatus: (json['payment_status'] ?? 'paid').toString(),
       notes: json['notes']?.toString(),
       itemCount: (json['item_count'] as num?)?.toInt(),
@@ -340,7 +345,11 @@ class DebtAgingBuckets {
         overdue += order.debtAmount;
       }
     }
-    return DebtAgingBuckets(current: current, pending: pending, overdue: overdue);
+    return DebtAgingBuckets(
+      current: current,
+      pending: pending,
+      overdue: overdue,
+    );
   }
 }
 
@@ -358,11 +367,11 @@ class CustomerDraft {
   final String notes;
 
   Map<String, dynamic> toJson() => {
-        'name': name.trim(),
-        if (phone.trim().isNotEmpty) 'phone': phone.trim(),
-        if (email.trim().isNotEmpty) 'email': email.trim(),
-        if (notes.trim().isNotEmpty) 'notes': notes.trim(),
-      };
+    'name': name.trim(),
+    if (phone.trim().isNotEmpty) 'phone': phone.trim(),
+    if (email.trim().isNotEmpty) 'email': email.trim(),
+    if (notes.trim().isNotEmpty) 'notes': notes.trim(),
+  };
 }
 
 class CustomersModuleSettings {

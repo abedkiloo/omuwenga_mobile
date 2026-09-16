@@ -24,7 +24,8 @@ class CustomerPickerSheet extends ConsumerStatefulWidget {
   const CustomerPickerSheet({super.key});
 
   @override
-  ConsumerState<CustomerPickerSheet> createState() => _CustomerPickerSheetState();
+  ConsumerState<CustomerPickerSheet> createState() =>
+      _CustomerPickerSheetState();
 }
 
 class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
@@ -50,7 +51,9 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
       _loading = true;
       _error = null;
     });
-    final result = await ref.read(customersApiProvider).list(search: q ?? _search.text);
+    final result = await ref
+        .read(customersApiProvider)
+        .list(search: q ?? _search.text);
     if (!mounted) return;
     result.when(
       success: (items) => setState(() {
@@ -66,7 +69,9 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
   }
 
   void _select(CustomerSummary c) {
-    ref.read(cartControllerProvider.notifier).attachCustomer(id: c.id, name: c.name);
+    ref
+        .read(cartControllerProvider.notifier)
+        .attachCustomer(id: c.id, name: c.name);
     Navigator.pop(context);
   }
 
@@ -78,13 +83,15 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
       return;
     }
     setState(() => _loading = true);
-    final result = await ref.read(customersApiProvider).create(
-          CustomerDraft(name: name),
-        );
+    final result = await ref
+        .read(customersApiProvider)
+        .create(CustomerDraft(name: name));
     if (!mounted) return;
     result.when(
       success: (c) {
-        ref.read(cartControllerProvider.notifier).attachCustomer(id: c.id, name: c.name);
+        ref
+            .read(cartControllerProvider.notifier)
+            .attachCustomer(id: c.id, name: c.name);
         Navigator.pop(context);
       },
       failure: (e, _) {
@@ -99,11 +106,14 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
-    final settings = ref.watch(customersSettingsProvider).maybeWhen(
+    final settings = ref
+        .watch(customersSettingsProvider)
+        .maybeWhen(
           data: (s) => s,
           orElse: () => const CustomersModuleSettings(),
         );
-    final canCreate = (auth.session?.permissions.canCreateCustomers ?? false) &&
+    final canCreate =
+        (auth.session?.permissions.canCreateCustomers ?? false) &&
         settings.enableCustomerCreate &&
         settings.allowQuickAddAtPos;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
@@ -115,7 +125,10 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Add customer', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Add customer',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             TextField(
               key: const Key('pos_customer_search'),
@@ -142,8 +155,8 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
                       child: Text(
                         'No customers found',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.mutedForeground,
-                            ),
+                          color: AppColors.mutedForeground,
+                        ),
                       ),
                     )
                   : ListView.builder(

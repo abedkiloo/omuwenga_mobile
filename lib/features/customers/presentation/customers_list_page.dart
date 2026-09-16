@@ -66,7 +66,9 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
           return a.name.toLowerCase().compareTo(b.name.toLowerCase());
         });
       case _CustomerSort.name:
-        list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        list.sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        );
     }
     return list;
   }
@@ -76,11 +78,14 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
     final state = ref.watch(customersListProvider);
     final auth = ref.watch(authControllerProvider);
     final session = auth.session;
-    final settings = ref.watch(customersSettingsProvider).maybeWhen(
+    final settings = ref
+        .watch(customersSettingsProvider)
+        .maybeWhen(
           data: (s) => s,
           orElse: () => const CustomersModuleSettings(),
         );
-    final canCreate = (session?.permissions.canCreateCustomers ?? false) &&
+    final canCreate =
+        (session?.permissions.canCreateCustomers ?? false) &&
         settings.enableCustomerCreate;
     final canPos = session?.permissions.canAccessPos ?? false;
     final canVisit = session?.permissions.canPlaceVisitOrders ?? false;
@@ -89,14 +94,19 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
         session?.profile.roleDisplay ?? session?.profile.role ?? 'Cashier';
 
     final visible = _visible(state.items);
-    final debtorCount =
-        state.items.where((c) => c.standing == CustomerStanding.debt).length;
-    final creditCount =
-        state.items.where((c) => c.standing == CustomerStanding.credit).length;
-    final goodCount =
-        state.items.where((c) => c.standing == CustomerStanding.good).length;
-    final totalOutstanding =
-        state.items.fold<double>(0, (sum, c) => sum + c.debtAmount);
+    final debtorCount = state.items
+        .where((c) => c.standing == CustomerStanding.debt)
+        .length;
+    final creditCount = state.items
+        .where((c) => c.standing == CustomerStanding.credit)
+        .length;
+    final goodCount = state.items
+        .where((c) => c.standing == CustomerStanding.good)
+        .length;
+    final totalOutstanding = state.items.fold<double>(
+      0,
+      (sum, c) => sum + c.debtAmount,
+    );
     final maxDebt = state.items.fold<double>(
       0,
       (max, c) => c.debtAmount > max ? c.debtAmount : max,
@@ -112,9 +122,9 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Text(
                 'Customer Directory',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
               ),
             ),
             Padding(
@@ -190,17 +200,17 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                     Text(
                       'Sort by: ',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.mutedForeground,
-                          ),
+                        color: AppColors.mutedForeground,
+                      ),
                     ),
                     DropdownButtonHideUnderline(
                       child: DropdownButton<_CustomerSort>(
                         value: _sort,
                         isDense: true,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                         items: const [
                           DropdownMenuItem(
                             value: _CustomerSort.highestDebt,
@@ -338,14 +348,12 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                 _expandedId = expanded ? null : c.id;
               });
             },
-            onOpenLedger: () =>
-                context.push(AppRoutes.customerDetail(c.id)),
+            onOpenLedger: () => context.push(AppRoutes.customerDetail(c.id)),
             onSettle: () => context.push(AppRoutes.customerSettle(c.id)),
             onStartPos: () {
-              ref.read(cartControllerProvider.notifier).attachCustomer(
-                    id: c.id,
-                    name: c.name,
-                  );
+              ref
+                  .read(cartControllerProvider.notifier)
+                  .attachCustomer(id: c.id, name: c.name);
               context.go(AppRoutes.pos);
             },
             onVisit: () => context.go(AppRoutes.siteVisit),
@@ -359,9 +367,9 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
               }
               await Clipboard.setData(ClipboardData(text: phone));
               if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Copied $phone')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('Copied $phone')));
             },
           ),
         );
@@ -394,10 +402,7 @@ class _FastAddBadge extends StatelessWidget {
 }
 
 class _DirectoryHeaderCard extends StatelessWidget {
-  const _DirectoryHeaderCard({
-    required this.userName,
-    required this.roleLabel,
-  });
+  const _DirectoryHeaderCard({required this.userName, required this.roleLabel});
 
   final String userName;
   final String roleLabel;
@@ -505,7 +510,9 @@ class _DirectorySummaryCard extends StatelessWidget {
                 child: _SummaryMetric(
                   label: 'Debtors',
                   value: '$debtorCount',
-                  subtitle: debtorCount == 1 ? '1 shop owes' : '$debtorCount shops owe',
+                  subtitle: debtorCount == 1
+                      ? '1 shop owes'
+                      : '$debtorCount shops owe',
                   valueColor: debtorCount > 0 ? AppColors.destructive : null,
                 ),
               ),
@@ -591,11 +598,11 @@ class _FilterChip extends StatelessWidget {
           child: Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: selected
-                      ? AppColors.primaryForeground
-                      : AppColors.foreground,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: selected
+                  ? AppColors.primaryForeground
+                  : AppColors.foreground,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
@@ -652,7 +659,9 @@ class _CustomerExpandableCard extends StatelessWidget {
         .toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) {
-      return parts.first.substring(0, parts.first.length.clamp(0, 2)).toUpperCase();
+      return parts.first
+          .substring(0, parts.first.length.clamp(0, 2))
+          .toUpperCase();
     }
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
@@ -746,9 +755,15 @@ class _CustomerExpandableCard extends StatelessWidget {
                   key: Key('customer_open_${customer.id}'),
                   tooltip: 'View ledger',
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
                   onPressed: onOpenLedger,
-                  icon: const Icon(Icons.chevron_right, color: AppColors.primary),
+                  icon: const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.primary,
+                  ),
                 ),
                 Icon(
                   expanded ? Icons.expand_less : Icons.expand_more,
@@ -779,11 +794,13 @@ class _CustomerExpandableCard extends StatelessWidget {
                     debt > 0
                         ? _kes(debt)
                         : credit > 0
-                            ? 'Credit ${_kes(credit)}'
-                            : _kes(0),
+                        ? 'Credit ${_kes(credit)}'
+                        : _kes(0),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: debt > 0 ? AppColors.destructive : AppColors.foreground,
+                      color: debt > 0
+                          ? AppColors.destructive
+                          : AppColors.foreground,
                     ),
                   ),
                   if (debt > 0) ...[
@@ -821,10 +838,7 @@ class _CustomerExpandableCard extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                _IconAction(
-                  icon: Icons.phone_outlined,
-                  onPressed: onCall,
-                ),
+                _IconAction(icon: Icons.phone_outlined, onPressed: onCall),
                 const SizedBox(width: 8),
                 if (canVisit)
                   Expanded(
@@ -892,20 +906,20 @@ class _StandingBadge extends StatelessWidget {
     );
     final (bg, fg, border) = switch (customer.standing) {
       CustomerStanding.debt => (
-          const Color(0xFFFEE2E2),
-          AppColors.destructive,
-          AppColors.destructive,
-        ),
+        const Color(0xFFFEE2E2),
+        AppColors.destructive,
+        AppColors.destructive,
+      ),
       CustomerStanding.credit => (
-          const Color(0xFFDCFCE7),
-          AppColors.success,
-          AppColors.success,
-        ),
+        const Color(0xFFDCFCE7),
+        AppColors.success,
+        AppColors.success,
+      ),
       CustomerStanding.good => (
-          AppColors.secondary,
-          AppColors.mutedForeground,
-          AppColors.border,
-        ),
+        AppColors.secondary,
+        AppColors.mutedForeground,
+        AppColors.border,
+      ),
     };
     return Container(
       key: Key('customer_standing_${customer.id}'),
@@ -919,13 +933,13 @@ class _StandingBadge extends StatelessWidget {
         !customer.isActive
             ? 'Inactive'
             : customer.standing == CustomerStanding.good &&
-                    customer.debtAmount <= 0
-                ? 'Zero Balance'
-                : label,
+                  customer.debtAmount <= 0
+            ? 'Zero Balance'
+            : label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: fg,
-              fontWeight: FontWeight.w700,
-            ),
+          color: fg,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -948,7 +962,9 @@ class _IconAction extends StatelessWidget {
           padding: EdgeInsets.zero,
           foregroundColor: AppColors.primary,
           side: const BorderSide(color: AppColors.primary),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
         child: Icon(icon, size: 18),
       ),
@@ -971,7 +987,9 @@ class _OutlineAction extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           side: const BorderSide(color: AppColors.primary),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
         child: Text(
           label,
@@ -984,7 +1002,6 @@ class _OutlineAction extends StatelessWidget {
 
 class _FilledAction extends StatelessWidget {
   const _FilledAction({
-    super.key,
     required this.label,
     required this.color,
     required this.onPressed,
@@ -1003,7 +1020,9 @@ class _FilledAction extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
         child: Text(
           label,

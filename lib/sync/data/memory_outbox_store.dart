@@ -7,8 +7,8 @@ import 'outbox_store.dart';
 /// In-memory outbox for unit tests and sync engine proofs.
 class MemoryOutboxStore implements OutboxStore {
   MemoryOutboxStore({ClientUuid? ids, DateTime Function()? clock})
-      : _ids = ids ?? ClientUuid(),
-        _clock = clock ?? DateTime.now;
+    : _ids = ids ?? ClientUuid(),
+      _clock = clock ?? DateTime.now;
 
   final ClientUuid _ids;
   final DateTime Function() _clock;
@@ -20,9 +20,7 @@ class MemoryOutboxStore implements OutboxStore {
   }
 
   List<OutboxEntry> _activeSnapshot() {
-    return _items.values
-        .where((e) => e.status != OutboxStatus.synced)
-        .toList()
+    return _items.values.where((e) => e.status != OutboxStatus.synced).toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
 

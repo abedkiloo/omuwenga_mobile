@@ -18,10 +18,10 @@ class ApiClient {
     required TokenStore tokenStore,
     http.Client? httpClient,
     SessionExpiredCallback? onSessionExpired,
-  })  : _env = env,
-        _tokenStore = tokenStore,
-        _http = httpClient ?? http.Client(),
-        _onSessionExpired = onSessionExpired;
+  }) : _env = env,
+       _tokenStore = tokenStore,
+       _http = httpClient ?? http.Client(),
+       _onSessionExpired = onSessionExpired;
 
   final AppEnv _env;
   final TokenStore _tokenStore;
@@ -103,7 +103,10 @@ class ApiClient {
     String? idempotencyKey,
   }) {
     return _send(() async {
-      final headers = await _headers(json: false, idempotencyKey: idempotencyKey);
+      final headers = await _headers(
+        json: false,
+        idempotencyKey: idempotencyKey,
+      );
       if (!auth) {
         headers.remove('Authorization');
       }

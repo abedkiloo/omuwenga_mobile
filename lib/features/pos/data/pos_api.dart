@@ -16,6 +16,11 @@ class SaleReceipt {
     required this.change,
     required this.items,
     this.customerName,
+    this.subtotal,
+    this.taxAmount = 0,
+    this.discountAmount = 0,
+    this.paymentReference,
+    this.createdAt,
     this.queuedOffline = false,
   });
 
@@ -27,6 +32,11 @@ class SaleReceipt {
   final double change;
   final List<CartLine> items;
   final String? customerName;
+  final double? subtotal;
+  final double taxAmount;
+  final double discountAmount;
+  final String? paymentReference;
+  final DateTime? createdAt;
   final bool queuedOffline;
 
   factory SaleReceipt.fromJson(Map<String, dynamic> json) {
@@ -62,6 +72,15 @@ class SaleReceipt {
       change: asDouble(json['change']),
       items: items,
       customerName: json['customer_name']?.toString(),
+      subtotal: json.containsKey('subtotal')
+          ? asDouble(json['subtotal'])
+          : null,
+      taxAmount: asDouble(json['tax_amount']),
+      discountAmount: asDouble(json['discount_amount']),
+      paymentReference: json['payment_reference']?.toString(),
+      createdAt: DateTime.tryParse(
+        (json['occurred_at'] ?? json['created_at'] ?? '').toString(),
+      ),
     );
   }
 }
@@ -102,7 +121,8 @@ class ProductCategory {
     return ProductCategory(
       id: (json['id'] as num).toInt(),
       name: (json['name'] ?? '').toString(),
-      productCount: (json['product_count'] as num?)?.toInt() ??
+      productCount:
+          (json['product_count'] as num?)?.toInt() ??
           (json['linked_product_count'] as num?)?.toInt() ??
           0,
       parentId: (json['parent'] as num?)?.toInt(),
@@ -133,8 +153,10 @@ class PosApi {
     if (categoryId != null) params['category'] = '$categoryId';
 
     final query = params.entries
-        .map((e) =>
-            '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}')
+        .map(
+          (e) =>
+              '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}',
+        )
         .join('&');
     final response = await _client.get('products/?$query');
     if (response.isFailure) {
@@ -170,14 +192,19 @@ class PosApi {
         if (item is Map) rows.add(Map<String, dynamic>.from(item));
       }
     }
-    return Success([
-      for (final row in rows) ProductCategory.fromJson(row),
-    ].where((c) => c.isActive && c.parentId == null).toList());
+    return Success(
+      [
+        for (final row in rows) ProductCategory.fromJson(row),
+      ].where((c) => c.isActive && c.parentId == null).toList(),
+    );
   }
 
   /// Quick POS search (`GET /products/search/?q=`). Prefer [listProducts] when
   /// you need pagination; this stays for barcode/short lookups.
-  Future<Result<List<CatalogProduct>>> searchProducts(String query, {int limit = 20}) async {
+  Future<Result<List<CatalogProduct>>> searchProducts(
+    String query, {
+    int limit = 20,
+  }) async {
     final q = query.trim();
     if (q.isEmpty) return const Success([]);
     final response = await _client.get(
@@ -195,7 +222,8 @@ class PosApi {
     if (decoded is! List) return const Success([]);
     return Success([
       for (final item in decoded)
-        if (item is Map) CatalogProduct.fromJson(Map<String, dynamic>.from(item)),
+        if (item is Map)
+          CatalogProduct.fromJson(Map<String, dynamic>.from(item)),
     ]);
   }
 
@@ -208,7 +236,8 @@ class PosApi {
     if (decoded is List) {
       final results = [
         for (final item in decoded)
-          if (item is Map) CatalogProduct.fromJson(Map<String, dynamic>.from(item)),
+          if (item is Map)
+            CatalogProduct.fromJson(Map<String, dynamic>.from(item)),
       ];
       return CatalogProductPage(
         results: results,
@@ -275,9 +304,11 @@ class PosApi {
         }
       }
     }
-    return Success([
-      for (final row in rows) ProductVariant.fromJson(row),
-    ].where((v) => v.isActive).toList());
+    return Success(
+      [
+        for (final row in rows) ProductVariant.fromJson(row),
+      ].where((v) => v.isActive).toList(),
+    );
   }
 
   Future<Result<PosSettings>> loadSettings() async {

@@ -20,22 +20,22 @@ class CbStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg) = switch (variant) {
       CbStatusPillVariant.online => (
-          const Color(0xFFDCFCE7),
-          AppColors.success,
-        ),
+        const Color(0xFFDCFCE7),
+        AppColors.success,
+      ),
       CbStatusPillVariant.success => (
-          const Color(0xFFDCFCE7),
-          AppColors.success,
-        ),
+        const Color(0xFFDCFCE7),
+        AppColors.success,
+      ),
       CbStatusPillVariant.warning => (
-          const Color(0xFFFEF3C7),
-          AppColors.warning,
-        ),
+        const Color(0xFFFEF3C7),
+        AppColors.warning,
+      ),
       CbStatusPillVariant.info => (AppColors.accentSoft, AppColors.primary),
       CbStatusPillVariant.neutral => (
-          AppColors.secondary,
-          AppColors.mutedForeground,
-        ),
+        AppColors.secondary,
+        AppColors.mutedForeground,
+      ),
     };
 
     return Container(
@@ -61,9 +61,9 @@ class CbStatusPill extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: fg,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: fg,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

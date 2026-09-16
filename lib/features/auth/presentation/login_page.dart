@@ -33,10 +33,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       setState(() => _localError = 'Enter your username and password.');
       return;
     }
-    await ref.read(authControllerProvider.notifier).login(
-          username: user,
-          password: pass,
-        );
+    await ref
+        .read(authControllerProvider.notifier)
+        .login(username: user, password: pass);
   }
 
   @override
@@ -55,7 +54,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               padding: const EdgeInsets.all(24),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 48,
+                ),
                 child: IntrinsicHeight(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,

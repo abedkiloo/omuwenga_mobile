@@ -18,7 +18,12 @@ import 'package:http/testing.dart';
 /// Sales-capable user for visit-order / map tests.
 AuthSession salesSession() {
   return AuthSession(
-    user: const AuthUser(id: 9, username: 'sales', firstName: 'Ada', lastName: 'Field'),
+    user: const AuthUser(
+      id: 9,
+      username: 'sales',
+      firstName: 'Ada',
+      lastName: 'Field',
+    ),
     profile: const UserProfileSnapshot(
       role: 'cashier',
       isSuperAdmin: false,
@@ -40,7 +45,12 @@ AuthSession salesSession() {
 
 AuthSession cashierSession({bool dailySales = false}) {
   return AuthSession(
-    user: const AuthUser(id: 1, username: 'sales', firstName: 'Sam', lastName: 'Cash'),
+    user: const AuthUser(
+      id: 1,
+      username: 'sales',
+      firstName: 'Sam',
+      lastName: 'Cash',
+    ),
     profile: const UserProfileSnapshot(
       role: 'cashier',
       isSuperAdmin: false,
@@ -53,8 +63,11 @@ AuthSession cashierSession({bool dailySales = false}) {
       const PermissionGrant(module: 'customers', action: 'view'),
       const PermissionGrant(module: 'customers', action: 'create'),
       const PermissionGrant(module: 'customers', action: 'update'),
+      const PermissionGrant(module: 'debt_management', action: 'view'),
+      const PermissionGrant(module: 'debt_management', action: 'update'),
       const PermissionGrant(module: 'sales', action: 'view'),
-      if (dailySales) const PermissionGrant(module: 'sales', action: 'daily_sales'),
+      if (dailySales)
+        const PermissionGrant(module: 'sales', action: 'daily_sales'),
     ]),
     persona: AppPersona.cashier,
   );
@@ -62,7 +75,12 @@ AuthSession cashierSession({bool dailySales = false}) {
 
 AuthSession managerSession({bool dailySales = false}) {
   return AuthSession(
-    user: const AuthUser(id: 2, username: 'manager', firstName: 'Mo', lastName: 'Lead'),
+    user: const AuthUser(
+      id: 2,
+      username: 'manager',
+      firstName: 'Mo',
+      lastName: 'Lead',
+    ),
     profile: const UserProfileSnapshot(
       role: 'manager',
       isSuperAdmin: false,
@@ -74,17 +92,23 @@ AuthSession managerSession({bool dailySales = false}) {
       const PermissionGrant(module: 'customers', action: 'view'),
       const PermissionGrant(module: 'customers', action: 'create'),
       const PermissionGrant(module: 'customers', action: 'update'),
+      const PermissionGrant(module: 'debt_management', action: 'view'),
+      const PermissionGrant(module: 'debt_management', action: 'update'),
       const PermissionGrant(module: 'sales', action: 'view'),
       const PermissionGrant(module: 'sales', action: 'refund'),
       const PermissionGrant(module: 'dispatch', action: 'view'),
       const PermissionGrant(module: 'dispatch', action: 'update'),
-      if (dailySales) const PermissionGrant(module: 'sales', action: 'daily_sales'),
+      if (dailySales)
+        const PermissionGrant(module: 'sales', action: 'daily_sales'),
     ]),
     persona: AppPersona.manager,
   );
 }
 
-List<Override> seedOverrides(AuthSession session, {InMemoryTokenStore? tokens}) {
+List<Override> seedOverrides(
+  AuthSession session, {
+  InMemoryTokenStore? tokens,
+}) {
   final store = tokens ?? InMemoryTokenStore();
   final outbox = MemoryOutboxStore();
   final connectivity = FakeConnectivityMonitor(online: true);
@@ -101,7 +125,8 @@ List<Override> seedOverrides(AuthSession session, {InMemoryTokenStore? tokens}) 
       return ApiClient(
         env: ref.watch(appEnvProvider),
         tokenStore: store,
-        httpClient: ref.watch(httpClientProvider) ??
+        httpClient:
+            ref.watch(httpClientProvider) ??
             MockClient((_) async => http.Response('{}', 200)),
       );
     }),

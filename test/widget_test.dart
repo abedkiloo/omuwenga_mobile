@@ -18,7 +18,10 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(InMemoryTokenStore()),
           appEnvProvider.overrideWithValue(
-            const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+            const AppEnv(
+              flavor: AppFlavor.dev,
+              apiBaseUrl: 'http://example.com/api',
+            ),
           ),
         ],
         child: Consumer(
@@ -89,7 +92,10 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(InMemoryTokenStore()),
           appEnvProvider.overrideWithValue(
-            const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+            const AppEnv(
+              flavor: AppFlavor.dev,
+              apiBaseUrl: 'http://example.com/api',
+            ),
           ),
         ],
         child: Consumer(

@@ -46,25 +46,20 @@ class CbStickyActionBar extends StatelessWidget {
                         Expanded(
                           child: Text(
                             summary!,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppColors.mutedForeground,
-                                ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: AppColors.mutedForeground),
                           ),
                         ),
                       if (summaryTrailing != null)
                         Text(
                           summaryTrailing!,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                     ],
                   ),
                 ),
-              if (secondary != null) ...[
-                secondary!,
-                const SizedBox(height: 8),
-              ],
+              if (secondary != null) ...[secondary!, const SizedBox(height: 8)],
               child ??
                   CbPrimaryButton(
                     key: primaryKey,

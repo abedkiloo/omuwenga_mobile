@@ -23,9 +23,17 @@ end_of_record
 
     test('filterRecords includes prefixes and excludes main', () {
       final records = [
-        LcovRecord(sourceFile: '/app/lib/core/result/result.dart', found: 10, hit: 10),
+        LcovRecord(
+          sourceFile: '/app/lib/core/result/result.dart',
+          found: 10,
+          hit: 10,
+        ),
         LcovRecord(sourceFile: '/app/lib/main.dart', found: 5, hit: 1),
-        LcovRecord(sourceFile: '/app/lib/features/health/data/health_api.dart', found: 8, hit: 8),
+        LcovRecord(
+          sourceFile: '/app/lib/features/health/data/health_api.dart',
+          found: 8,
+          hit: 8,
+        ),
       ];
       final filtered = filterRecords(
         records,

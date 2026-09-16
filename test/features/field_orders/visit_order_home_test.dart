@@ -12,7 +12,9 @@ import 'package:flutter_test/flutter_test.dart';
 import '../auth/auth_fixtures.dart';
 
 void main() {
-  testWidgets('sales home shows visit order; delivery more hides it', (tester) async {
+  testWidgets('sales home shows visit order; delivery more hides it', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: seedOverrides(salesSession()),
@@ -26,7 +28,12 @@ void main() {
     expect(find.text('Visit order'), findsOneWidget);
 
     final deliveryOnly = AuthSession(
-      user: const AuthUser(id: 3, username: 'driver', firstName: 'D', lastName: 'R'),
+      user: const AuthUser(
+        id: 3,
+        username: 'driver',
+        firstName: 'D',
+        lastName: 'R',
+      ),
       profile: const UserProfileSnapshot(
         role: 'delivery',
         isSuperAdmin: false,
@@ -50,7 +57,12 @@ void main() {
 
   testWidgets('router redirects visit order without sales/pos', (tester) async {
     final deliveryOnly = AuthSession(
-      user: const AuthUser(id: 3, username: 'driver', firstName: 'D', lastName: 'R'),
+      user: const AuthUser(
+        id: 3,
+        username: 'driver',
+        firstName: 'D',
+        lastName: 'R',
+      ),
       profile: const UserProfileSnapshot(
         role: 'delivery',
         isSuperAdmin: false,
@@ -62,9 +74,7 @@ void main() {
       ]),
       persona: AppPersona.deliveryDriver,
     );
-    final container = ProviderContainer(
-      overrides: seedOverrides(deliveryOnly),
-    );
+    final container = ProviderContainer(overrides: seedOverrides(deliveryOnly));
     addTearDown(container.dispose);
     final router = createAppRouter(
       readAuth: () => container.read(authControllerProvider),

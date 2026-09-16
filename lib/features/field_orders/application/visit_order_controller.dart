@@ -36,10 +36,13 @@ class VisitOrderState {
   bool get hasProducts => lines.isNotEmpty;
   bool get hasPin => pin != null;
   bool get canPlace =>
-      hasCustomer && hasProducts && hasPin && !submitting && placedOrderId == null;
+      hasCustomer &&
+      hasProducts &&
+      hasPin &&
+      !submitting &&
+      placedOrderId == null;
 
-  double get subtotal =>
-      lines.fold(0, (sum, line) => sum + line.lineTotal);
+  double get subtotal => lines.fold(0, (sum, line) => sum + line.lineTotal);
 
   VisitOrderState copyWith({
     VisitOrderStep? step,
@@ -80,20 +83,22 @@ class VisitOrderController extends StateNotifier<VisitOrderState> {
   }
 
   void selectCustomer(CustomerSummary customer) {
-    state = state.copyWith(
-      customer: customer,
-      clearError: true,
-    );
+    state = state.copyWith(customer: customer, clearError: true);
   }
 
   void clearCustomer() {
     state = state.copyWith(clearCustomer: true, step: VisitOrderStep.customer);
   }
 
-  void addProduct(CatalogProduct product, {ProductVariant? variant, double qty = 1}) {
+  void addProduct(
+    CatalogProduct product, {
+    ProductVariant? variant,
+    double qty = 1,
+  }) {
     final variantId = variant?.id;
-    final lineKey =
-        variantId == null ? '${product.id}' : '${product.id}-$variantId';
+    final lineKey = variantId == null
+        ? '${product.id}'
+        : '${product.id}-$variantId';
     final existing = state.lines.indexWhere((l) => l.lineKey == lineKey);
     final next = [...state.lines];
     if (existing >= 0) {
@@ -211,5 +216,5 @@ String _shortError(String raw) {
 
 final visitOrderProvider =
     StateNotifierProvider.autoDispose<VisitOrderController, VisitOrderState>(
-  (ref) => VisitOrderController(ref.watch(fieldOrdersApiProvider)),
-);
+      (ref) => VisitOrderController(ref.watch(fieldOrdersApiProvider)),
+    );

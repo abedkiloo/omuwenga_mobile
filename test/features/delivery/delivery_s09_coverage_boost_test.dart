@@ -21,34 +21,33 @@ Map<String, dynamic> stopJson({
   int id = 1,
   String status = 'pending',
   bool podComplete = false,
-}) =>
+}) => {
+  'id': id,
+  'sequence': 1,
+  'status': status,
+  'customer_name': 'Debtor',
+  'customer_phone': '0700',
+  'site': {
+    'id': 3,
+    'label': 'Blue gate',
+    'latitude': '-1.29',
+    'longitude': '36.82',
+    'landmark': 'Blue container',
+    'media': [
+      {'image_url': 'http://x/a.jpg'},
+    ],
+  },
+  'lines': [
     {
-      'id': id,
-      'sequence': 1,
-      'status': status,
-      'customer_name': 'Debtor',
-      'customer_phone': '0700',
-      'site': {
-        'id': 3,
-        'label': 'Blue gate',
-        'latitude': '-1.29',
-        'longitude': '36.82',
-        'landmark': 'Blue container',
-        'media': [
-          {'image_url': 'http://x/a.jpg'},
-        ],
-      },
-      'lines': [
-        {
-          'product_id': 2,
-          'product_name': 'Paint',
-          'ordered_quantity': '2',
-          'delivered_quantity': '0',
-          'returned_quantity': '0',
-        },
-      ],
-      'pod': podComplete ? {'is_complete': true} : null,
-    };
+      'product_id': 2,
+      'product_name': 'Paint',
+      'ordered_quantity': '2',
+      'delivered_quantity': '0',
+      'returned_quantity': '0',
+    },
+  ],
+  'pod': podComplete ? {'is_complete': true} : null,
+};
 
 void main() {
   test('provider constructs', () {
@@ -77,7 +76,10 @@ void main() {
     var status = 'collected';
     final api = DeliveryApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: InMemoryTokenStore(),
         httpClient: MockClient((request) async {
           if (request.url.path.contains('/config')) {
@@ -123,14 +125,23 @@ void main() {
           }
           if (request.url.path.contains('/start')) {
             status = 'delivering';
-            return http.Response(jsonEncode(stopJson(status: 'delivering')), 200);
+            return http.Response(
+              jsonEncode(stopJson(status: 'delivering')),
+              200,
+            );
           }
           if (request.url.path.contains('/collect')) {
             status = 'collected';
-            return http.Response(jsonEncode(stopJson(status: 'collected')), 200);
+            return http.Response(
+              jsonEncode(stopJson(status: 'collected')),
+              200,
+            );
           }
           if (request.url.path.contains('/lines')) {
-            return http.Response(jsonEncode(stopJson(status: 'delivering')), 200);
+            return http.Response(
+              jsonEncode(stopJson(status: 'delivering')),
+              200,
+            );
           }
           return http.Response('{}', 404);
         }),
@@ -154,7 +165,14 @@ void main() {
       isNotEmpty,
     );
     expect(
-      container.read(deliveryRouteProvider).route!.stops.single.lines.single.productId,
+      container
+          .read(deliveryRouteProvider)
+          .route!
+          .stops
+          .single
+          .lines
+          .single
+          .productId,
       2,
     );
 
@@ -317,7 +335,10 @@ void main() {
 
   test('domain edges and api invalid payloads', () async {
     expect(DeliveryStopStatus.parse('arrived').apiValue, 'arrived');
-    expect(DeliveryStopStatus.parse('delivering'), DeliveryStopStatus.delivering);
+    expect(
+      DeliveryStopStatus.parse('delivering'),
+      DeliveryStopStatus.delivering,
+    );
     expect(DeliveryStopStatus.parse('failed'), DeliveryStopStatus.failed);
     final site = DeliverySiteSnapshot.fromJson({
       'id': 1,
@@ -332,7 +353,10 @@ void main() {
 
     final api = DeliveryApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: InMemoryTokenStore(),
         httpClient: MockClient((_) async => http.Response('"x"', 200)),
       ),
@@ -343,7 +367,10 @@ void main() {
 
     final net = DeliveryApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: InMemoryTokenStore(),
         httpClient: MockClient((_) async => throw Exception('down')),
       ),
@@ -354,7 +381,10 @@ void main() {
   test('controller action failures and offline deny', () async {
     final api = DeliveryApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: InMemoryTokenStore(),
         httpClient: MockClient((request) async {
           if (request.url.path.contains('/config')) {

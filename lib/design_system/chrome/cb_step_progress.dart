@@ -53,8 +53,9 @@ class CbStepProgress extends StatelessWidget {
                       color: i <= currentIndex
                           ? AppColors.foreground
                           : AppColors.mutedForeground,
-                      fontWeight:
-                          i == currentIndex ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight: i == currentIndex
+                          ? FontWeight.w600
+                          : FontWeight.w500,
                     ),
                   ),
                 ),
@@ -90,7 +91,11 @@ class _StepCircle extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: completed
-          ? const Icon(Icons.check, size: 16, color: AppColors.primaryForeground)
+          ? const Icon(
+              Icons.check,
+              size: 16,
+              color: AppColors.primaryForeground,
+            )
           : Text(
               '$index',
               style: TextStyle(

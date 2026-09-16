@@ -21,7 +21,10 @@ void main() {
   SalesHistoryApi apiWith(MockClient client) {
     return SalesHistoryApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: client,
       ),
@@ -52,8 +55,7 @@ void main() {
     );
     final list = (await api.list(
       const SalesHistoryFilters(search: 'ann'),
-    ))
-        .getOrThrow();
+    )).getOrThrow();
     expect(list.single.paymentStatus, PaymentStatusDisplay.partial);
   });
 
@@ -68,14 +70,16 @@ void main() {
         }
         return http.Response(
           jsonEncode({
-            'id': 1,
+            'id': '1',
             'sale_number': 'S-1',
             'total': '100',
             'amount_paid': '100',
             'status': 'completed',
             'can_refund': true,
+            'customer': {'id': '4'},
             'items': [
               {
+                'product': {'id': '7'},
                 'product_name': 'Cement',
                 'quantity': 1,
                 'unit_price': 100,
@@ -87,16 +91,37 @@ void main() {
       }),
     );
     final detail = (await api.detail(1)).getOrThrow();
+    expect(detail.id, 1);
+    expect(detail.customerId, 4);
+    expect(detail.items.single.productId, 7);
     expect(detail.items.single.productName, 'Cement');
-    expect((await api.refund(saleId: 1, reason: 'Wrong', idempotencyKey: 'k1')).isSuccess, isTrue);
+    expect(
+      (await api.refund(
+        saleId: 1,
+        reason: 'Wrong',
+        idempotencyKey: 'k1',
+      )).isSuccess,
+      isTrue,
+    );
     expect(n, 2);
   });
 
   test('api errors', () async {
     final api = apiWith(
-      MockClient((_) async => http.Response(jsonEncode({'error': 'Nope'}), 400)),
+      MockClient(
+        (_) async => http.Response(jsonEncode({'error': 'Nope'}), 400),
+      ),
     );
     expect((await api.list(const SalesHistoryFilters())).isFailure, isTrue);
     expect(SalesHistoryApiException('x').toString(), 'x');
+
+    final malformed = apiWith(
+      MockClient((_) async => http.Response('{not-json', 200)),
+    );
+    expect(
+      (await malformed.list(const SalesHistoryFilters())).isFailure,
+      isTrue,
+    );
+    expect((await malformed.detail(1)).isFailure, isTrue);
   });
 }

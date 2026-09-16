@@ -2,17 +2,17 @@
 enum AppFlavor { dev, staging, prod }
 
 class AppEnv {
-  const AppEnv({
-    required this.flavor,
-    required this.apiBaseUrl,
-  });
+  const AppEnv({required this.flavor, required this.apiBaseUrl});
 
   final AppFlavor flavor;
   final String apiBaseUrl;
 
   /// Reads compile-time defines. Defaults to [AppFlavor.dev].
   factory AppEnv.fromDefines({
-    String flavorName = const String.fromEnvironment('APP_ENV', defaultValue: 'dev'),
+    String flavorName = const String.fromEnvironment(
+      'APP_ENV',
+      defaultValue: 'dev',
+    ),
     String? apiBaseUrlOverride = const String.fromEnvironment('API_BASE_URL'),
   }) {
     final flavor = parseFlavor(flavorName);

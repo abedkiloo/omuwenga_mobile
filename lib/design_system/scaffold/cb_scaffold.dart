@@ -18,10 +18,7 @@ class CbScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: body,
-      ),
+      body: Padding(padding: const EdgeInsets.all(16), child: body),
       floatingActionButton: floatingActionButton,
       backgroundColor: AppColors.background,
     );

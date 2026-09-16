@@ -44,7 +44,7 @@ class FieldOrdersApi {
         'customer_id': customerId,
         'latitude': latitude,
         'longitude': longitude,
-        if (accuracy != null) 'accuracy': accuracy,
+        'accuracy': ?accuracy,
         'landmark': landmark,
         'label': label,
         'notes': notes,
@@ -64,7 +64,9 @@ class FieldOrdersApi {
     if (res.isFailure) return Failure((res as Failure).error);
     final response = res.getOrThrow();
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      return Failure(FieldOrdersApiException('List failed (${response.statusCode})'));
+      return Failure(
+        FieldOrdersApiException('List failed (${response.statusCode})'),
+      );
     }
     try {
       final data = jsonDecode(response.body);
@@ -104,7 +106,9 @@ class FieldOrdersApi {
       if (data is! Map) {
         return Failure(FieldOrdersApiException('Invalid order payload'));
       }
-      return Success(FieldOrderSummary.fromJson(Map<String, dynamic>.from(data)));
+      return Success(
+        FieldOrderSummary.fromJson(Map<String, dynamic>.from(data)),
+      );
     } on Object catch (e, st) {
       return Failure(e, st);
     }

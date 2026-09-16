@@ -48,7 +48,10 @@ void main() {
         canSubmitCheckout(
           cart: empty,
           settings: settings,
-          draft: const CheckoutDraft(method: PosPaymentMethod.cash, amountPaid: 0),
+          draft: const CheckoutDraft(
+            method: PosPaymentMethod.cash,
+            amountPaid: 0,
+          ),
         ),
         isFalse,
       );
@@ -58,7 +61,10 @@ void main() {
         canSubmitCheckout(
           cart: cart,
           settings: settings,
-          draft: CheckoutDraft(method: PosPaymentMethod.cash, amountPaid: cart.total),
+          draft: CheckoutDraft(
+            method: PosPaymentMethod.cash,
+            amountPaid: cart.total,
+          ),
         ),
         isTrue,
       );
@@ -66,7 +72,10 @@ void main() {
         canSubmitCheckout(
           cart: cart,
           settings: settings,
-          draft: const CheckoutDraft(method: PosPaymentMethod.mpesa, amountPaid: 150),
+          draft: const CheckoutDraft(
+            method: PosPaymentMethod.mpesa,
+            amountPaid: 150,
+          ),
         ),
         isTrue,
       );
@@ -86,7 +95,10 @@ void main() {
         canSubmitCheckout(
           cart: cart,
           settings: settings,
-          draft: const CheckoutDraft(method: PosPaymentMethod.card, amountPaid: 150),
+          draft: const CheckoutDraft(
+            method: PosPaymentMethod.card,
+            amountPaid: 150,
+          ),
         ),
         isFalse,
       );

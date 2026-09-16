@@ -60,8 +60,7 @@ class FieldOrderCart {
 
   bool get canSubmit => siteId > 0 && lines.isNotEmpty;
 
-  double get subtotal =>
-      lines.fold(0, (sum, line) => sum + line.lineTotal);
+  double get subtotal => lines.fold(0, (sum, line) => sum + line.lineTotal);
 
   FieldOrderCart copyWith({
     int? siteId,
@@ -89,8 +88,9 @@ class FieldOrderCart {
     double qty = 1,
   }) {
     final variantId = variant?.id;
-    final lineKey =
-        variantId == null ? '${product.id}' : '${product.id}-$variantId';
+    final lineKey = variantId == null
+        ? '${product.id}'
+        : '${product.id}-$variantId';
     final existing = lines.indexWhere((l) => l.lineKey == lineKey);
     if (existing >= 0) {
       final next = [...lines];
@@ -117,14 +117,14 @@ class FieldOrderCart {
   }
 
   List<Map<String, dynamic>> toLinesJson() => [
-        for (final line in lines)
-          {
-            'product_id': line.productId,
-            'quantity': line.quantity.toString(),
-            'unit_price': line.unitPrice.toStringAsFixed(2),
-            if (line.variantId != null) 'variant_id': line.variantId,
-          },
-      ];
+    for (final line in lines)
+      {
+        'product_id': line.productId,
+        'quantity': line.quantity.toString(),
+        'unit_price': line.unitPrice.toStringAsFixed(2),
+        if (line.variantId != null) 'variant_id': line.variantId,
+      },
+  ];
 }
 
 class FieldOrderSummary {
@@ -184,21 +184,18 @@ class FieldOrderSummary {
     return FieldOrderSummary(
       id: (json['id'] as num).toInt(),
       status: FieldOrderStatus.parse(json['status']?.toString()),
-      siteId: (json['site'] as num?)?.toInt() ??
+      siteId:
+          (json['site'] as num?)?.toInt() ??
           (site is Map ? (site['id'] as num?)?.toInt() : null) ??
           0,
       siteLabel: site is Map ? (site['label'] ?? '').toString() : '',
       customerName: json['customer_name']?.toString(),
       photoUrls: urls,
-      latitude: site is Map
-          ? double.tryParse('${site['latitude']}')
-          : null,
-      longitude: site is Map
-          ? double.tryParse('${site['longitude']}')
-          : null,
+      latitude: site is Map ? double.tryParse('${site['latitude']}') : null,
+      longitude: site is Map ? double.tryParse('${site['longitude']}') : null,
       lines: lines,
-      assignedDeliveryDriverId:
-          (json['assigned_delivery_agent_id'] as num?)?.toInt(),
+      assignedDeliveryDriverId: (json['assigned_delivery_agent_id'] as num?)
+          ?.toInt(),
       stockAllocated: json['stock_allocated'] == true,
     );
   }

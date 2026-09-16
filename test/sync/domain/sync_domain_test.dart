@@ -29,11 +29,23 @@ void main() {
 
   group('humanizeSyncError', () {
     test('maps common failures', () {
-      expect(humanizeSyncError(statusCode: 401, error: 'x'), contains('Sign in'));
-      expect(humanizeSyncError(statusCode: 409, error: 'x'), contains('conflict'));
-      expect(humanizeSyncError(statusCode: 500, error: 'x'), contains('unavailable'));
       expect(
-        humanizeSyncError(statusCode: null, error: Exception('SocketException')),
+        humanizeSyncError(statusCode: 401, error: 'x'),
+        contains('Sign in'),
+      );
+      expect(
+        humanizeSyncError(statusCode: 409, error: 'x'),
+        contains('conflict'),
+      );
+      expect(
+        humanizeSyncError(statusCode: 500, error: 'x'),
+        contains('unavailable'),
+      );
+      expect(
+        humanizeSyncError(
+          statusCode: null,
+          error: Exception('SocketException'),
+        ),
         contains('No connection'),
       );
       expect(isPermanentHttpFailure(400), isTrue);

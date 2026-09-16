@@ -27,7 +27,12 @@ import 'package:http/testing.dart';
 
 AuthSession _dispatcherSession() {
   return AuthSession(
-    user: const AuthUser(id: 3, username: 'dispatch', firstName: 'Di', lastName: 'Patch'),
+    user: const AuthUser(
+      id: 3,
+      username: 'dispatch',
+      firstName: 'Di',
+      lastName: 'Patch',
+    ),
     profile: const UserProfileSnapshot(
       role: 'manager',
       isSuperAdmin: false,
@@ -41,9 +46,13 @@ AuthSession _dispatcherSession() {
     persona: AppPersona.dispatcher,
   );
 }
+
 ApiClient _client(MockClient httpClient) {
   return ApiClient(
-    env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+    env: const AppEnv(
+      flavor: AppFlavor.dev,
+      apiBaseUrl: 'http://example.com/api',
+    ),
     tokenStore: InMemoryTokenStore(),
     httpClient: httpClient,
   );
@@ -66,9 +75,7 @@ void main() {
 
   test('api catch and site_id from site_detail', () async {
     final fo = FieldOrdersApi(
-      _client(
-        MockClient((_) async => http.Response('{not-json', 200)),
-      ),
+      _client(MockClient((_) async => http.Response('{not-json', 200))),
     );
     expect((await fo.listMine()).isFailure, isTrue);
     expect((await fo.submit(1)).isFailure, isTrue);
@@ -94,7 +101,10 @@ void main() {
       'status': 'draft',
       'site_detail': {'id': 99, 'label': 'Only detail'},
       'lines': 'nope',
-      'site_media': [{'image_url': null}, 'x'],
+      'site_media': [
+        {'image_url': null},
+        'x',
+      ],
     });
     expect(summary.siteId, 99);
     expect(summary.photoUrls, isEmpty);
@@ -137,7 +147,9 @@ void main() {
     expect(find.byKey(const Key('fo_submit_error')), findsOneWidget);
   });
 
-  testWidgets('dispatch queue error empty refresh and detail actions', (tester) async {
+  testWidgets('dispatch queue error empty refresh and detail actions', (
+    tester,
+  ) async {
     var calls = 0;
     final api = DispatchApi(
       _client(

@@ -33,11 +33,7 @@ void main() {
         final wallet = detailCalls == 1 ? '-100.00' : '0.00';
         return http.Response(
           jsonEncode({
-            'customer': {
-              'id': 5,
-              'name': 'Pat',
-              'wallet_balance': wallet,
-            },
+            'customer': {'id': 5, 'name': 'Pat', 'wallet_balance': wallet},
             'standing_summary': {
               'standing': detailCalls == 1 ? 'debt' : 'good',
             },
@@ -53,7 +49,10 @@ void main() {
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final api = CustomersApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: client,
       ),
@@ -90,7 +89,10 @@ void main() {
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final api = CustomersApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: client,
       ),

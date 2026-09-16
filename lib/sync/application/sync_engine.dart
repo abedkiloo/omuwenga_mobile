@@ -11,7 +11,8 @@ import '../domain/outbox_entry.dart';
 import '../domain/sync_backoff.dart';
 import '../data/outbox_store.dart';
 
-typedef OutboxHttpSender = Future<Result<http.Response>> Function(OutboxEntry entry);
+typedef OutboxHttpSender =
+    Future<Result<http.Response>> Function(OutboxEntry entry);
 
 /// Drains the outbox when online. Never reports success until the server accepts.
 class SyncEngine {
@@ -21,10 +22,10 @@ class SyncEngine {
     SyncBackoff backoff = const SyncBackoff(),
     this.maxAttempts = 5,
     DateTime Function()? clock,
-  })  : _store = store,
-        _sender = sender,
-        _backoff = backoff,
-        _clock = clock ?? DateTime.now;
+  }) : _store = store,
+       _sender = sender,
+       _backoff = backoff,
+       _clock = clock ?? DateTime.now;
 
   final OutboxStore _store;
   final OutboxHttpSender _sender;
@@ -196,7 +197,8 @@ _MultipartPayload? _multipartPayload(String bodyJson) {
     fileField: (decoded['file_field'] ?? 'image').toString(),
     fileBytes: bytes,
     fileName: (decoded['file_name'] ?? 'upload.bin').toString(),
-    contentType: (decoded['content_type'] ?? 'application/octet-stream').toString(),
+    contentType: (decoded['content_type'] ?? 'application/octet-stream')
+        .toString(),
   );
 }
 

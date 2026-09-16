@@ -27,7 +27,10 @@ class AuthUser {
   }
 
   String get displayName {
-    final parts = [firstName, lastName].whereType<String>().where((s) => s.isNotEmpty);
+    final parts = [
+      firstName,
+      lastName,
+    ].whereType<String>().where((s) => s.isNotEmpty);
     if (parts.isEmpty) return username;
     return parts.join(' ');
   }
@@ -51,7 +54,9 @@ class AuthSession {
     final profileJson = json['profile'] is Map
         ? Map<String, dynamic>.from(json['profile'] as Map)
         : null;
-    final permissions = PermissionSet.fromJsonList(json['permissions'] as List?);
+    final permissions = PermissionSet.fromJsonList(
+      json['permissions'] as List?,
+    );
     final user = AuthUser.fromJson(userJson);
     final profile = UserProfileSnapshot.fromJson(profileJson);
     final persona = resolvePersona(

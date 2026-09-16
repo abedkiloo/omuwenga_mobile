@@ -66,8 +66,8 @@ class DeliverySiteSnapshot {
       landmark: (json['landmark'] ?? '').toString(),
       photoUrls: urls,
       customerName: json['customer_name']?.toString(),
-      customerPhone: json['customer_phone']?.toString() ??
-          json['phone']?.toString(),
+      customerPhone:
+          json['customer_phone']?.toString() ?? json['phone']?.toString(),
     );
   }
 }
@@ -87,10 +87,7 @@ class DeliveryLine {
   final double deliveredQuantity;
   final double returnedQuantity;
 
-  DeliveryLine copyWith({
-    double? deliveredQuantity,
-    double? returnedQuantity,
-  }) {
+  DeliveryLine copyWith({double? deliveredQuantity, double? returnedQuantity}) {
     return DeliveryLine(
       productId: productId,
       productName: productName,

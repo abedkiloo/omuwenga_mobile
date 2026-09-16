@@ -22,7 +22,12 @@ import 'package:http/testing.dart';
 
 AuthSession _session({required bool canUpdate}) {
   return AuthSession(
-    user: const AuthUser(id: 1, username: 'sales', firstName: 'Sam', lastName: 'Cash'),
+    user: const AuthUser(
+      id: 1,
+      username: 'sales',
+      firstName: 'Sam',
+      lastName: 'Cash',
+    ),
     profile: const UserProfileSnapshot(
       role: 'cashier',
       isSuperAdmin: false,
@@ -31,7 +36,8 @@ AuthSession _session({required bool canUpdate}) {
     ),
     permissions: PermissionSet([
       const PermissionGrant(module: 'customers', action: 'view'),
-      if (canUpdate) const PermissionGrant(module: 'customers', action: 'update'),
+      if (canUpdate)
+        const PermissionGrant(module: 'debt_management', action: 'update'),
     ]),
     persona: AppPersona.cashier,
   );
@@ -67,17 +73,15 @@ List<Override> _overrides({
 }
 
 Map<String, dynamic> _detailJson({required String wallet}) => {
-      'customer': {
-        'id': 7,
-        'name': 'Debtor',
-        'wallet_balance': wallet,
-        'phone': '0700',
-      },
-      'standing_summary': {
-        'standing': double.parse(wallet) < 0 ? 'debt' : 'good',
-      },
-      'orders': <dynamic>[],
-    };
+  'customer': {
+    'id': 7,
+    'name': 'Debtor',
+    'wallet_balance': wallet,
+    'phone': '0700',
+  },
+  'standing_summary': {'standing': double.parse(wallet) < 0 ? 'debt' : 'good'},
+  'orders': <dynamic>[],
+};
 
 void main() {
   testWidgets('hides settle when no debt', (tester) async {
@@ -102,7 +106,9 @@ void main() {
     expect(find.text('Good standing'), findsOneWidget);
   });
 
-  testWidgets('hides settle when no customers.update permission', (tester) async {
+  testWidgets('hides settle when no debt management update permission', (
+    tester,
+  ) async {
     final client = MockClient((request) async {
       if (request.url.path.contains('/detail/')) {
         return http.Response(jsonEncode(_detailJson(wallet: '-80.00')), 200);
@@ -124,7 +130,7 @@ void main() {
     expect(find.byKey(const Key('customer_settle')), findsNothing);
   });
 
-  testWidgets('shows settle when debt and update permission', (tester) async {
+  testWidgets('shows settle when debt and debt update permission', (tester) async {
     final client = MockClient((request) async {
       if (request.url.path.contains('/detail/')) {
         return http.Response(jsonEncode(_detailJson(wallet: '-80.00')), 200);
@@ -160,7 +166,11 @@ void main() {
       isTrue,
     );
     expect(
-      canSettleCustomerDebt(auth: authWithout, settings: settings, debtAmount: 10),
+      canSettleCustomerDebt(
+        auth: authWithout,
+        settings: settings,
+        debtAmount: 10,
+      ),
       isFalse,
     );
     expect(

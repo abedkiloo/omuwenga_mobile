@@ -25,16 +25,34 @@ class StoreShellPage extends ConsumerWidget {
     final location = GoRouterState.of(context).uri.toString();
 
     final destinations = <_NavDest>[
-      const _NavDest(label: 'Home', icon: Icons.home_outlined, route: AppRoutes.home),
+      const _NavDest(
+        label: 'Home',
+        icon: Icons.home_outlined,
+        route: AppRoutes.home,
+      ),
       if (perms == null || perms.canAccessPos)
-        const _NavDest(label: 'POS', icon: Icons.point_of_sale_outlined, route: AppRoutes.pos),
+        const _NavDest(
+          label: 'POS',
+          icon: Icons.point_of_sale_outlined,
+          route: AppRoutes.pos,
+        ),
+      if (perms == null || perms.canViewSales)
+        const _NavDest(
+          label: 'History',
+          icon: Icons.receipt_long_outlined,
+          route: AppRoutes.salesHistory,
+        ),
       if (perms == null || perms.canViewCustomers)
         const _NavDest(
           label: 'Customers',
           icon: Icons.people_outline,
           route: AppRoutes.customers,
         ),
-      const _NavDest(label: 'More', icon: Icons.more_horiz, route: AppRoutes.more),
+      const _NavDest(
+        label: 'More',
+        icon: Icons.more_horiz,
+        route: AppRoutes.more,
+      ),
     ];
 
     final sync = ref.watch(syncStatusProvider);
@@ -54,16 +72,19 @@ class StoreShellPage extends ConsumerWidget {
                   status: sync,
                   onTap: sync.failedCount > 0
                       ? () async {
-                          final items =
-                              await ref.read(syncStatusProvider.notifier).failedItems();
+                          final items = await ref
+                              .read(syncStatusProvider.notifier)
+                              .failedItems();
                           if (!context.mounted) return;
                           await SyncFailuresSheet.show(
                             context,
                             items: items,
-                            onRetry: (id) =>
-                                ref.read(syncStatusProvider.notifier).retryFailed(id),
-                            onDiscard: (id) =>
-                                ref.read(syncStatusProvider.notifier).discardFailed(id),
+                            onRetry: (id) => ref
+                                .read(syncStatusProvider.notifier)
+                                .retryFailed(id),
+                            onDiscard: (id) => ref
+                                .read(syncStatusProvider.notifier)
+                                .discardFailed(id),
                           );
                         }
                       : null,
@@ -94,7 +115,11 @@ class StoreShellPage extends ConsumerWidget {
 }
 
 class _NavDest {
-  const _NavDest({required this.label, required this.icon, required this.route});
+  const _NavDest({
+    required this.label,
+    required this.icon,
+    required this.route,
+  });
   final String label;
   final IconData icon;
   final String route;
@@ -122,7 +147,10 @@ class _MoreTile extends StatelessWidget {
         child: ListTile(
           leading: Icon(icon, color: AppColors.primary),
           title: Text(title),
-          trailing: const Icon(Icons.chevron_right, color: AppColors.mutedForeground),
+          trailing: const Icon(
+            Icons.chevron_right,
+            color: AppColors.mutedForeground,
+          ),
         ),
       ),
     );
@@ -185,7 +213,9 @@ class _DeliveryHome extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Recognize the place, do the work, prove it, next.',
-              style: theme.textTheme.bodyLarge?.copyWith(color: AppColors.mutedForeground),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: AppColors.mutedForeground,
+              ),
             ),
             const SizedBox(height: 32),
             CbPrimaryButton(
@@ -217,7 +247,9 @@ class _DispatcherHome extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Prepare what the driver will take.',
-              style: theme.textTheme.bodyLarge?.copyWith(color: AppColors.mutedForeground),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: AppColors.mutedForeground,
+              ),
             ),
             const SizedBox(height: 32),
             CbPrimaryButton(

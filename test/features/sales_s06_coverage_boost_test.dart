@@ -76,14 +76,28 @@ void main() {
       'cashier_name': 'c',
       'occurred_at': 't',
       'refund_status': 'none',
+      'subtotal': '12',
+      'tax_amount': '1',
+      'discount_amount': '3',
+      'change': '2',
+      'served_by_name': 'Grace',
+      'sale_type': 'pos',
       'items': [
-        {'product_name': 'X', 'quantity': 2, 'unit_price': 5},
+        {
+          'product_name': 'X',
+          'product_sku': 'SKU-X',
+          'quantity': 2,
+          'unit_price': 5,
+        },
       ],
     });
     expect(detail.items.single.lineTotal, 10);
+    expect(detail.items.single.sku, 'SKU-X');
+    expect(detail.discountAmount, 3);
 
-    final filters = const SalesHistoryFilters(search: 'a')
-        .copyWith(dateFrom: '2026-01-01', paymentMethod: 'cash');
+    final filters = const SalesHistoryFilters(
+      search: 'a',
+    ).copyWith(dateFrom: '2026-01-01', paymentMethod: 'cash');
     expect(filters.toQuery()['date_from'], '2026-01-01');
     expect(filters.copyWith(clearDates: true).dateFrom, isNull);
 
@@ -98,12 +112,7 @@ void main() {
           'amount_paid': '1',
           'payment_status': 'paid',
         },
-        {
-          'id': 2,
-          'sale_number': 'S2',
-          'total': '10',
-          'amount_paid': '4',
-        },
+        {'id': 2, 'sale_number': 'S2', 'total': '10', 'amount_paid': '4'},
       ],
     });
     expect(report.orders[1].paymentStatus, PaymentStatusDisplay.partial);
@@ -191,14 +200,20 @@ void main() {
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final historyApi = SalesHistoryApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: client,
       ),
     );
     final dailyApi = DailySalesApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: client,
       ),
@@ -214,7 +229,10 @@ void main() {
     expect(await detail.refund(reason: 'wrong item'), isTrue);
     expect(refunded, isTrue);
 
-    final daily = DailySalesController(dailyApi, initialDay: DateTime(2026, 9, 14));
+    final daily = DailySalesController(
+      dailyApi,
+      initialDay: DateTime(2026, 9, 14),
+    );
     await daily.load();
     await daily.goToPreviousDay();
     await daily.goToNextDay();
@@ -227,9 +245,12 @@ void main() {
     await customerDay.load(customerId: 9, date: '2026-09-14');
     expect(customerDay.state.detail!.customerName, 'D');
 
-    expect(PermissionSet([
-      const PermissionGrant(module: 'sales', action: 'refund'),
-    ]).canRefundSales, isTrue);
+    expect(
+      PermissionSet([
+        const PermissionGrant(module: 'sales', action: 'refund'),
+      ]).canRefundSales,
+      isTrue,
+    );
   });
 
   testWidgets('history list and sale detail refund UI', (tester) async {
@@ -248,10 +269,20 @@ void main() {
             'can_refund': true,
             'customer_name': 'Ann',
             'payment_method': 'cash',
+            'payment_reference': 'CASH-1',
             'cashier_name': 'sam',
             'occurred_at': '2026-09-14',
+            'subtotal': '100',
+            'tax_amount': '0',
+            'discount_amount': '0',
+            'change': '0',
             'items': [
-              {'product_name': 'Item', 'quantity': 1, 'unit_price': 100},
+              {
+                'product_name': 'Item',
+                'product_sku': 'ITEM-1',
+                'quantity': 1,
+                'unit_price': 100,
+              },
             ],
           }),
           200,
@@ -279,6 +310,10 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('sale_row_1')), findsOneWidget);
+    expect(find.byKey(const Key('sales_shift_total')), findsOneWidget);
+    expect(find.text('SALES (1)'), findsOneWidget);
+    expect(find.byKey(const Key('sales_method_card')), findsNothing);
+    expect(find.byKey(const Key('sales_export_shift')), findsNothing);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -288,6 +323,12 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('sale_refund')), findsOneWidget);
+    expect(find.byKey(const Key('sale_print_receipt')), findsOneWidget);
+    expect(find.byKey(const Key('sale_share_receipt')), findsOneWidget);
+    expect(find.text('Financial Accounting'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+    expect(find.text('Tender & Gateway Audit'), findsOneWidget);
     await tester.tap(find.byKey(const Key('sale_refund')));
     await tester.pump();
     await tester.enterText(find.byKey(const Key('refund_reason')), 'Damaged');
@@ -370,10 +411,8 @@ void main() {
             routes: [
               GoRoute(
                 path: '/',
-                builder: (_, _) => const CustomerDayPage(
-                  customerId: 9,
-                  date: '2026-09-14',
-                ),
+                builder: (_, _) =>
+                    const CustomerDayPage(customerId: 9, date: '2026-09-14'),
               ),
               GoRoute(
                 path: '/sales/:id',
@@ -400,7 +439,10 @@ void main() {
     final throwClient = MockClient((_) async => throw Exception('down'));
     final api = SalesHistoryApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: throwClient,
       ),
@@ -414,7 +456,10 @@ void main() {
 
     final weird = SalesHistoryApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: MockClient((request) async {
           if (request.url.path.contains('/refund/')) {
@@ -431,13 +476,20 @@ void main() {
     expect((await weird.detail(1)).isFailure, isTrue);
     expect((await weird.list(const SalesHistoryFilters())).isFailure, isTrue);
     expect(
-      (await weird.refund(saleId: 1, reason: 'x', idempotencyKey: 'k2')).isSuccess,
+      (await weird.refund(
+        saleId: 1,
+        reason: 'x',
+        idempotencyKey: 'k2',
+      )).isSuccess,
       isTrue,
     );
 
     final daily = DailySalesApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: MockClient(
           (_) async => http.Response(jsonEncode({'error': 'bad'}), 400),
@@ -452,27 +504,39 @@ void main() {
 
     final dailyThrow = DailySalesApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: throwClient,
       ),
     );
     expect((await dailyThrow.load(date: '2026-09-14')).isFailure, isTrue);
     expect(
-      (await dailyThrow.customerDay(customerId: 1, date: '2026-09-14')).isFailure,
+      (await dailyThrow.customerDay(
+        customerId: 1,
+        date: '2026-09-14',
+      )).isFailure,
       isTrue,
     );
 
     final dailyWeird = DailySalesApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: MockClient((_) async => http.Response('[]', 200)),
       ),
     );
     expect((await dailyWeird.load(date: '2026-09-14')).isFailure, isTrue);
     expect(
-      (await dailyWeird.customerDay(customerId: 1, date: '2026-09-14')).isFailure,
+      (await dailyWeird.customerDay(
+        customerId: 1,
+        date: '2026-09-14',
+      )).isFailure,
       isTrue,
     );
     expect(DailySalesApiException('x').toString(), 'x');
@@ -524,11 +588,12 @@ void main() {
     container.read(salesHistoryApiProvider);
     container.read(dailySalesApiProvider);
     container.read(salesHistoryProvider);
-    await container.read(salesHistoryProvider.notifier).load(
-          filters: const SalesHistoryFilters(dateFrom: '2026-01-01').copyWith(
-            dateTo: '2026-01-02',
-            search: 'q',
-          ),
+    await container
+        .read(salesHistoryProvider.notifier)
+        .load(
+          filters: const SalesHistoryFilters(
+            dateFrom: '2026-01-01',
+          ).copyWith(dateTo: '2026-01-02', search: 'q'),
         );
     final s = const SalesHistoryState(error: 'e');
     expect(s.copyWith(loading: true).error, 'e');
@@ -591,12 +656,7 @@ void main() {
             'amount_paid': '10',
             'customer_name': 'A',
           },
-          {
-            'id': 2,
-            'sale_number': 'S-2',
-            'total': '20',
-            'amount_paid': '0',
-          },
+          {'id': 2, 'sale_number': 'S-2', 'total': '20', 'amount_paid': '0'},
         ]),
         200,
       );
@@ -625,7 +685,9 @@ void main() {
     expect(find.byKey(const Key('sale_status_hero')), findsOneWidget);
   });
 
-  testWidgets('customer day empty after failed load without detail', (tester) async {
+  testWidgets('customer day empty after failed load without detail', (
+    tester,
+  ) async {
     final client = MockClient((_) async => http.Response('{}', 200));
     await tester.pumpWidget(
       ProviderScope(

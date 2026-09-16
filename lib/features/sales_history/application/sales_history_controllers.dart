@@ -61,8 +61,8 @@ class SalesHistoryController extends StateNotifier<SalesHistoryState> {
 
 final salesHistoryProvider =
     StateNotifierProvider<SalesHistoryController, SalesHistoryState>((ref) {
-  return SalesHistoryController(ref.watch(salesHistoryApiProvider));
-});
+      return SalesHistoryController(ref.watch(salesHistoryApiProvider));
+    });
 
 class SaleDetailState {
   const SaleDetailState({
@@ -103,7 +103,8 @@ class SaleDetailController extends StateNotifier<SaleDetailState> {
     state = state.copyWith(loading: true, clearError: true);
     final result = await _api.detail(id);
     result.when(
-      success: (detail) => state = state.copyWith(detail: detail, loading: false),
+      success: (detail) =>
+          state = state.copyWith(detail: detail, loading: false),
       failure: (e, _) =>
           state = state.copyWith(loading: false, error: e.toString()),
     );
@@ -132,11 +133,11 @@ class SaleDetailController extends StateNotifier<SaleDetailState> {
 
 final saleDetailProvider = StateNotifierProvider.autoDispose
     .family<SaleDetailController, SaleDetailState, int>((ref, id) {
-  final controller = SaleDetailController(
-    ref.watch(salesHistoryApiProvider),
-    ClientUuid(),
-  );
-  // ignore: discarded_futures
-  controller.load(id);
-  return controller;
-});
+      final controller = SaleDetailController(
+        ref.watch(salesHistoryApiProvider),
+        ClientUuid(),
+      );
+      // ignore: discarded_futures
+      controller.load(id);
+      return controller;
+    });

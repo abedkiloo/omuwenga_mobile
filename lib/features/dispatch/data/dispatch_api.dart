@@ -20,7 +20,9 @@ class DispatchApi {
     if (res.isFailure) return Failure((res as Failure).error);
     final response = res.getOrThrow();
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      return Failure(DispatchApiException('Queue failed (${response.statusCode})'));
+      return Failure(
+        DispatchApiException('Queue failed (${response.statusCode})'),
+      );
     }
     try {
       final data = jsonDecode(response.body);
@@ -53,7 +55,10 @@ class DispatchApi {
     return _parse(res, 'Assign failed');
   }
 
-  Future<Result<FieldOrderSummary>> _parse(Result responseResult, String label) async {
+  Future<Result<FieldOrderSummary>> _parse(
+    Result responseResult,
+    String label,
+  ) async {
     if (responseResult.isFailure) {
       return Failure((responseResult as Failure).error);
     }
@@ -66,7 +71,9 @@ class DispatchApi {
       if (data is! Map) {
         return Failure(DispatchApiException('Invalid order payload'));
       }
-      return Success(FieldOrderSummary.fromJson(Map<String, dynamic>.from(data)));
+      return Success(
+        FieldOrderSummary.fromJson(Map<String, dynamic>.from(data)),
+      );
     } on Object catch (e, st) {
       return Failure(e, st);
     }

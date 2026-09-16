@@ -46,7 +46,8 @@ class CatalogProduct {
     return CatalogProduct(
       id: (json['id'] as num).toInt(),
       name: (json['name'] ?? '').toString(),
-      price: asDouble(json['selling_price'] ?? json['price'] ?? json['mrp']) ?? 0,
+      price:
+          asDouble(json['selling_price'] ?? json['price'] ?? json['mrp']) ?? 0,
       sku: json['sku']?.toString(),
       barcode: json['barcode']?.toString(),
       stockQuantity: asDouble(json['stock_quantity']),
@@ -142,8 +143,9 @@ class PosCart {
     double qty = 1,
   }) {
     final variantId = variant?.id;
-    final lineKey =
-        variantId == null ? '${product.id}' : '${product.id}-$variantId';
+    final lineKey = variantId == null
+        ? '${product.id}'
+        : '${product.id}-$variantId';
     final existing = lines.indexWhere((l) => l.lineKey == lineKey);
     if (existing >= 0) {
       final updated = List<CartLine>.from(lines);

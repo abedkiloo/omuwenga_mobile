@@ -4,11 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../application/sync_status_controller.dart';
 
 class SyncStatusChip extends StatelessWidget {
-  const SyncStatusChip({
-    super.key,
-    required this.status,
-    this.onTap,
-  });
+  const SyncStatusChip({super.key, required this.status, this.onTap});
 
   final SyncStatus status;
   final VoidCallback? onTap;
@@ -70,7 +66,9 @@ class SyncStatusChip extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 status.label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(color: _fg),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(color: _fg),
               ),
             ],
           ),

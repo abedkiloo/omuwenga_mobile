@@ -52,31 +52,43 @@ void main() {
 
   ApiClient clientWith(MockClient httpClient) {
     return ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: httpClient,
     );
   }
 
-  PaymentsApi apiWith(MockClient httpClient) => PaymentsApi(clientWith(httpClient));
+  PaymentsApi apiWith(MockClient httpClient) =>
+      PaymentsApi(clientWith(httpClient));
 
   group('PaymentIntent domain', () {
     test('parses statuses and flags', () {
-      expect(PaymentIntentStatus.parse('prompted'), PaymentIntentStatus.prompted);
+      expect(
+        PaymentIntentStatus.parse('prompted'),
+        PaymentIntentStatus.prompted,
+      );
       expect(PaymentIntentStatus.parse('PAID'), PaymentIntentStatus.paid);
       expect(PaymentIntentStatus.parse('failed'), PaymentIntentStatus.failed);
-      expect(PaymentIntentStatus.parse('cancelled'), PaymentIntentStatus.cancelled);
+      expect(
+        PaymentIntentStatus.parse('cancelled'),
+        PaymentIntentStatus.cancelled,
+      );
       expect(PaymentIntentStatus.parse('expired'), PaymentIntentStatus.expired);
       expect(PaymentIntentStatus.parse(null), PaymentIntentStatus.created);
       expect(PaymentIntentStatus.paid.isTerminal, isTrue);
       expect(PaymentIntentStatus.prompted.isWaiting, isTrue);
 
-      final intent = PaymentIntent.fromJson(intentJson(
-        status: 'paid',
-        purpose: 'debt',
-        smsSent: true,
-        receipt: 'QHX',
-      ));
+      final intent = PaymentIntent.fromJson(
+        intentJson(
+          status: 'paid',
+          purpose: 'debt',
+          smsSent: true,
+          receipt: 'QHX',
+        ),
+      );
       expect(intent.purpose, PaymentPurpose.debt);
       expect(intent.smsSent, isTrue);
       expect(intent.mpesaReceipt, 'QHX');
@@ -95,19 +107,30 @@ void main() {
           final path = request.url.path;
           if (path.endsWith('/payments/intents/') && request.method == 'POST') {
             createBody = jsonDecode(request.body) as Map<String, dynamic>;
-            return http.Response(jsonEncode(intentJson(status: 'created')), 201);
+            return http.Response(
+              jsonEncode(intentJson(status: 'created')),
+              201,
+            );
           }
           if (path.contains('/stk/')) {
-            return http.Response(jsonEncode(intentJson(status: 'prompted')), 200);
+            return http.Response(
+              jsonEncode(intentJson(status: 'prompted')),
+              200,
+            );
           }
           if (path.contains('/query/')) {
             return http.Response(
-              jsonEncode(intentJson(status: 'paid', smsSent: true, receipt: 'R1')),
+              jsonEncode(
+                intentJson(status: 'paid', smsSent: true, receipt: 'R1'),
+              ),
               200,
             );
           }
           if (path.contains('/intents/1/')) {
-            return http.Response(jsonEncode(intentJson(status: 'prompted')), 200);
+            return http.Response(
+              jsonEncode(intentJson(status: 'prompted')),
+              200,
+            );
           }
           return http.Response('{}', 404);
         }),
@@ -121,16 +144,20 @@ void main() {
           customerId: 9,
           customerName: 'Ann',
           clientUuid: 'uuid-1',
-        ))
-            .getOrThrow()
-            .status,
+        )).getOrThrow().status,
         PaymentIntentStatus.created,
       );
       expect(createBody?['customer_id'], 9);
       expect(createBody?['customer_name'], 'Ann');
       expect(createBody?['client_uuid'], 'uuid-1');
-      expect((await api.sendStk(1)).getOrThrow().status, PaymentIntentStatus.prompted);
-      expect((await api.get(1)).getOrThrow().status, PaymentIntentStatus.prompted);
+      expect(
+        (await api.sendStk(1)).getOrThrow().status,
+        PaymentIntentStatus.prompted,
+      );
+      expect(
+        (await api.get(1)).getOrThrow().status,
+        PaymentIntentStatus.prompted,
+      );
       final paid = (await api.query(1)).getOrThrow();
       expect(paid.status, PaymentIntentStatus.paid);
       expect(paid.smsSent, isTrue);
@@ -140,7 +167,14 @@ void main() {
       final badStatus = apiWith(
         MockClient((_) async => http.Response('nope', 500)),
       );
-      expect((await badStatus.create(amount: 1, phone: '1', purpose: 'pos')).isFailure, isTrue);
+      expect(
+        (await badStatus.create(
+          amount: 1,
+          phone: '1',
+          purpose: 'pos',
+        )).isFailure,
+        isTrue,
+      );
 
       final badJson = apiWith(
         MockClient((_) async => http.Response('not-json', 200)),
@@ -156,9 +190,7 @@ void main() {
     });
 
     test('propagates transport failure', () async {
-      final api = apiWith(
-        MockClient((_) async => throw Exception('down')),
-      );
+      final api = apiWith(MockClient((_) async => throw Exception('down')));
       expect((await api.sendStk(1)).isFailure, isTrue);
     });
   });
@@ -183,17 +215,28 @@ void main() {
             return http.Response(jsonEncode(intentJson()), 201);
           }
           if (request.url.path.contains('/stk/')) {
-            return http.Response(jsonEncode(intentJson(status: 'prompted')), 200);
+            return http.Response(
+              jsonEncode(intentJson(status: 'prompted')),
+              200,
+            );
           }
           polls++;
           return http.Response(
-            jsonEncode(intentJson(status: polls >= 1 ? 'paid' : 'prompted', smsSent: true)),
+            jsonEncode(
+              intentJson(
+                status: polls >= 1 ? 'paid' : 'prompted',
+                smsSent: true,
+              ),
+            ),
             200,
           );
         }),
       );
       final online = StkWaitController(onlineApi, FakeConnectivityMonitor());
-      expect(await online.start(amount: 10, phone: '0700', purpose: 'pos'), isTrue);
+      expect(
+        await online.start(amount: 10, phone: '0700', purpose: 'pos'),
+        isTrue,
+      );
       expect(online.state.intent?.status, PaymentIntentStatus.prompted);
       await online.refresh(1);
       expect(online.state.isPaid, isTrue);
@@ -209,7 +252,10 @@ void main() {
         apiWith(MockClient((_) async => http.Response('x', 400))),
         FakeConnectivityMonitor(),
       );
-      expect(await createFail.start(amount: 1, phone: '1', purpose: 'pos'), isFalse);
+      expect(
+        await createFail.start(amount: 1, phone: '1', purpose: 'pos'),
+        isFalse,
+      );
       expect(createFail.state.error, isNotNull);
       createFail.dispose();
 
@@ -226,7 +272,10 @@ void main() {
         ),
         FakeConnectivityMonitor(),
       );
-      expect(await stkFail.start(amount: 1, phone: '1', purpose: 'pos'), isFalse);
+      expect(
+        await stkFail.start(amount: 1, phone: '1', purpose: 'pos'),
+        isFalse,
+      );
       expect(stkFail.state.intent, isNotNull);
       expect(stkFail.state.error, isNotNull);
       stkFail.dispose();
@@ -240,7 +289,10 @@ void main() {
               return http.Response(jsonEncode(intentJson()), 201);
             }
             if (request.url.path.contains('/stk/')) {
-              return http.Response(jsonEncode(intentJson(status: 'prompted')), 200);
+              return http.Response(
+                jsonEncode(intentJson(status: 'prompted')),
+                200,
+              );
             }
             return http.Response('bad', 500);
           }),
@@ -255,10 +307,7 @@ void main() {
   });
 
   group('StkWaitPage widgets', () {
-    Widget harness({
-      required MockClient httpClient,
-      bool online = true,
-    }) {
+    Widget harness({required MockClient httpClient, bool online = true}) {
       return ProviderScope(
         overrides: [
           apiClientProvider.overrideWithValue(clientWith(httpClient)),
@@ -286,8 +335,11 @@ void main() {
       );
       await tester.pump();
       await tester.pump();
-      expect(find.text('Offline'), findsOneWidget);
       expect(find.byKey(const Key('stk_title')), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('stk_title'))).data,
+        'Offline',
+      );
     });
 
     testWidgets('shows non-offline error from failed create', (tester) async {
@@ -309,32 +361,42 @@ void main() {
               return http.Response(jsonEncode(intentJson()), 201);
             }
             if (request.url.path.contains('/stk/')) {
-              return http.Response(jsonEncode(intentJson(status: 'prompted')), 200);
-            }
-            if (request.url.path.contains('/query/')) {
               return http.Response(
-                jsonEncode(intentJson(
-                  status: 'paid',
-                  smsSent: true,
-                  receipt: 'QHX99',
-                )),
+                jsonEncode(intentJson(status: 'prompted')),
                 200,
               );
             }
-            return http.Response(jsonEncode(intentJson(status: 'prompted')), 200);
+            if (request.url.path.contains('/query/')) {
+              return http.Response(
+                jsonEncode(
+                  intentJson(status: 'paid', smsSent: true, receipt: 'QHX99'),
+                ),
+                200,
+              );
+            }
+            return http.Response(
+              jsonEncode(intentJson(status: 'prompted')),
+              200,
+            );
           }),
         ),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
-      expect(find.text('Waiting for M-Pesa'), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('stk_title'))).data,
+        'Waiting for M-Pesa',
+      );
       await tester.pump(const Duration(seconds: 2));
       await tester.pump(const Duration(milliseconds: 50));
 
       await tester.tap(find.byKey(const Key('stk_query')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
-      expect(find.text('Payment confirmed'), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('stk_title'))).data,
+        'Payment confirmed',
+      );
       expect(find.byKey(const Key('stk_sms_sent')), findsOneWidget);
       expect(find.text('Done'), findsOneWidget);
     });
@@ -347,13 +409,15 @@ void main() {
               return http.Response(jsonEncode(intentJson()), 201);
             }
             if (request.url.path.contains('/stk/')) {
-              return http.Response(jsonEncode(intentJson(status: 'prompted')), 200);
+              return http.Response(
+                jsonEncode(intentJson(status: 'prompted')),
+                200,
+              );
             }
             return http.Response(
-              jsonEncode(intentJson(
-                status: 'failed',
-                failure: 'Customer cancelled',
-              )),
+              jsonEncode(
+                intentJson(status: 'failed', failure: 'Customer cancelled'),
+              ),
               200,
             );
           }),
@@ -364,7 +428,10 @@ void main() {
       await tester.tap(find.byKey(const Key('stk_query')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
-      expect(find.text('Payment not completed'), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('stk_title'))).data,
+        'Payment not completed',
+      );
       expect(find.text('Customer cancelled'), findsOneWidget);
     });
 
@@ -398,7 +465,9 @@ void main() {
                 }),
               ),
             ),
-            connectivityMonitorProvider.overrideWithValue(FakeConnectivityMonitor()),
+            connectivityMonitorProvider.overrideWithValue(
+              FakeConnectivityMonitor(),
+            ),
           ],
           child: MaterialApp(
             home: Builder(

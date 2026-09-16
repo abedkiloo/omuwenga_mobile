@@ -32,7 +32,9 @@ class _StkWaitPageState extends ConsumerState<StkWaitPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(stkWaitProvider.notifier).start(
+      ref
+          .read(stkWaitProvider.notifier)
+          .start(
             amount: widget.amount,
             phone: widget.phone,
             purpose: widget.purpose,
@@ -148,9 +150,8 @@ class _StkWaitPageState extends ConsumerState<StkWaitPage> {
             CbPrimaryButton(
               key: const Key('stk_done'),
               label: state.isPaid ? 'Done' : 'Close',
-              onPressed: () => Navigator.of(context).maybePop(
-                state.isPaid ? intent : null,
-              ),
+              onPressed: () =>
+                  Navigator.of(context).maybePop(state.isPaid ? intent : null),
             ),
           ],
         ),

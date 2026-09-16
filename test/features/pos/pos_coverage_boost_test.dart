@@ -49,7 +49,10 @@ List<Override> overrides({
     posSettingsProvider.overrideWith((ref) async {
       if (api != null) {
         final r = await api.loadSettings();
-        return r.when(success: (s) => s, failure: (_, _) => const PosSettings());
+        return r.when(
+          success: (s) => s,
+          failure: (_, _) => const PosSettings(),
+        );
       }
       return settings;
     }),
@@ -80,7 +83,10 @@ void main() {
     var n = 0;
     final api = PosApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: MockClient((request) async {
           n++;
@@ -93,7 +99,9 @@ void main() {
           }
           if (request.url.path.contains('store-settings')) {
             return http.Response(
-              jsonEncode({'enabled_payment_methods': ['cash', 'card']}),
+              jsonEncode({
+                'enabled_payment_methods': ['cash', 'card'],
+              }),
               200,
             );
           }
@@ -122,8 +130,7 @@ void main() {
           paymentReference: 'REF',
         ),
         idempotencyKey: 'k',
-      ))
-          .isFailure,
+      )).isFailure,
       isTrue,
     );
   });
@@ -136,7 +143,10 @@ void main() {
       overrides: [
         tokenStoreProvider.overrideWithValue(tokens),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
         httpClientProvider.overrideWithValue(client),
         apiClientProvider.overrideWith((ref) {
@@ -147,7 +157,9 @@ void main() {
           );
         }),
         outboxStoreProvider.overrideWithValue(MemoryOutboxStore()),
-        connectivityMonitorProvider.overrideWithValue(FakeConnectivityMonitor()),
+        connectivityMonitorProvider.overrideWithValue(
+          FakeConnectivityMonitor(),
+        ),
         posApiProvider.overrideWithValue(failing),
         // do not override posSettingsProvider — exercise failure → defaults
       ],
@@ -155,7 +167,10 @@ void main() {
     addTearDown(container.dispose);
     final settings = await container.read(posSettingsProvider.future);
     expect(settings.enabledPaymentMethods, isNotEmpty);
-    expect(await container.read(checkoutControllerProvider.notifier).submit(), isFalse);
+    expect(
+      await container.read(checkoutControllerProvider.notifier).submit(),
+      isFalse,
+    );
   });
 
   test('api createSale transport and unexpected body', () async {
@@ -164,7 +179,10 @@ void main() {
     var n = 0;
     final api = PosApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: MockClient((request) async {
           n++;
@@ -178,23 +196,53 @@ void main() {
     final cart = const PosCart().addProduct(
       const CatalogProduct(id: 1, name: 'A', price: 10),
     );
-    final draft = const CheckoutDraft(method: PosPaymentMethod.cash, amountPaid: 10);
-    expect((await api.createSale(cart: cart, draft: draft, idempotencyKey: 'a')).isFailure, isTrue);
-    expect((await api.createSale(cart: cart, draft: draft, idempotencyKey: 'b')).isFailure, isTrue);
-    expect((await api.createSale(cart: cart, draft: draft, idempotencyKey: 'c')).isFailure, isTrue);
+    final draft = const CheckoutDraft(
+      method: PosPaymentMethod.cash,
+      amountPaid: 10,
+    );
+    expect(
+      (await api.createSale(
+        cart: cart,
+        draft: draft,
+        idempotencyKey: 'a',
+      )).isFailure,
+      isTrue,
+    );
+    expect(
+      (await api.createSale(
+        cart: cart,
+        draft: draft,
+        idempotencyKey: 'b',
+      )).isFailure,
+      isTrue,
+    );
+    expect(
+      (await api.createSale(
+        cart: cart,
+        draft: draft,
+        idempotencyKey: 'c',
+      )).isFailure,
+      isTrue,
+    );
 
     final settingsApi = PosApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: MockClient((_) async => http.Response('{not-json', 200)),
       ),
     );
     expect((await settingsApi.loadSettings()).isFailure, isTrue);
     expect(
-      const CartLine(productId: 1, name: 'A', unitPrice: 1, quantity: 1)
-          .copyWith(unitPrice: 2)
-          .unitPrice,
+      const CartLine(
+        productId: 1,
+        name: 'A',
+        unitPrice: 1,
+        quantity: 1,
+      ).copyWith(unitPrice: 2).unitPrice,
       2,
     );
   });
@@ -208,7 +256,10 @@ void main() {
       overrides: [
         tokenStoreProvider.overrideWithValue(tokens),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
         httpClientProvider.overrideWithValue(client),
         apiClientProvider.overrideWith((ref) {
@@ -228,17 +279,22 @@ void main() {
       await outbox.dispose();
       connectivity.dispose();
     });
-    container.read(cartControllerProvider.notifier).addProduct(
-          const CatalogProduct(id: 1, name: 'A', price: 10),
-        );
-    container.read(checkoutControllerProvider.notifier).setDraft(
+    container
+        .read(cartControllerProvider.notifier)
+        .addProduct(const CatalogProduct(id: 1, name: 'A', price: 10));
+    container
+        .read(checkoutControllerProvider.notifier)
+        .setDraft(
           const CheckoutDraft(
             method: PosPaymentMethod.mpesa,
             amountPaid: 10,
             paymentReference: 'REF1',
           ),
         );
-    expect(await container.read(checkoutControllerProvider.notifier).submit(), isTrue);
+    expect(
+      await container.read(checkoutControllerProvider.notifier).submit(),
+      isTrue,
+    );
     final pending = await outbox.listPending();
     expect(pending.single.bodyJson, contains('REF1'));
   });
@@ -252,7 +308,9 @@ void main() {
         final rows = [
           {'id': 5, 'name': 'Nail', 'selling_price': 20, 'stock_quantity': 5},
         ];
-        if (q.isNotEmpty && !q.toLowerCase().contains('nail') && q != '12345678') {
+        if (q.isNotEmpty &&
+            !q.toLowerCase().contains('nail') &&
+            q != '12345678') {
           return http.Response(
             jsonEncode({
               'count': 0,
@@ -326,6 +384,18 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_confirm_pay')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pos_review_cart')));
+    await tester.pumpAndSettle();
+    expect(find.text('Active Cart Items'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('pos_pay')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('pos_confirm_pay')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pos_confirm_pay')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pos_close_sale_confirm')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('receipt_title')), findsOneWidget);
     await tester.tap(find.byKey(const Key('receipt_done')));
     await tester.pumpAndSettle();
@@ -350,9 +420,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    widgetRef.read(cartControllerProvider.notifier).addProduct(
-          const CatalogProduct(id: 1, name: 'X', price: 1),
-        );
+    widgetRef
+        .read(cartControllerProvider.notifier)
+        .addProduct(const CatalogProduct(id: 1, name: 'X', price: 1));
     await tester.pumpAndSettle();
     expect(find.textContaining('Customer required'), findsOneWidget);
 
@@ -373,7 +443,12 @@ void main() {
             'next': null,
             'previous': null,
             'results': [
-              {'id': 3, 'name': 'Bolt', 'selling_price': 5},
+              {
+                'id': 3,
+                'name': 'Bolt',
+                'selling_price': 5,
+                'stock_quantity': 3,
+              },
             ],
           }),
           200,
@@ -382,7 +457,7 @@ void main() {
       if (request.url.path.contains('/products/search/')) {
         return http.Response(
           jsonEncode([
-            {'id': 3, 'name': 'Bolt', 'selling_price': 5},
+            {'id': 3, 'name': 'Bolt', 'selling_price': 5, 'stock_quantity': 3},
           ]),
           200,
         );
@@ -405,6 +480,18 @@ void main() {
     await tester.enterText(find.byKey(const Key('pos_search')), '');
     await tester.testTextInput.receiveAction(TextInputAction.search);
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('pos_cart_icon')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('pos_clear_cart')));
+    await tester.pumpAndSettle();
+    expect(find.text('Clear current sale?'), findsOneWidget);
+    await tester.tap(find.text('Keep sale'));
+    await tester.pumpAndSettle();
+    expect(find.text('Active Cart Items'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('pos_clear_cart')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pos_clear_confirm')));
+    await tester.pumpAndSettle();
+    expect(find.text('Active Cart Items'), findsNothing);
   });
 
   testWidgets('customer attached label', (tester) async {
@@ -454,15 +541,17 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    widgetRef.read(cartControllerProvider.notifier).addProduct(
-          const CatalogProduct(id: 1, name: 'A', price: 10),
-        );
+    widgetRef
+        .read(cartControllerProvider.notifier)
+        .addProduct(const CatalogProduct(id: 1, name: 'A', price: 10));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_pay')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('pos_confirm_pay')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_confirm_pay')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pos_close_sale_confirm')));
     await tester.pumpAndSettle();
     expect(find.textContaining('waiting to sync'), findsOneWidget);
   });
@@ -537,9 +626,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    widgetRef.read(cartControllerProvider.notifier).addProduct(
-          const CatalogProduct(id: 1, name: 'X', price: 1),
-        );
+    widgetRef
+        .read(cartControllerProvider.notifier)
+        .addProduct(const CatalogProduct(id: 1, name: 'X', price: 1));
     await tester.pumpAndSettle();
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -561,7 +650,10 @@ void main() {
       overrides: [
         tokenStoreProvider.overrideWithValue(tokens),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
         httpClientProvider.overrideWithValue(client),
         apiClientProvider.overrideWith((ref) {
@@ -572,7 +664,9 @@ void main() {
           );
         }),
         outboxStoreProvider.overrideWithValue(MemoryOutboxStore()),
-        connectivityMonitorProvider.overrideWithValue(FakeConnectivityMonitor()),
+        connectivityMonitorProvider.overrideWithValue(
+          FakeConnectivityMonitor(),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -583,13 +677,13 @@ void main() {
 
 class _FailingSettingsApi extends PosApi {
   _FailingSettingsApi()
-      : super(
-          ApiClient(
-            env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://x/api'),
-            tokenStore: InMemoryTokenStore(),
-            httpClient: MockClient((_) async => http.Response('{}', 200)),
-          ),
-        );
+    : super(
+        ApiClient(
+          env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://x/api'),
+          tokenStore: InMemoryTokenStore(),
+          httpClient: MockClient((_) async => http.Response('{}', 200)),
+        ),
+      );
 
   @override
   Future<Result<PosSettings>> loadSettings() async {

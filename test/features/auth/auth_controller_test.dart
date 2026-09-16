@@ -35,13 +35,19 @@ void main() {
       overrides: [
         tokenStoreProvider.overrideWithValue(InMemoryTokenStore()),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
       ],
     );
     addTearDown(container.dispose);
     await container.read(authControllerProvider.notifier).bootstrap();
-    expect(container.read(authControllerProvider).status, AuthStatus.unauthenticated);
+    expect(
+      container.read(authControllerProvider).status,
+      AuthStatus.unauthenticated,
+    );
   });
 
   test('AuthController login success and markSessionExpired', () async {
@@ -50,7 +56,10 @@ void main() {
       overrides: [
         tokenStoreProvider.overrideWithValue(tokens),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
         apiClientProvider.overrideWith((ref) {
           return ApiClient(
@@ -88,8 +97,14 @@ void main() {
     expect(result.isSuccess, isTrue);
     expect(container.read(authControllerProvider).isAuthenticated, isTrue);
     auth.markSessionExpired();
-    expect(container.read(authControllerProvider).status, AuthStatus.unauthenticated);
-    expect(container.read(authControllerProvider).message, contains('Session expired'));
+    expect(
+      container.read(authControllerProvider).status,
+      AuthStatus.unauthenticated,
+    );
+    expect(
+      container.read(authControllerProvider).message,
+      contains('Session expired'),
+    );
     auth.clearMessage();
     expect(container.read(authControllerProvider).message, isNull);
   });
@@ -101,7 +116,10 @@ void main() {
       overrides: [
         tokenStoreProvider.overrideWithValue(tokens),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
         apiClientProvider.overrideWith((ref) {
           return ApiClient(
@@ -125,14 +143,20 @@ void main() {
     );
     addTearDown(container.dispose);
     await container.read(authControllerProvider.notifier).bootstrap();
-    expect(container.read(authControllerProvider).status, AuthStatus.unauthenticated);
+    expect(
+      container.read(authControllerProvider).status,
+      AuthStatus.unauthenticated,
+    );
 
     await tokens.writeTokens(access: 'a', refresh: 'r');
     final seeded = ProviderContainer(
       overrides: [
         tokenStoreProvider.overrideWithValue(tokens),
         appEnvProvider.overrideWithValue(
-          const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
         ),
         authSessionSeedProvider.overrideWithValue(
           AuthSession(
@@ -159,7 +183,10 @@ void main() {
     addTearDown(seeded.dispose);
     expect(seeded.read(authControllerProvider).isAuthenticated, isTrue);
     await seeded.read(authControllerProvider.notifier).logout();
-    expect(seeded.read(authControllerProvider).status, AuthStatus.unauthenticated);
+    expect(
+      seeded.read(authControllerProvider).status,
+      AuthStatus.unauthenticated,
+    );
   });
 
   testWidgets('login page success rebuilds to cashier home', (tester) async {
@@ -169,7 +196,10 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(tokens),
           appEnvProvider.overrideWithValue(
-            const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+            const AppEnv(
+              flavor: AppFlavor.dev,
+              apiBaseUrl: 'http://example.com/api',
+            ),
           ),
           apiClientProvider.overrideWith((ref) {
             return ApiClient(
@@ -214,9 +244,18 @@ void main() {
               final router = GoRouter(
                 initialLocation: AppRoutes.home,
                 routes: [
-                  GoRoute(path: AppRoutes.home, builder: (_, _) => const PersonaHomePage()),
-                  GoRoute(path: AppRoutes.pos, builder: (_, _) => const Text('pos')),
-                  GoRoute(path: AppRoutes.customers, builder: (_, _) => const Text('c')),
+                  GoRoute(
+                    path: AppRoutes.home,
+                    builder: (_, _) => const PersonaHomePage(),
+                  ),
+                  GoRoute(
+                    path: AppRoutes.pos,
+                    builder: (_, _) => const Text('pos'),
+                  ),
+                  GoRoute(
+                    path: AppRoutes.customers,
+                    builder: (_, _) => const Text('c'),
+                  ),
                 ],
               );
               return MaterialApp.router(routerConfig: router);

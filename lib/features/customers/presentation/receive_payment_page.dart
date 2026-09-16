@@ -81,7 +81,9 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
       return;
     }
 
-    final ok = await ref.read(customerDetailProvider(widget.customerId).notifier).receivePayment(
+    final ok = await ref
+        .read(customerDetailProvider(widget.customerId).notifier)
+        .receivePayment(
           amount: amount,
           paymentMethod: _method.apiValue,
           reference: reference,
@@ -109,13 +111,15 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
       appBar: AppBar(title: const Text('Receive payment')),
       body: detail == null
           ? (state.loading
-              ? const LoadingState()
-              : ErrorState(
-                  message: state.error ?? 'Customer unavailable',
-                  onRetry: () => ref
-                      .read(customerDetailProvider(widget.customerId).notifier)
-                      .load(widget.customerId),
-                ))
+                ? const LoadingState()
+                : ErrorState(
+                    message: state.error ?? 'Customer unavailable',
+                    onRetry: () => ref
+                        .read(
+                          customerDetailProvider(widget.customerId).notifier,
+                        )
+                        .load(widget.customerId),
+                  ))
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
@@ -130,21 +134,22 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                       ? detail.debtAmount.toStringAsFixed(2)
                       : _amount.text,
                   style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 Text(
                   'Wallet debt',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.mutedForeground,
-                      ),
+                    color: AppColors.mutedForeground,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 TextField(
                   key: const Key('settle_amount'),
                   controller: _amount,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: const InputDecoration(
                     labelText: 'Amount',
                     border: OutlineInputBorder(),

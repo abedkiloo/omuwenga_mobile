@@ -25,7 +25,8 @@ class AuthState {
   final String? message;
   final bool busy;
 
-  bool get isAuthenticated => status == AuthStatus.authenticated && session != null;
+  bool get isAuthenticated =>
+      status == AuthStatus.authenticated && session != null;
 
   AuthState copyWith({
     AuthStatus? status,
@@ -63,16 +64,20 @@ class AuthController extends Notifier<AuthState> {
   Future<void> bootstrap() async {
     final access = await _tokens.readAccess();
     final refresh = await _tokens.readRefresh();
-    if ((access == null || access.isEmpty) && (refresh == null || refresh.isEmpty)) {
+    if ((access == null || access.isEmpty) &&
+        (refresh == null || refresh.isEmpty)) {
       state = const AuthState(status: AuthStatus.unauthenticated);
       return;
     }
     final result = await _api.me();
     state = result.when(
-      success: (session) => AuthState(status: AuthStatus.authenticated, session: session),
+      success: (session) =>
+          AuthState(status: AuthStatus.authenticated, session: session),
       failure: (error, _) => AuthState(
         status: AuthStatus.unauthenticated,
-        message: error is AuthFailure ? error.message : AuthFailure.sessionExpired().message,
+        message: error is AuthFailure
+            ? error.message
+            : AuthFailure.sessionExpired().message,
       ),
     );
     if (!state.isAuthenticated) {
@@ -127,8 +132,9 @@ class AuthController extends Notifier<AuthState> {
   }
 }
 
-final authControllerProvider =
-    NotifierProvider<AuthController, AuthState>(AuthController.new);
+final authControllerProvider = NotifierProvider<AuthController, AuthState>(
+  AuthController.new,
+);
 
 /// Bridges [authControllerProvider] to GoRouter refresh.
 class AuthRouterListenable extends ChangeNotifier {

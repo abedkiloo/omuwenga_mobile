@@ -98,7 +98,11 @@ void main() {
       flavor: AppFlavor.dev,
       apiBaseUrl: 'http://example.com/api',
     );
-    final apiClient = ApiClient(env: env, tokenStore: tokens, httpClient: client);
+    final apiClient = ApiClient(
+      env: env,
+      tokenStore: tokens,
+      httpClient: client,
+    );
 
     await tester.pumpWidget(
       ProviderScope(

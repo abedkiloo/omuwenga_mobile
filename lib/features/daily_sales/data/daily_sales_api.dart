@@ -17,10 +17,7 @@ class DailySalesApi {
     int? cashierId,
     int pageSize = 50,
   }) async {
-    final params = <String, String>{
-      'date': date,
-      'page_size': '$pageSize',
-    };
+    final params = <String, String>{'date': date, 'page_size': '$pageSize'};
     if (paymentStatus != null) {
       params['payment_status'] = paymentStatus.name;
     }
@@ -47,9 +44,13 @@ class DailySalesApi {
     }
     final decoded = jsonDecode(res.body);
     if (decoded is! Map) {
-      return Failure(DailySalesApiException('Unexpected daily sales response.'));
+      return Failure(
+        DailySalesApiException('Unexpected daily sales response.'),
+      );
     }
-    return Success(DailySalesReport.fromJson(Map<String, dynamic>.from(decoded)));
+    return Success(
+      DailySalesReport.fromJson(Map<String, dynamic>.from(decoded)),
+    );
   }
 
   Future<Result<CustomerDayDetail>> customerDay({
@@ -69,7 +70,9 @@ class DailySalesApi {
     }
     final decoded = jsonDecode(res.body);
     if (decoded is! Map) {
-      return Failure(DailySalesApiException('Unexpected customer day response.'));
+      return Failure(
+        DailySalesApiException('Unexpected customer day response.'),
+      );
     }
     return Success(
       CustomerDayDetail.fromJson(Map<String, dynamic>.from(decoded)),

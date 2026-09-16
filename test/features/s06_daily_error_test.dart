@@ -50,9 +50,14 @@ void main() {
         overrides: [
           tokenStoreProvider.overrideWithValue(tokens),
           appEnvProvider.overrideWithValue(
-            const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+            const AppEnv(
+              flavor: AppFlavor.dev,
+              apiBaseUrl: 'http://example.com/api',
+            ),
           ),
-          authSessionSeedProvider.overrideWithValue(managerSession(dailySales: true)),
+          authSessionSeedProvider.overrideWithValue(
+            managerSession(dailySales: true),
+          ),
           httpClientProvider.overrideWithValue(client),
           apiClientProvider.overrideWith((ref) {
             return ApiClient(

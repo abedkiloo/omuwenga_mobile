@@ -7,7 +7,7 @@ import 'connectivity_monitor.dart';
 /// Production connectivity — excluded from coverage gate (platform channels).
 class ConnectivityPlusMonitor implements ConnectivityMonitor {
   ConnectivityPlusMonitor({Connectivity? connectivity})
-      : _connectivity = connectivity ?? Connectivity() {
+    : _connectivity = connectivity ?? Connectivity() {
     _subscription = _connectivity.onConnectivityChanged.listen((results) {
       _controller.add(_isOnline(results));
     });

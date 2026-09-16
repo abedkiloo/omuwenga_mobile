@@ -28,6 +28,7 @@ class PosPage extends ConsumerStatefulWidget {
 class _PosPageState extends ConsumerState<PosPage> {
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
+  final _catalogScroll = ScrollController();
   final _catalog = ProductCatalogPaging();
   List<ProductCategory> _categories = const [];
 
@@ -43,6 +44,7 @@ class _PosPageState extends ConsumerState<PosPage> {
   void dispose() {
     _search.dispose();
     _searchFocus.dispose();
+    _catalogScroll.dispose();
     super.dispose();
   }
 
@@ -97,8 +99,9 @@ class _PosPageState extends ConsumerState<PosPage> {
         context: context,
         product: product,
         loadVariants: () async {
-          final result =
-              await ref.read(posApiProvider).fetchVariants(product.id);
+          final result = await ref
+              .read(posApiProvider)
+              .fetchVariants(product.id);
           return result.when(
             success: (list) => list,
             failure: (e, _) => throw e,
@@ -106,13 +109,53 @@ class _PosPageState extends ConsumerState<PosPage> {
         },
       );
       if (!mounted || pick == null) return;
-      ref.read(cartControllerProvider.notifier).addProduct(
-            pick.product,
-            variant: pick.variant,
-            qty: pick.quantity,
-          );
+      final stock = pick.variant.stockQuantity;
+      if (stock == null || stock <= 0 || pick.quantity > stock) {
+        _showStockUnavailable(pick.variant.sku ?? pick.product.name);
+        return;
+      }
+      ref
+          .read(cartControllerProvider.notifier)
+          .addProduct(pick.product, variant: pick.variant, qty: pick.quantity);
     } else {
+      final stock = product.stockQuantity;
+      if (stock == null || stock <= 0) {
+        _showStockUnavailable(product.sku ?? product.name);
+        return;
+      }
       ref.read(cartControllerProvider.notifier).addProduct(product);
+    }
+  }
+
+  void _showStockUnavailable(String product) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$product has no available stock.')));
+  }
+
+  Future<void> _confirmClearCart() async {
+    final clear = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear current sale?'),
+        content: const Text(
+          'This removes every item and customer from the current cart.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep sale'),
+          ),
+          FilledButton(
+            key: const Key('pos_clear_confirm'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Clear sale'),
+          ),
+        ],
+      ),
+    );
+    if (clear == true) {
+      ref.read(cartControllerProvider.notifier).clear();
     }
   }
 
@@ -141,17 +184,16 @@ class _PosPageState extends ConsumerState<PosPage> {
 
   Future<void> _openPay() async {
     final cart = ref.read(cartControllerProvider);
-    final settings = ref.read(posSettingsProvider).maybeWhen(
-          data: (s) => s,
-          orElse: () => const PosSettings(),
-        );
+    final settings = ref
+        .read(posSettingsProvider)
+        .maybeWhen(data: (s) => s, orElse: () => const PosSettings());
     if (cart.isEmpty) return;
 
     final methods = settings.enabledPaymentMethods;
     final method = methods.isEmpty ? PosPaymentMethod.cash : methods.first;
-    ref.read(checkoutControllerProvider.notifier).setDraft(
-          CheckoutDraft(method: method, amountPaid: cart.total),
-        );
+    ref
+        .read(checkoutControllerProvider.notifier)
+        .setDraft(CheckoutDraft(method: method, amountPaid: cart.total));
 
     await showModalBottomSheet<void>(
       context: context,
@@ -184,9 +226,8 @@ class _PosPageState extends ConsumerState<PosPage> {
     final session = ref.watch(authControllerProvider).session;
     final theme = Theme.of(context);
     final userName = session?.user.displayName ?? 'Cashier';
-    final roleLabel = session?.profile.roleDisplay ??
-        session?.profile.role ??
-        'Cashier';
+    final roleLabel =
+        session?.profile.roleDisplay ?? session?.profile.role ?? 'Cashier';
 
     return PopScope(
       canPop: !cart.isDirty,
@@ -213,6 +254,14 @@ class _PosPageState extends ConsumerState<PosPage> {
                 child: _PosHeaderCard(
                   userName: userName,
                   roleLabel: roleLabel,
+                  cartItemCount: cart.itemCount,
+                  onCartTap: cart.isEmpty
+                      ? null
+                      : () => _catalogScroll.animateTo(
+                          0,
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOut,
+                        ),
                 ),
               ),
               Padding(
@@ -267,8 +316,10 @@ class _PosPageState extends ConsumerState<PosPage> {
                 const LinearProgressIndicator(minHeight: 2),
               if (_catalog.error != null)
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Text(
                     _catalog.error!,
                     style: const TextStyle(color: AppColors.destructive),
@@ -279,6 +330,7 @@ class _PosPageState extends ConsumerState<PosPage> {
                   onNotification: _onScroll,
                   child: ListView(
                     key: const Key('pos_catalog_scroll'),
+                    controller: _catalogScroll,
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                     children: [
                       if (!cart.isEmpty) ...[
@@ -297,11 +349,13 @@ class _PosPageState extends ConsumerState<PosPage> {
                             ),
                             const Spacer(),
                             TextButton.icon(
-                              onPressed: () => ref
-                                  .read(cartControllerProvider.notifier)
-                                  .clear(),
-                              icon: const Icon(Icons.delete_outline,
-                                  size: 18, color: AppColors.destructive),
+                              key: const Key('pos_clear_cart'),
+                              onPressed: _confirmClearCart,
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                size: 18,
+                                color: AppColors.destructive,
+                              ),
                               label: const Text(
                                 'Clear',
                                 style: TextStyle(color: AppColors.destructive),
@@ -316,9 +370,16 @@ class _PosPageState extends ConsumerState<PosPage> {
                             onDec: () => ref
                                 .read(cartControllerProvider.notifier)
                                 .setQuantity(line.lineKey, line.quantity - 1),
-                            onInc: () => ref
-                                .read(cartControllerProvider.notifier)
-                                .setQuantity(line.lineKey, line.quantity + 1),
+                            onInc:
+                                line.stockQuantity == null ||
+                                    line.quantity >= line.stockQuantity!
+                                ? null
+                                : () => ref
+                                      .read(cartControllerProvider.notifier)
+                                      .setQuantity(
+                                        line.lineKey,
+                                        line.quantity + 1,
+                                      ),
                           ),
                           const SizedBox(height: 8),
                         ],
@@ -349,7 +410,12 @@ class _PosPageState extends ConsumerState<PosPage> {
                         for (final p in _catalog.items) ...[
                           _CatalogProductCard(
                             product: p,
-                            onTap: () => _selectProduct(p),
+                            onTap:
+                                p.hasVariants ||
+                                    (p.stockQuantity != null &&
+                                        p.stockQuantity! > 0)
+                                ? () => _selectProduct(p)
+                                : null,
                           ),
                           const SizedBox(height: 8),
                         ],
@@ -360,8 +426,7 @@ class _PosPageState extends ConsumerState<PosPage> {
                             child: SizedBox(
                               width: 24,
                               height: 24,
-                              child:
-                                  CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           ),
                         ),
@@ -442,10 +507,14 @@ class _PosHeaderCard extends StatelessWidget {
   const _PosHeaderCard({
     required this.userName,
     required this.roleLabel,
+    required this.cartItemCount,
+    required this.onCartTap,
   });
 
   final String userName;
   final String roleLabel;
+  final int cartItemCount;
+  final VoidCallback? onCartTap;
 
   @override
   Widget build(BuildContext context) {
@@ -495,6 +564,45 @@ class _PosHeaderCard extends StatelessWidget {
             showOnlineDot: true,
           ),
           const SizedBox(width: 8),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                key: const Key('pos_cart_icon'),
+                tooltip: 'Current cart',
+                onPressed: onCartTap,
+                icon: const Icon(
+                  Icons.shopping_cart_outlined,
+                  color: AppColors.primary,
+                ),
+              ),
+              if (cartItemCount > 0)
+                Positioned(
+                  right: 2,
+                  top: 0,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: const BoxDecoration(
+                      color: AppColors.destructive,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      cartItemCount > 99 ? '99+' : '$cartItemCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
           const CircleAvatar(
             radius: 16,
             backgroundColor: AppColors.primary,
@@ -531,8 +639,10 @@ class _PosSearchRow extends StatelessWidget {
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
               hintText: 'Search SKU, Brand or Scan…',
-              prefixIcon:
-                  const Icon(Icons.search, color: AppColors.mutedForeground),
+              prefixIcon: const Icon(
+                Icons.search,
+                color: AppColors.mutedForeground,
+              ),
               filled: true,
               fillColor: AppColors.surface,
               border: OutlineInputBorder(
@@ -622,7 +732,7 @@ class _CartLineCard extends StatelessWidget {
 
   final CartLine line;
   final VoidCallback onDec;
-  final VoidCallback onInc;
+  final VoidCallback? onInc;
 
   @override
   Widget build(BuildContext context) {
@@ -644,8 +754,10 @@ class _CartLineCard extends StatelessWidget {
                   color: AppColors.accentSoft,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.inventory_2_outlined,
-                    color: AppColors.primary),
+                child: const Icon(
+                  Icons.inventory_2_outlined,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -744,19 +856,17 @@ class _CartLineCard extends StatelessWidget {
 }
 
 class _CatalogProductCard extends StatelessWidget {
-  const _CatalogProductCard({
-    required this.product,
-    required this.onTap,
-  });
+  const _CatalogProductCard({required this.product, required this.onTap});
 
   final CatalogProduct product;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final stock = product.stockQuantity;
     final lowStock = stock != null && stock > 0 && stock <= 50;
+    final unavailable = !product.hasVariants && (stock == null || stock <= 0);
 
     return CbSurfaceCard(
       key: Key('pos_product_card_${product.id}'),
@@ -781,8 +891,10 @@ class _CatalogProductCard extends StatelessWidget {
                       color: AppColors.primary,
                     ),
                   )
-                : const Icon(Icons.inventory_2_outlined,
-                    color: AppColors.primary),
+                : const Icon(
+                    Icons.inventory_2_outlined,
+                    color: AppColors.primary,
+                  ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -809,7 +921,13 @@ class _CatalogProductCard extends StatelessWidget {
                     color: AppColors.mutedForeground,
                   ),
                 ),
-                if (stock != null) ...[
+                if (unavailable) ...[
+                  const SizedBox(height: 6),
+                  const CbStatusPill(
+                    label: 'Stock unavailable',
+                    variant: CbStatusPillVariant.neutral,
+                  ),
+                ] else if (stock != null) ...[
                   const SizedBox(height: 6),
                   CbStatusPill(
                     label: 'Stock ${stock.round()}',
@@ -832,7 +950,7 @@ class _CatalogProductCard extends StatelessWidget {
             product.hasVariants
                 ? Icons.layers_outlined
                 : Icons.add_circle_outline,
-            color: AppColors.primary,
+            color: unavailable ? AppColors.mutedForeground : AppColors.primary,
           ),
         ],
       ),
@@ -841,19 +959,15 @@ class _CatalogProductCard extends StatelessWidget {
 }
 
 class _QtyButton extends StatelessWidget {
-  const _QtyButton({
-    super.key,
-    required this.icon,
-    required this.onTap,
-  });
+  const _QtyButton({super.key, required this.icon, required this.onTap});
 
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surface,
+      color: onTap == null ? AppColors.background : AppColors.surface,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
@@ -865,7 +979,13 @@ class _QtyButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.border),
           ),
-          child: Icon(icon, size: 18, color: AppColors.primary),
+          child: Icon(
+            icon,
+            size: 18,
+            color: onTap == null
+                ? AppColors.mutedForeground
+                : AppColors.primary,
+          ),
         ),
       ),
     );
@@ -889,8 +1009,9 @@ class _CustomerStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasCustomer = cart.customerId != null;
-    final customerLabel =
-        hasCustomer ? cart.customerName ?? 'Customer' : 'Walk-in Retail';
+    final customerLabel = hasCustomer
+        ? cart.customerName ?? 'Customer'
+        : 'Walk-in Retail';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -907,8 +1028,11 @@ class _CustomerStrip extends StatelessWidget {
               color: AppColors.surface,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.storefront_outlined,
-                color: AppColors.primary, size: 18),
+            child: const Icon(
+              Icons.storefront_outlined,
+              color: AppColors.primary,
+              size: 18,
+            ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -979,7 +1103,6 @@ class _CustomerStrip extends StatelessWidget {
   }
 }
 
-
 class _PaySheet extends ConsumerStatefulWidget {
   const _PaySheet();
 
@@ -1014,7 +1137,9 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
   void _pushDraft({PosPaymentMethod? method}) {
     final checkout = ref.read(checkoutControllerProvider);
     final amount = double.tryParse(_amount.text) ?? 0;
-    ref.read(checkoutControllerProvider.notifier).setDraft(
+    ref
+        .read(checkoutControllerProvider.notifier)
+        .setDraft(
           CheckoutDraft(
             method: method ?? checkout.draft.method,
             amountPaid: amount,
@@ -1023,14 +1148,38 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
         );
   }
 
+  Future<bool?> _confirmCloseSale(PosCart cart) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Confirm and close sale?'),
+        content: Text(
+          'Confirm payment of ${_kes(cart.total)} and record this sale. '
+          'Choose Review cart if you need to change any item first.',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('pos_review_cart'),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Review cart'),
+          ),
+          FilledButton(
+            key: const Key('pos_close_sale_confirm'),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Confirm & close sale'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(cartControllerProvider);
     final checkout = ref.watch(checkoutControllerProvider);
-    final settings = ref.watch(posSettingsProvider).maybeWhen(
-          data: (s) => s,
-          orElse: () => const PosSettings(),
-        );
+    final settings = ref
+        .watch(posSettingsProvider)
+        .maybeWhen(data: (s) => s, orElse: () => const PosSettings());
     final draft = checkout.draft;
     final valid = canSubmitCheckout(
       cart: cart,
@@ -1050,8 +1199,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     } else if (isMpesa) {
       confirmLabel = 'Send STK Push';
     } else {
-      confirmLabel =
-          'Confirm Payment - KES ${cart.total.toStringAsFixed(2)}';
+      confirmLabel = 'Confirm Payment - KES ${cart.total.toStringAsFixed(2)}';
     }
 
     return Padding(
@@ -1169,7 +1317,9 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
               TextField(
                 key: const Key('pos_amount_paid'),
                 controller: _amount,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Amount paid',
                   border: OutlineInputBorder(),
@@ -1226,14 +1376,23 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
               onPressed: !valid || checkout.phase == CheckoutPhase.submitting
                   ? null
                   : () async {
+                      final phone = _phone.text.trim();
+                      if (isMpesa && phone.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Enter M-Pesa phone')),
+                        );
+                        return;
+                      }
+
+                      final closeSale = await _confirmCloseSale(cart);
+                      if (!context.mounted) return;
+                      if (closeSale == false) {
+                        Navigator.pop(context);
+                        return;
+                      }
+                      if (closeSale != true) return;
+
                       if (isMpesa) {
-                        final phone = _phone.text.trim();
-                        if (phone.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Enter M-Pesa phone')),
-                          );
-                          return;
-                        }
                         final amount = cart.total;
                         _amount.text = amount.toStringAsFixed(2);
                         _pushDraft();
@@ -1244,7 +1403,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                           purpose: 'pos',
                         );
                         if (paid == null || !context.mounted) return;
-                        _reference.text = paid.mpesaReceipt ?? paid.invoiceNumber;
+                        _reference.text =
+                            paid.mpesaReceipt ?? paid.invoiceNumber;
                         _pushDraft();
                       }
                       final ok = await ref

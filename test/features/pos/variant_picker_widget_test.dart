@@ -5,7 +5,6 @@ import 'package:completebyte_pos_mobile/core/env/app_env.dart';
 import 'package:completebyte_pos_mobile/core/network/api_client.dart';
 import 'package:completebyte_pos_mobile/core/secure/token_store.dart';
 import 'package:completebyte_pos_mobile/features/pos/application/pos_controllers.dart';
-import 'package:completebyte_pos_mobile/features/pos/data/pos_api.dart';
 import 'package:completebyte_pos_mobile/features/pos/domain/payment.dart';
 import 'package:completebyte_pos_mobile/features/pos/presentation/pos_page.dart';
 import 'package:completebyte_pos_mobile/sync/application/connectivity_monitor.dart';
@@ -73,6 +72,18 @@ void main() {
                 'stock_quantity': 2,
                 'is_active': true,
               },
+              {
+                'id': 103,
+                'product': 12,
+                'size': 4,
+                'size_name': 'Out of stock',
+                'color': 5,
+                'color_name': 'Red',
+                'effective_price': 21,
+                'sku': 'TEE-OOS',
+                'stock_quantity': 0,
+                'is_active': true,
+              },
             ],
           }),
           200,
@@ -131,6 +142,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('variant_picker_title')), findsOneWidget);
+    expect(find.byKey(const Key('variant_size_4')), findsNothing);
     await tester.tap(find.byKey(const Key('variant_size_1')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('variant_color_2')));

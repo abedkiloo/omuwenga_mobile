@@ -52,7 +52,10 @@ Map<String, dynamic> _orderJson({
 FieldOrdersApi _api(MockClient client) {
   return FieldOrdersApi(
     ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: InMemoryTokenStore(),
       httpClient: client,
     ),
@@ -63,7 +66,10 @@ void main() {
   group('domain', () {
     test('status parse and apiValue', () {
       expect(FieldOrderStatus.parse('submitted'), FieldOrderStatus.submitted);
-      expect(FieldOrderStatus.parse('out_for_delivery'), FieldOrderStatus.outForDelivery);
+      expect(
+        FieldOrderStatus.parse('out_for_delivery'),
+        FieldOrderStatus.outForDelivery,
+      );
       expect(FieldOrderStatus.parse(null), FieldOrderStatus.draft);
       expect(FieldOrderStatus.outForDelivery.apiValue, 'out_for_delivery');
       expect(FieldOrderStatus.ready.apiValue, 'ready');
@@ -75,15 +81,20 @@ void main() {
     test('cart canSubmit and addProduct merge', () {
       var cart = const FieldOrderCart(siteId: 0);
       expect(cart.canSubmit, isFalse);
-      cart = cart.copyWith(siteId: 3).addProduct(
-            const CatalogProduct(id: 1, name: 'A', price: 10),
-          );
+      cart = cart
+          .copyWith(siteId: 3)
+          .addProduct(const CatalogProduct(id: 1, name: 'A', price: 10));
       expect(cart.canSubmit, isTrue);
       cart = cart.addProduct(const CatalogProduct(id: 1, name: 'A', price: 10));
       expect(cart.lines.single.quantity, 2);
       expect(cart.subtotal, 20);
       expect(cart.toLinesJson().single['product_id'], 1);
-      cart = cart.copyWith(notes: 'n', photoUrls: ['u'], latitude: 1, longitude: 2);
+      cart = cart.copyWith(
+        notes: 'n',
+        photoUrls: ['u'],
+        latitude: 1,
+        longitude: 2,
+      );
       expect(cart.notes, 'n');
       expect(cart.photoUrls, ['u']);
     });
@@ -107,7 +118,10 @@ void main() {
             return http.Response(jsonEncode(_orderJson()), 201);
           }
           if (request.url.path.contains('/submit/')) {
-            return http.Response(jsonEncode(_orderJson(status: 'submitted')), 200);
+            return http.Response(
+              jsonEncode(_orderJson(status: 'submitted')),
+              200,
+            );
           }
           if (request.url.path.contains('/field-orders/')) {
             return http.Response(
@@ -126,17 +140,21 @@ void main() {
         ),
       );
       expect(created.getOrThrow().id, 1);
-      expect((await api.submit(1)).getOrThrow().status, FieldOrderStatus.submitted);
+      expect(
+        (await api.submit(1)).getOrThrow().status,
+        FieldOrderStatus.submitted,
+      );
       expect((await api.listMine()).getOrThrow().single.id, 1);
 
       final bad = _api(MockClient((_) async => http.Response('nope', 400)));
-      expect((await bad.create(const FieldOrderCart(siteId: 1))).isFailure, isTrue);
+      expect(
+        (await bad.create(const FieldOrderCart(siteId: 1))).isFailure,
+        isTrue,
+      );
       expect((await bad.submit(9)).isFailure, isTrue);
       expect((await bad.listMine()).isFailure, isTrue);
 
-      final invalid = _api(
-        MockClient((_) async => http.Response('"x"', 200)),
-      );
+      final invalid = _api(MockClient((_) async => http.Response('"x"', 200)));
       expect((await invalid.listMine()).isFailure, isTrue);
       expect((await invalid.submit(1)).isFailure, isTrue);
 
@@ -147,7 +165,10 @@ void main() {
 
       final netFail = FieldOrdersApi(
         ApiClient(
-          env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          env: const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
           tokenStore: InMemoryTokenStore(),
           httpClient: MockClient((_) async => throw Exception('down')),
         ),
@@ -164,12 +185,21 @@ void main() {
           if (request.url.path.endsWith('/field-orders/')) {
             return http.Response(jsonEncode(_orderJson()), 201);
           }
-          return http.Response(jsonEncode(_orderJson(status: 'submitted')), 200);
+          return http.Response(
+            jsonEncode(_orderJson(status: 'submitted')),
+            200,
+          );
         }),
       );
       final c = FieldOrderCartController(api, push);
       expect(await c.submit(), isFalse);
-      c.bindSite(siteId: 7, label: 'Gate', photoUrls: ['u'], latitude: 1, longitude: 2);
+      c.bindSite(
+        siteId: 7,
+        label: 'Gate',
+        photoUrls: ['u'],
+        latitude: 1,
+        longitude: 2,
+      );
       c.setNotes('rush');
       expect(c.state.canSubmit, isFalse);
       c.addProduct(const CatalogProduct(id: 1, name: 'Sample SKU', price: 100));
@@ -230,7 +260,10 @@ void main() {
       final push = FakePushNotifier();
       final posApi = PosApi(
         ApiClient(
-          env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          env: const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
           tokenStore: InMemoryTokenStore(),
           httpClient: MockClient((request) async {
             if (request.url.path.contains('/products/search/')) {
@@ -269,7 +302,10 @@ void main() {
             posApiProvider.overrideWithValue(posApi),
             pushNotifierProvider.overrideWithValue(push),
             appEnvProvider.overrideWithValue(
-              const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+              const AppEnv(
+                flavor: AppFlavor.dev,
+                apiBaseUrl: 'http://example.com/api',
+              ),
             ),
           ],
           child: const MaterialApp(home: FieldOrderCartPage(siteId: 7)),

@@ -41,8 +41,9 @@ class DailySalesState {
   }) {
     return DailySalesState(
       day: day ?? this.day,
-      statusFilter:
-          clearStatusFilter ? null : (statusFilter ?? this.statusFilter),
+      statusFilter: clearStatusFilter
+          ? null
+          : (statusFilter ?? this.statusFilter),
       search: search ?? this.search,
       report: clearReport ? null : (report ?? this.report),
       loading: loading ?? this.loading,
@@ -53,7 +54,7 @@ class DailySalesState {
 
 class DailySalesController extends StateNotifier<DailySalesState> {
   DailySalesController(this._api, {DateTime? initialDay})
-      : super(DailySalesState(day: initialDay));
+    : super(DailySalesState(day: initialDay));
 
   final DailySalesApi _api;
 
@@ -100,21 +101,17 @@ class DailySalesController extends StateNotifier<DailySalesState> {
 }
 
 final dailySalesProvider =
-    StateNotifierProvider.autoDispose<DailySalesController, DailySalesState>(
-  (ref) {
-    final controller = DailySalesController(ref.watch(dailySalesApiProvider));
-    // ignore: discarded_futures
-    controller.load();
-    return controller;
-  },
-);
+    StateNotifierProvider.autoDispose<DailySalesController, DailySalesState>((
+      ref,
+    ) {
+      final controller = DailySalesController(ref.watch(dailySalesApiProvider));
+      // ignore: discarded_futures
+      controller.load();
+      return controller;
+    });
 
 class CustomerDayState {
-  const CustomerDayState({
-    this.detail,
-    this.loading = false,
-    this.error,
-  });
+  const CustomerDayState({this.detail, this.loading = false, this.error});
 
   final CustomerDayDetail? detail;
   final bool loading;
@@ -152,11 +149,15 @@ class CustomerDayController extends StateNotifier<CustomerDayState> {
 }
 
 final customerDayProvider = StateNotifierProvider.autoDispose
-    .family<CustomerDayController, CustomerDayState, ({int customerId, String date})>(
-  (ref, key) {
-    final controller = CustomerDayController(ref.watch(dailySalesApiProvider));
-    // ignore: discarded_futures
-    controller.load(customerId: key.customerId, date: key.date);
-    return controller;
-  },
-);
+    .family<
+      CustomerDayController,
+      CustomerDayState,
+      ({int customerId, String date})
+    >((ref, key) {
+      final controller = CustomerDayController(
+        ref.watch(dailySalesApiProvider),
+      );
+      // ignore: discarded_futures
+      controller.load(customerId: key.customerId, date: key.date);
+      return controller;
+    });

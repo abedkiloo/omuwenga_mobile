@@ -31,7 +31,12 @@ import 'package:http/testing.dart';
 
 AuthSession _fullSession() {
   return AuthSession(
-    user: const AuthUser(id: 1, username: 'sales', firstName: 'Sam', lastName: 'Cash'),
+    user: const AuthUser(
+      id: 1,
+      username: 'sales',
+      firstName: 'Sam',
+      lastName: 'Cash',
+    ),
     profile: const UserProfileSnapshot(
       role: 'cashier',
       isSuperAdmin: false,
@@ -42,6 +47,8 @@ AuthSession _fullSession() {
       const PermissionGrant(module: 'customers', action: 'view'),
       const PermissionGrant(module: 'customers', action: 'create'),
       const PermissionGrant(module: 'customers', action: 'update'),
+      const PermissionGrant(module: 'debt_management', action: 'view'),
+      const PermissionGrant(module: 'debt_management', action: 'update'),
       const PermissionGrant(module: 'pos', action: 'view'),
     ]),
     persona: AppPersona.cashier,
@@ -75,7 +82,10 @@ CustomersApi _api(MockClient client) {
   final tokens = InMemoryTokenStore();
   return CustomersApi(
     ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: tokens,
       httpClient: client,
     ),
@@ -132,22 +142,27 @@ void main() {
 
     final throwApi = CustomersApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: MockClient((_) async => throw Exception('offline')),
       ),
     );
     expect((await throwApi.list()).isFailure, isTrue);
     expect((await throwApi.detail(1)).isFailure, isTrue);
-    expect((await throwApi.create(const CustomerDraft(name: 'A'))).isFailure, isTrue);
+    expect(
+      (await throwApi.create(const CustomerDraft(name: 'A'))).isFailure,
+      isTrue,
+    );
     expect(
       (await throwApi.receiveWalletPayment(
         customerId: 1,
         amount: 1,
         paymentMethod: 'cash',
         idempotencyKey: 'k',
-      ))
-          .isFailure,
+      )).isFailure,
       isTrue,
     );
     expect((await throwApi.loadSettings()).isSuccess, isTrue);
@@ -179,7 +194,10 @@ void main() {
 
     expect((await api.detail(1)).isFailure, isTrue);
     expect((await api.detail(1)).isFailure, isTrue);
-    expect((await api.create(const CustomerDraft(name: 'A'))).isFailure, isTrue);
+    expect(
+      (await api.create(const CustomerDraft(name: 'A'))).isFailure,
+      isTrue,
+    );
     expect(
       (await api.update(1, const CustomerDraft(name: 'A'))).isFailure,
       isTrue,
@@ -192,8 +210,7 @@ void main() {
         reference: 'r',
         notes: 'n',
         idempotencyKey: 'k2',
-      ))
-          .isFailure,
+      )).isFailure,
       isTrue,
     );
     expect(
@@ -203,8 +220,7 @@ void main() {
         paymentMethod: 'cash',
         notes: 'n',
         idempotencyKey: 'k3',
-      ))
-          .isFailure,
+      )).isFailure,
       isTrue,
     );
     expect((await api.loadSettings()).getOrThrow().enableWalletPayment, isTrue);
@@ -243,11 +259,17 @@ void main() {
     final api = _api(client);
     final detail = CustomerDetailController(api, ClientUuid());
     await detail.load(9);
-    expect(await detail.receivePayment(amount: 1, paymentMethod: 'cash'), isFalse);
+    expect(
+      await detail.receivePayment(amount: 1, paymentMethod: 'cash'),
+      isFalse,
+    );
     expect(detail.state.error, isNotNull);
 
     final empty = CustomerDetailController(api, ClientUuid());
-    expect(await empty.receivePayment(amount: 1, paymentMethod: 'cash'), isFalse);
+    expect(
+      await empty.receivePayment(amount: 1, paymentMethod: 'cash'),
+      isFalse,
+    );
   });
 
   testWidgets('list / form / settle / picker / rich detail', (tester) async {
@@ -294,11 +316,15 @@ void main() {
       }
       if (request.url.path.contains('receive-wallet-payment')) {
         return http.Response(
-          jsonEncode({'wallet_balance': '0', 'transaction': {'id': 1}}),
+          jsonEncode({
+            'wallet_balance': '0',
+            'transaction': {'id': 1},
+          }),
           201,
         );
       }
-      if (request.method == 'POST' && request.url.path.endsWith('/customers/')) {
+      if (request.method == 'POST' &&
+          request.url.path.endsWith('/customers/')) {
         return http.Response(jsonEncode({'id': 99, 'name': 'New'}), 201);
       }
       if (request.method == 'PUT') {
@@ -324,8 +350,14 @@ void main() {
     final router = GoRouter(
       initialLocation: '/customers',
       routes: [
-        GoRoute(path: '/customers', builder: (_, _) => const CustomersListPage()),
-        GoRoute(path: '/customers/new', builder: (_, _) => const CustomerFormPage()),
+        GoRoute(
+          path: '/customers',
+          builder: (_, _) => const CustomersListPage(),
+        ),
+        GoRoute(
+          path: '/customers/new',
+          builder: (_, _) => const CustomerFormPage(),
+        ),
         GoRoute(
           path: '/customers/:id',
           builder: (_, state) => CustomerDetailPage(
@@ -387,7 +419,10 @@ void main() {
 
     router.go('/customers/new');
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('customer_form_name')), 'Fresh');
+    await tester.enterText(
+      find.byKey(const Key('customer_form_name')),
+      'Fresh',
+    );
     await tester.tap(find.byKey(const Key('customer_form_save')));
     await tester.pumpAndSettle();
   });
@@ -464,7 +499,10 @@ void main() {
 
     await tester.tap(find.byKey(const Key('open_picker')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('pos_customer_search')), 'Made');
+    await tester.enterText(
+      find.byKey(const Key('pos_customer_search')),
+      'Made',
+    );
     await tester.tap(find.byKey(const Key('pos_customer_create')));
     await tester.pumpAndSettle();
   });
@@ -662,7 +700,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('customer_form_name')), 'PosCust');
+    await tester.enterText(
+      find.byKey(const Key('customer_form_name')),
+      'PosCust',
+    );
     await tester.tap(find.byKey(const Key('customer_form_save')));
     await tester.pumpAndSettle();
     expect(okContainer.read(cartControllerProvider).customerId, 55);
@@ -706,7 +747,9 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('settle unavailable and payment rejected snackbar', (tester) async {
+  testWidgets('settle unavailable and payment rejected snackbar', (
+    tester,
+  ) async {
     final client = MockClient((request) async {
       if (request.url.path.contains('/999/')) {
         return http.Response(jsonEncode({'error': 'gone'}), 404);
@@ -754,7 +797,8 @@ void main() {
   testWidgets('picker failure empty create and create error', (tester) async {
     var listMode = 'error';
     final client = MockClient((request) async {
-      if (request.method == 'POST' && request.url.path.endsWith('/customers/')) {
+      if (request.method == 'POST' &&
+          request.url.path.endsWith('/customers/')) {
         return http.Response(jsonEncode({'error': 'create failed'}), 400);
       }
       if (request.url.path.contains('/sales/customers')) {
@@ -786,7 +830,8 @@ void main() {
                   ),
                   GoRoute(
                     path: '/customers/new',
-                    builder: (_, _) => const CustomerFormPage(returnToPos: true),
+                    builder: (_, _) =>
+                        const CustomerFormPage(returnToPos: true),
                   ),
                 ],
               ),
@@ -807,7 +852,8 @@ void main() {
 
   testWidgets('picker empty list and named create failure', (tester) async {
     final client = MockClient((request) async {
-      if (request.method == 'POST' && request.url.path.endsWith('/customers/')) {
+      if (request.method == 'POST' &&
+          request.url.path.endsWith('/customers/')) {
         return http.Response(jsonEncode({'error': 'create failed'}), 400);
       }
       if (request.url.path.contains('/sales/customers')) {
@@ -840,7 +886,10 @@ void main() {
     await tester.tap(find.byKey(const Key('open_picker3')));
     await tester.pumpAndSettle();
     expect(find.text('No customers found'), findsOneWidget);
-    await tester.enterText(find.byKey(const Key('pos_customer_search')), 'Nope');
+    await tester.enterText(
+      find.byKey(const Key('pos_customer_search')),
+      'Nope',
+    );
     await tester.tap(find.byKey(const Key('pos_customer_create')));
     await tester.pumpAndSettle();
     expect(find.textContaining('create failed'), findsOneWidget);

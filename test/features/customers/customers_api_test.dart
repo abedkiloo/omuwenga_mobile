@@ -20,7 +20,10 @@ void main() {
   CustomersApi apiWith(MockClient client) {
     return CustomersApi(
       ApiClient(
-        env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
         tokenStore: tokens,
         httpClient: client,
       ),
@@ -155,9 +158,15 @@ void main() {
         );
       }),
     );
-    expect((await api.create(const CustomerDraft(name: 'New'))).getOrThrow().id, 8);
     expect(
-      (await api.update(8, const CustomerDraft(name: 'Updated'))).getOrThrow().name,
+      (await api.create(const CustomerDraft(name: 'New'))).getOrThrow().id,
+      8,
+    );
+    expect(
+      (await api.update(
+        8,
+        const CustomerDraft(name: 'Updated'),
+      )).getOrThrow().name,
       'Updated',
     );
     final settings = (await api.loadSettings()).getOrThrow();
@@ -168,10 +177,15 @@ void main() {
 
   test('api errors surface message', () async {
     final api = apiWith(
-      MockClient((_) async => http.Response(jsonEncode({'error': 'Nope'}), 400)),
+      MockClient(
+        (_) async => http.Response(jsonEncode({'error': 'Nope'}), 400),
+      ),
     );
     final fail = await api.list();
     expect(fail.isFailure, isTrue);
-    expect(fail.when(success: (_) => '', failure: (e, _) => e.toString()), 'Nope');
+    expect(
+      fail.when(success: (_) => '', failure: (e, _) => e.toString()),
+      'Nope',
+    );
   });
 }

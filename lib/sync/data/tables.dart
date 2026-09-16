@@ -24,9 +24,11 @@ class CachedProducts extends Table {
   TextColumn get id => text()();
   TextColumn get serverId => text().nullable()();
   TextColumn get sku => text().nullable()();
+
   /// Display name — not PII; kept plaintext for search.
   TextColumn get name => text()();
   RealColumn get price => real().withDefault(const Constant(0))();
+
   /// Optional AES blob for future sensitive attributes (notes, phones on related entities).
   TextColumn get encryptedPayload => text().nullable()();
   DateTimeColumn get updatedAt => dateTime()();

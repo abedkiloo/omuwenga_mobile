@@ -21,7 +21,12 @@ import 'package:http/testing.dart';
 
 AuthSession _dispatcherSession({bool canUpdate = true}) {
   return AuthSession(
-    user: const AuthUser(id: 3, username: 'dispatch', firstName: 'Di', lastName: 'Patch'),
+    user: const AuthUser(
+      id: 3,
+      username: 'dispatch',
+      firstName: 'Di',
+      lastName: 'Patch',
+    ),
     profile: const UserProfileSnapshot(
       role: 'manager',
       isSuperAdmin: false,
@@ -30,16 +35,14 @@ AuthSession _dispatcherSession({bool canUpdate = true}) {
     ),
     permissions: PermissionSet([
       const PermissionGrant(module: 'dispatch', action: 'view'),
-      if (canUpdate) const PermissionGrant(module: 'dispatch', action: 'update'),
+      if (canUpdate)
+        const PermissionGrant(module: 'dispatch', action: 'update'),
     ]),
     persona: AppPersona.dispatcher,
   );
 }
 
-Map<String, dynamic> _orderJson({
-  int id = 11,
-  String status = 'submitted',
-}) {
+Map<String, dynamic> _orderJson({int id = 11, String status = 'submitted'}) {
   return {
     'id': id,
     'status': status,
@@ -69,7 +72,10 @@ Map<String, dynamic> _orderJson({
 DispatchApi _api(MockClient client) {
   return DispatchApi(
     ApiClient(
-      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
       tokenStore: InMemoryTokenStore(),
       httpClient: client,
     ),
@@ -104,9 +110,10 @@ void main() {
       expect((await api.queue()).getOrThrow().single.id, 11);
       expect((await api.pack(11)).getOrThrow().stockAllocated, isTrue);
       expect(
-        (await api.assign(orderId: 11, deliveryDriverId: 101))
-            .getOrThrow()
-            .assignedDeliveryDriverId,
+        (await api.assign(
+          orderId: 11,
+          deliveryDriverId: 101,
+        )).getOrThrow().assignedDeliveryDriverId,
         101,
       );
 
@@ -118,15 +125,16 @@ void main() {
         isTrue,
       );
 
-      final invalid = _api(
-        MockClient((_) async => http.Response('{}', 200)),
-      );
+      final invalid = _api(MockClient((_) async => http.Response('{}', 200)));
       expect((await invalid.queue()).isFailure, isTrue);
       expect((await invalid.pack(1)).isFailure, isTrue);
 
       final net = DispatchApi(
         ApiClient(
-          env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+          env: const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
           tokenStore: InMemoryTokenStore(),
           httpClient: MockClient((_) async => throw Exception('down')),
         ),
@@ -195,7 +203,10 @@ void main() {
                 if (request.url.path.contains('/queue/')) {
                   return http.Response(jsonEncode([_orderJson()]), 200);
                 }
-                return http.Response(jsonEncode(_orderJson(status: 'ready')), 200);
+                return http.Response(
+                  jsonEncode(_orderJson(status: 'ready')),
+                  200,
+                );
               }),
             ),
           ),
@@ -207,9 +218,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: const MaterialApp(
-            home: DispatchOrderDetailPage(orderId: 11),
-          ),
+          child: const MaterialApp(home: DispatchOrderDetailPage(orderId: 11)),
         ),
       );
       await tester.pumpAndSettle();
@@ -255,9 +264,7 @@ void main() {
             ),
             pushNotifierProvider.overrideWithValue(FakePushNotifier()),
           ],
-          child: const MaterialApp(
-            home: DispatchOrderDetailPage(orderId: 11),
-          ),
+          child: const MaterialApp(home: DispatchOrderDetailPage(orderId: 11)),
         ),
       );
       await tester.pumpAndSettle();
@@ -270,9 +277,7 @@ void main() {
         ProviderScope(
           overrides: [
             dispatchApiProvider.overrideWithValue(
-              _api(
-                MockClient((_) async => http.Response(jsonEncode([]), 200)),
-              ),
+              _api(MockClient((_) async => http.Response(jsonEncode([]), 200))),
             ),
             pushNotifierProvider.overrideWithValue(FakePushNotifier()),
           ],
@@ -289,7 +294,9 @@ void main() {
           overrides: [
             dispatchApiProvider.overrideWithValue(
               _api(
-                MockClient((_) async => http.Response(jsonEncode([_orderJson()]), 200)),
+                MockClient(
+                  (_) async => http.Response(jsonEncode([_orderJson()]), 200),
+                ),
               ),
             ),
             pushNotifierProvider.overrideWithValue(FakePushNotifier()),

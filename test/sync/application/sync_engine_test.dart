@@ -23,7 +23,10 @@ void main() {
     final keys = <String>[];
     final engine = SyncEngine(
       store: store,
-      backoff: const SyncBackoff(base: Duration(seconds: 1), cap: Duration(seconds: 60)),
+      backoff: const SyncBackoff(
+        base: Duration(seconds: 1),
+        cap: Duration(seconds: 60),
+      ),
       maxAttempts: 3,
       clock: () => now,
       sender: (entry) async {
@@ -45,7 +48,9 @@ void main() {
 
     expect(await engine.drainOnce(), 0);
     expect(keys, ['stable-key-1']);
-    var pending = await store.listPending(readyBefore: now.add(const Duration(hours: 1)));
+    var pending = await store.listPending(
+      readyBefore: now.add(const Duration(hours: 1)),
+    );
     expect(pending.single.attemptCount, 1);
     expect(pending.single.idempotencyKey, 'stable-key-1');
 

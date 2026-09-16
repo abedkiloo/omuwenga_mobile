@@ -51,7 +51,7 @@ class StkWaitState {
 
 class StkWaitController extends StateNotifier<StkWaitState> {
   StkWaitController(this._api, this._connectivity)
-      : super(const StkWaitState());
+    : super(const StkWaitState());
 
   final PaymentsApi _api;
   final ConnectivityMonitor _connectivity;
@@ -78,7 +78,11 @@ class StkWaitController extends StateNotifier<StkWaitState> {
       );
       return false;
     }
-    state = state.copyWith(polling: true, clearError: true, offlineBlocked: false);
+    state = state.copyWith(
+      polling: true,
+      clearError: true,
+      offlineBlocked: false,
+    );
     final created = await _api.create(
       amount: amount,
       phone: phone,
@@ -151,8 +155,8 @@ class StkWaitController extends StateNotifier<StkWaitState> {
 
 final stkWaitProvider =
     StateNotifierProvider.autoDispose<StkWaitController, StkWaitState>(
-  (ref) => StkWaitController(
-    ref.watch(paymentsApiProvider),
-    ref.watch(connectivityMonitorProvider),
-  ),
-);
+      (ref) => StkWaitController(
+        ref.watch(paymentsApiProvider),
+        ref.watch(connectivityMonitorProvider),
+      ),
+    );

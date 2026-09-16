@@ -6,17 +6,25 @@ void main() {
   group('PermissionSet', () {
     test('parses grants and canViewDailySales', () {
       final set = PermissionSet.fromJsonList([
-        {'module': 'sales', 'action': 'daily_sales', 'name': 'sales.daily_sales'},
+        {
+          'module': 'sales',
+          'action': 'daily_sales',
+          'name': 'sales.daily_sales',
+        },
         {'module': 'pos', 'action': 'view'},
         {'module': 'customers', 'action': 'view'},
+        {'module': 'debt_management', 'action': 'view'},
+        {'module': 'debt_management', 'action': 'update'},
       ]);
       expect(set.canViewDailySales, isTrue);
       expect(set.canAccessPos, isTrue);
       expect(set.canViewCustomers, isTrue);
+      expect(set.canViewDebtManagement, isTrue);
+      expect(set.canUpdateDebtManagement, isTrue);
       expect(set.canCreateCustomers, isFalse);
       expect(set.canUpdateCustomers, isFalse);
       expect(set.has('sales', 'view'), isFalse);
-      expect(set.length, 3);
+      expect(set.length, 5);
     });
 
     test('create and update customer grants', () {
@@ -39,7 +47,10 @@ void main() {
         {'module': 'sales', 'action': 'view'},
       ]);
       expect(set.canViewSales, isTrue);
-      expect(PermissionGrant.fromJson({'module': 'a', 'action': 'b'}).key, 'a.b');
+      expect(
+        PermissionGrant.fromJson({'module': 'a', 'action': 'b'}).key,
+        'a.b',
+      );
     });
 
     test('dispatch and visit-order grants', () {

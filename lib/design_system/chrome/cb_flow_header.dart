@@ -54,16 +54,16 @@ class CbFlowHeader extends StatelessWidget implements PreferredSizeWidget {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.foreground,
-                          ),
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.foreground,
+                      ),
                     ),
                     if (subtitle != null)
                       Text(
                         subtitle!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.mutedForeground,
-                            ),
+                          color: AppColors.mutedForeground,
+                        ),
                       ),
                   ],
                 ),
@@ -74,8 +74,8 @@ class CbFlowHeader extends StatelessWidget implements PreferredSizeWidget {
                   variant: CbStatusPillVariant.online,
                   showOnlineDot: true,
                 )
-              else if (trailing != null)
-                trailing!,
+              else
+                ?trailing,
               if (showOnline && trailing != null) ...[
                 const SizedBox(width: 8),
                 trailing!,
