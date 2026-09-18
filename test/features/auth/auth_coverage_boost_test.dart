@@ -276,6 +276,33 @@ void main() {
     expect(find.text('Start New Sale'), findsOneWidget);
   });
 
+  testWidgets('router sends flagged user to change password', (tester) async {
+    final flagged = AuthSession(
+      user: cashierSession().user,
+      profile: cashierSession().profile.copyWith(mustChangePassword: true),
+      permissions: cashierSession().permissions,
+      persona: cashierSession().persona,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: seedOverrides(flagged),
+        child: Consumer(
+          builder: (context, ref, _) {
+            final listenable = AuthRouterListenable(ref);
+            final router = createAppRouter(
+              readAuth: () => ref.read(authControllerProvider),
+              refreshListenable: listenable,
+              initialLocation: AppRoutes.home,
+            );
+            return MaterialApp.router(routerConfig: router);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Choose your password'), findsOneWidget);
+  });
+
   testWidgets('cashier navigates POS and Customers', (tester) async {
     final router = GoRouter(
       initialLocation: AppRoutes.home,

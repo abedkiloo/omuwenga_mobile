@@ -8,6 +8,7 @@ import '../features/field_orders/presentation/google_map_pin_picker.dart';
 import '../features/field_orders/presentation/map_pin_picker.dart';
 import '../features/field_orders/presentation/visit_order_page.dart';
 import '../features/auth/application/auth_controller.dart';
+import '../features/auth/presentation/change_password_page.dart';
 import '../features/auth/presentation/login_page.dart';
 import '../features/auth/presentation/store_shell.dart';
 import '../features/customers/presentation/customer_detail_page.dart';
@@ -81,6 +82,14 @@ GoRouter createAppRouter({
       if (!auth.isAuthenticated) {
         return loggingIn ? null : AppRoutes.login;
       }
+      final mustChange = auth.session?.profile.mustChangePassword == true;
+      final changingPassword = loc == AppRoutes.changePassword;
+      if (mustChange) {
+        return changingPassword ? null : AppRoutes.changePassword;
+      }
+      if (changingPassword) {
+        return AppRoutes.home;
+      }
       if (loggingIn || splashing) {
         return AppRoutes.home;
       }
@@ -141,6 +150,11 @@ GoRouter createAppRouter({
         path: AppRoutes.login,
         pageBuilder: (context, state) =>
             _fadePage(key: state.pageKey, child: const LoginPage()),
+      ),
+      GoRoute(
+        path: AppRoutes.changePassword,
+        pageBuilder: (context, state) =>
+            _fadePage(key: state.pageKey, child: const ChangePasswordPage()),
       ),
       GoRoute(
         path: AppRoutes.health,

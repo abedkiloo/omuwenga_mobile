@@ -96,7 +96,7 @@ String? validateCheckout({
 }) {
   if (cart.isEmpty) return 'Add at least one product.';
   if (settings.requireCustomer && cart.customerId == null) {
-    return 'Customer is required.';
+    return 'Duka is required.';
   }
   if (!settings.enabledPaymentMethods.contains(draft.method)) {
     return 'Payment method is not enabled.';

@@ -271,4 +271,70 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Start New Sale'), findsOneWidget);
   });
+
+  test('AuthController changePassword clears must-change flag', () async {
+    final tokens = InMemoryTokenStore();
+    final container = ProviderContainer(
+      overrides: [
+        tokenStoreProvider.overrideWithValue(tokens),
+        appEnvProvider.overrideWithValue(
+          const AppEnv(
+            flavor: AppFlavor.dev,
+            apiBaseUrl: 'http://example.com/api',
+          ),
+        ),
+        authSessionSeedProvider.overrideWithValue(
+          AuthSession(
+            user: const AuthUser(id: 1, username: 'sales'),
+            profile: const UserProfileSnapshot(
+              role: 'cashier',
+              isSuperAdmin: false,
+              isAdmin: false,
+              isManager: false,
+              mustChangePassword: true,
+            ),
+            permissions: PermissionSet(const []),
+            persona: AppPersona.cashier,
+          ),
+        ),
+        apiClientProvider.overrideWith((ref) {
+          return ApiClient(
+            env: ref.watch(appEnvProvider),
+            tokenStore: tokens,
+            httpClient: MockClient((request) async {
+              if (request.url.path.contains('change_password')) {
+                return http.Response('{"message":"ok"}', 200);
+              }
+              if (request.url.path.contains('/me/')) {
+                return http.Response(
+                  jsonEncode({
+                    'user': {'id': 1, 'username': 'sales'},
+                    'profile': {
+                      'role': 'cashier',
+                      'is_super_admin': false,
+                      'is_admin': false,
+                      'is_manager': false,
+                      'must_change_password': false,
+                    },
+                    'permissions': [],
+                  }),
+                  200,
+                );
+              }
+              return http.Response('{}', 200);
+            }),
+          );
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+    final result = await container
+        .read(authControllerProvider.notifier)
+        .changePassword(newPassword: 'ownpass1', confirmPassword: 'ownpass1');
+    expect(result.isSuccess, isTrue);
+    expect(
+      container.read(authControllerProvider).session?.profile.mustChangePassword,
+      isFalse,
+    );
+  });
 }

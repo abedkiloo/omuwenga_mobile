@@ -49,9 +49,11 @@ class HomeDailyState {
 
 bool homeShowsAllSales(AuthSession session) {
   return session.persona == AppPersona.admin ||
+      session.persona == AppPersona.manager ||
       session.user.isSuperuser ||
       session.profile.isSuperAdmin ||
-      session.profile.isAdmin;
+      session.profile.isAdmin ||
+      session.profile.isManager;
 }
 
 class HomeDailyController extends StateNotifier<HomeDailyState> {
@@ -133,9 +135,7 @@ class HomeDailyController extends StateNotifier<HomeDailyState> {
               debtAmount: s.debtAmount,
             ),
         ];
-        if (!showAll) {
-          // History is usually already scoped; keep as-is for the logged-in user.
-        }
+        // List is server-scoped for sales agents (own cashier/served_by only).
         state = state.copyWith(
           loading: false,
           summary: HomeDailySummary(

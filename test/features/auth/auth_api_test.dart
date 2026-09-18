@@ -4,6 +4,7 @@ import 'package:completebyte_pos_mobile/core/env/app_env.dart';
 import 'package:completebyte_pos_mobile/core/network/api_client.dart';
 import 'package:completebyte_pos_mobile/core/secure/token_store.dart';
 import 'package:completebyte_pos_mobile/features/auth/data/auth_api.dart';
+import 'package:completebyte_pos_mobile/features/auth/domain/auth_session.dart';
 import 'package:completebyte_pos_mobile/features/auth/domain/persona.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -247,5 +248,38 @@ void main() {
     await AuthApi(client: client, tokenStore: tokens).logout();
     expect(await tokens.readAccess(), isNull);
     client.close();
+  });
+
+  test('changePassword posts new password', () async {
+    await tokens.writeTokens(access: 'a', refresh: 'r');
+    final client = ApiClient(
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
+      tokenStore: tokens,
+      httpClient: MockClient((request) async {
+        expect(request.url.path, endsWith('/accounts/users/1/change_password/'));
+        final body = jsonDecode(request.body) as Map;
+        expect(body['new_password'], 'ownpass1');
+        return http.Response('{"message":"ok"}', 200);
+      }),
+    );
+    final result = await AuthApi(
+      client: client,
+      tokenStore: tokens,
+    ).changePassword(userId: 1, newPassword: 'ownpass1');
+    expect(result.isSuccess, isTrue);
+    client.close();
+  });
+
+  test('profile parses must_change_password', () {
+    final payload = _loginPayload();
+    payload['profile'] = {
+      ...Map<String, dynamic>.from(payload['profile'] as Map),
+      'must_change_password': true,
+    };
+    final session = AuthSession.fromAuthPayload(payload);
+    expect(session.profile.mustChangePassword, isTrue);
   });
 }

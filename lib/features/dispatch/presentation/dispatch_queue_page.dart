@@ -214,13 +214,29 @@ class _DispatchOrderDetailPageState
                 labelText: 'Delivery driver',
                 border: OutlineInputBorder(),
               ),
-              items: const [
-                DropdownMenuItem(value: 101, child: Text('Driver A (101)')),
-                DropdownMenuItem(value: 102, child: Text('Driver B (102)')),
+              items: [
+                for (final d in state.drivers)
+                  DropdownMenuItem(
+                    value: d.id,
+                    child: Text(d.displayName),
+                  ),
               ],
-              onChanged: (v) => ref
-                  .read(dispatchQueueProvider.notifier)
-                  .selectDeliveryDriver(v),
+              onChanged: state.drivers.isEmpty
+                  ? null
+                  : (v) => ref
+                        .read(dispatchQueueProvider.notifier)
+                        .selectDeliveryDriver(v),
+            ),
+          if (canPack && state.drivers.isEmpty && !state.loading)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'No delivery drivers available. Add a Delivery Driver role user.',
+                key: const Key('dispatch_no_drivers'),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.mutedForeground,
+                ),
+              ),
             ),
           if (state.error != null)
             Padding(

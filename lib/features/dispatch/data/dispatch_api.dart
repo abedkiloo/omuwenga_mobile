@@ -11,6 +11,26 @@ class DispatchApiException implements Exception {
   String toString() => message;
 }
 
+class DeliveryDriverOption {
+  const DeliveryDriverOption({
+    required this.id,
+    required this.displayName,
+    this.username = '',
+  });
+
+  final int id;
+  final String displayName;
+  final String username;
+
+  factory DeliveryDriverOption.fromJson(Map<String, dynamic> json) {
+    return DeliveryDriverOption(
+      id: (json['id'] as num).toInt(),
+      displayName: (json['display_name'] ?? json['username'] ?? '').toString(),
+      username: (json['username'] ?? '').toString(),
+    );
+  }
+}
+
 class DispatchApi {
   DispatchApi(this._client);
   final ApiClient _client;
@@ -33,6 +53,30 @@ class DispatchApi {
         for (final row in data)
           if (row is Map)
             FieldOrderSummary.fromJson(Map<String, dynamic>.from(row)),
+      ]);
+    } on Object catch (e, st) {
+      return Failure(e, st);
+    }
+  }
+
+  Future<Result<List<DeliveryDriverOption>>> drivers() async {
+    final res = await _client.get('dispatch/drivers/');
+    if (res.isFailure) return Failure((res as Failure).error);
+    final response = res.getOrThrow();
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return Failure(
+        DispatchApiException('Drivers failed (${response.statusCode})'),
+      );
+    }
+    try {
+      final data = jsonDecode(response.body);
+      if (data is! List) {
+        return Failure(DispatchApiException('Invalid drivers payload'));
+      }
+      return Success([
+        for (final row in data)
+          if (row is Map)
+            DeliveryDriverOption.fromJson(Map<String, dynamic>.from(row)),
       ]);
     } on Object catch (e, st) {
       return Failure(e, st);

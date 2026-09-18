@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/result/result.dart';
+import '../../field_orders/domain/field_order.dart';
 import '../domain/delivery_stop.dart';
 
 class DeliveryApiException implements Exception {
@@ -108,6 +109,52 @@ class DeliveryApi {
 
   Future<Result<DeliveryStop>> complete(int id) =>
       _postStop('delivery/stops/$id/complete/');
+
+  Future<Result<List<FieldOrderSummary>>> available() async {
+    final res = await _client.get('delivery/available/');
+    if (res.isFailure) return Failure((res as Failure).error);
+    final response = res.getOrThrow();
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return Failure(
+        DeliveryApiException('Available failed (${response.statusCode})'),
+      );
+    }
+    try {
+      final data = jsonDecode(response.body);
+      if (data is! List) {
+        return Failure(DeliveryApiException('Invalid available payload'));
+      }
+      return Success([
+        for (final row in data)
+          if (row is Map)
+            FieldOrderSummary.fromJson(Map<String, dynamic>.from(row)),
+      ]);
+    } on Object catch (e, st) {
+      return Failure(e, st);
+    }
+  }
+
+  Future<Result<FieldOrderSummary>> claim(int orderId) async {
+    final res = await _client.post('delivery/field-orders/$orderId/claim/');
+    if (res.isFailure) return Failure((res as Failure).error);
+    final response = res.getOrThrow();
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return Failure(
+        DeliveryApiException('Claim failed (${response.statusCode})'),
+      );
+    }
+    try {
+      final data = jsonDecode(response.body);
+      if (data is! Map) {
+        return Failure(DeliveryApiException('Invalid claim payload'));
+      }
+      return Success(
+        FieldOrderSummary.fromJson(Map<String, dynamic>.from(data)),
+      );
+    } on Object catch (e, st) {
+      return Failure(e, st);
+    }
+  }
 
   Future<Result<DeliveryStop>> _postStop(
     String path, {

@@ -84,9 +84,26 @@ DispatchApi _api(MockClient client) {
 
 void main() {
   group('api', () {
-    test('queue pack assign and error paths', () async {
+    test('queue pack assign drivers and error paths', () async {
       final api = _api(
         MockClient((request) async {
+          if (request.url.path.contains('/drivers/')) {
+            return http.Response(
+              jsonEncode([
+                {
+                  'id': 101,
+                  'username': 'drv_a',
+                  'display_name': 'Driver A',
+                },
+                {
+                  'id': 102,
+                  'username': 'drv_b',
+                  'display_name': 'Driver B',
+                },
+              ]),
+              200,
+            );
+          }
           if (request.url.path.contains('/queue/')) {
             return http.Response(jsonEncode([_orderJson()]), 200);
           }
@@ -108,6 +125,7 @@ void main() {
         }),
       );
       expect((await api.queue()).getOrThrow().single.id, 11);
+      expect((await api.drivers()).getOrThrow().first.displayName, 'Driver A');
       expect((await api.pack(11)).getOrThrow().stockAllocated, isTrue);
       expect(
         (await api.assign(
@@ -119,6 +137,7 @@ void main() {
 
       final bad = _api(MockClient((_) async => http.Response('x', 500)));
       expect((await bad.queue()).isFailure, isTrue);
+      expect((await bad.drivers()).isFailure, isTrue);
       expect((await bad.pack(1)).isFailure, isTrue);
       expect(
         (await bad.assign(orderId: 1, deliveryDriverId: 1)).isFailure,
@@ -127,6 +146,7 @@ void main() {
 
       final invalid = _api(MockClient((_) async => http.Response('{}', 200)));
       expect((await invalid.queue()).isFailure, isTrue);
+      expect((await invalid.drivers()).isFailure, isTrue);
       expect((await invalid.pack(1)).isFailure, isTrue);
 
       final net = DispatchApi(
@@ -149,6 +169,14 @@ void main() {
       final push = FakePushNotifier();
       final api = _api(
         MockClient((request) async {
+          if (request.url.path.contains('/drivers/')) {
+            return http.Response(
+              jsonEncode([
+                {'id': 101, 'username': 'a', 'display_name': 'Driver A'},
+              ]),
+              200,
+            );
+          }
           if (request.url.path.contains('/queue/')) {
             return http.Response(jsonEncode([_orderJson()]), 200);
           }
@@ -167,6 +195,7 @@ void main() {
       final c = DispatchQueueController(api, push);
       await c.load();
       expect(c.state.orders, isNotEmpty);
+      expect(c.state.drivers, isNotEmpty);
       expect(c.state.canAssign, isFalse);
       expect(await c.assign(11), isFalse);
       expect(c.state.error, contains('Select a delivery driver'));
@@ -200,6 +229,18 @@ void main() {
           dispatchApiProvider.overrideWithValue(
             _api(
               MockClient((request) async {
+                if (request.url.path.contains('/drivers/')) {
+                  return http.Response(
+                    jsonEncode([
+                      {
+                        'id': 101,
+                        'username': 'a',
+                        'display_name': 'Driver A',
+                      },
+                    ]),
+                    200,
+                  );
+                }
                 if (request.url.path.contains('/queue/')) {
                   return http.Response(jsonEncode([_orderJson()]), 200);
                 }
@@ -233,7 +274,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('dispatch_driver_select')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Driver A (101)').last);
+      await tester.tap(find.text('Driver A').last);
       await tester.pumpAndSettle();
 
       final assignEnabled = tester.widget<FilledButton>(
@@ -255,6 +296,9 @@ void main() {
             dispatchApiProvider.overrideWithValue(
               _api(
                 MockClient((request) async {
+                  if (request.url.path.contains('/drivers/')) {
+                    return http.Response(jsonEncode([]), 200);
+                  }
                   if (request.url.path.contains('/queue/')) {
                     return http.Response(jsonEncode([_orderJson()]), 200);
                   }
@@ -277,7 +321,14 @@ void main() {
         ProviderScope(
           overrides: [
             dispatchApiProvider.overrideWithValue(
-              _api(MockClient((_) async => http.Response(jsonEncode([]), 200))),
+              _api(
+                MockClient((request) async {
+                  if (request.url.path.contains('/drivers/')) {
+                    return http.Response(jsonEncode([]), 200);
+                  }
+                  return http.Response(jsonEncode([]), 200);
+                }),
+              ),
             ),
             pushNotifierProvider.overrideWithValue(FakePushNotifier()),
           ],
@@ -294,9 +345,12 @@ void main() {
           overrides: [
             dispatchApiProvider.overrideWithValue(
               _api(
-                MockClient(
-                  (_) async => http.Response(jsonEncode([_orderJson()]), 200),
-                ),
+                MockClient((request) async {
+                  if (request.url.path.contains('/drivers/')) {
+                    return http.Response(jsonEncode([]), 200);
+                  }
+                  return http.Response(jsonEncode([_orderJson()]), 200);
+                }),
               ),
             ),
             pushNotifierProvider.overrideWithValue(FakePushNotifier()),

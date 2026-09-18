@@ -18,6 +18,7 @@ class UserProfileSnapshot {
     required this.isAdmin,
     required this.isManager,
     this.roleDisplay,
+    this.mustChangePassword = false,
   });
 
   final String role;
@@ -25,6 +26,7 @@ class UserProfileSnapshot {
   final bool isAdmin;
   final bool isManager;
   final String? roleDisplay;
+  final bool mustChangePassword;
 
   factory UserProfileSnapshot.fromJson(Map<String, dynamic>? json) {
     if (json == null) {
@@ -41,6 +43,20 @@ class UserProfileSnapshot {
       isAdmin: json['is_admin'] == true,
       isManager: json['is_manager'] == true,
       roleDisplay: json['role_display']?.toString(),
+      mustChangePassword:
+          json['must_change_password'] == true ||
+          json['mustChangePassword'] == true,
+    );
+  }
+
+  UserProfileSnapshot copyWith({bool? mustChangePassword}) {
+    return UserProfileSnapshot(
+      role: role,
+      isSuperAdmin: isSuperAdmin,
+      isAdmin: isAdmin,
+      isManager: isManager,
+      roleDisplay: roleDisplay,
+      mustChangePassword: mustChangePassword ?? this.mustChangePassword,
     );
   }
 }

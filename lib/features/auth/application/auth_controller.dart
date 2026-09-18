@@ -114,6 +114,63 @@ class AuthController extends Notifier<AuthState> {
     return result;
   }
 
+  Future<Result<AuthSession>> changePassword({
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.length < 6) {
+      final failure = AuthFailure.server(
+        'Password must be at least 6 characters.',
+      );
+      state = state.copyWith(message: failure.message, busy: false);
+      return Failure(failure);
+    }
+    if (newPassword != confirmPassword) {
+      final failure = AuthFailure.server('Passwords do not match.');
+      state = state.copyWith(message: failure.message, busy: false);
+      return Failure(failure);
+    }
+    final session = state.session;
+    final userId = session?.user.id;
+    if (session == null || userId == null || userId == 0) {
+      final failure = AuthFailure.sessionExpired();
+      state = state.copyWith(message: failure.message, busy: false);
+      return Failure(failure);
+    }
+    state = state.copyWith(busy: true, clearMessage: true);
+    final changeResult = await _api.changePassword(
+      userId: userId,
+      newPassword: newPassword,
+    );
+    if (changeResult.isFailure) {
+      final failure = changeResult as Failure<void>;
+      final message = failure.error is AuthFailure
+          ? (failure.error as AuthFailure).message
+          : 'Could not save the new password. Please try again.';
+      state = state.copyWith(busy: false, message: message);
+      return Failure(failure.error, failure.stackTrace);
+    }
+    final cleared = AuthSession(
+      user: session.user,
+      profile: session.profile.copyWith(mustChangePassword: false),
+      permissions: session.permissions,
+      persona: session.persona,
+    );
+    state = AuthState(
+      status: AuthStatus.authenticated,
+      session: cleared,
+      busy: false,
+    );
+    final meResult = await _api.me();
+    return meResult.when(
+      success: (refreshed) {
+        state = AuthState(status: AuthStatus.authenticated, session: refreshed);
+        return Success(refreshed);
+      },
+      failure: (_, _) => Success(cleared),
+    );
+  }
+
   Future<void> logout() async {
     state = state.copyWith(busy: true);
     await _api.logout();

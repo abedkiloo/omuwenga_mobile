@@ -102,7 +102,7 @@ void main() {
       managerSession(dailySales: true).permissions.canViewDailySales,
       isTrue,
     );
-    expect(find.text('Full daily sales'), findsOneWidget);
+    expect(find.text('Daily sales'), findsOneWidget);
     expect(find.byKey(const Key('home_daily_sales')), findsOneWidget);
   });
 

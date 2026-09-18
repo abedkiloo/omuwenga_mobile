@@ -73,6 +73,28 @@ class AuthApi {
     return Success(AuthSession.fromAuthPayload(data));
   }
 
+  Future<Result<void>> changePassword({
+    required int userId,
+    required String newPassword,
+  }) async {
+    final responseResult = await _client.post(
+      'accounts/users/$userId/change_password/',
+      body: {'new_password': newPassword},
+    );
+    if (responseResult.isFailure) {
+      final failure = responseResult as Failure<http.Response>;
+      return Failure(failure.error, failure.stackTrace);
+    }
+    final res = responseResult.getOrThrow();
+    if (res.statusCode == 401) {
+      return Failure(AuthFailure.sessionExpired());
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(AuthFailure.server(safeMessage(res.body)));
+    }
+    return const Success(null);
+  }
+
   Future<Result<void>> logout() async {
     final refresh = await _tokenStore.readRefresh();
     if (refresh != null && refresh.isNotEmpty) {

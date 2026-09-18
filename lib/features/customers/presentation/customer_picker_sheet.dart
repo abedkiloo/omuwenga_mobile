@@ -10,7 +10,7 @@ import '../../pos/application/pos_controllers.dart';
 import '../application/customers_controllers.dart';
 import '../domain/customer.dart';
 
-/// POS deep-link: pick or quick-add a customer onto the cart.
+/// POS deep-link: pick or quick-add a duka onto the cart.
 Future<void> showCustomerPickerSheet(BuildContext context, WidgetRef ref) {
   return showModalBottomSheet<void>(
     context: context,
@@ -126,7 +126,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Add customer',
+              'Assign Duka',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
@@ -134,7 +134,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
               key: const Key('pos_customer_search'),
               controller: _search,
               decoration: const InputDecoration(
-                labelText: 'Search or type a name',
+                labelText: 'Search shop, owner, or phone',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.search),
               ),
@@ -153,7 +153,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
               child: _items.isEmpty && !_loading
                   ? Center(
                       child: Text(
-                        'No customers found',
+                        'No dukas found',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppColors.mutedForeground,
                         ),
@@ -165,6 +165,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
                         final c = _items[i];
                         return ListTile(
                           key: Key('pos_pick_customer_${c.id}'),
+                          leading: const Icon(Icons.storefront_outlined),
                           title: Text(c.name),
                           subtitle: c.phone == null || c.phone!.isEmpty
                               ? null
@@ -178,8 +179,8 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
               CbPrimaryButton(
                 key: const Key('pos_customer_create'),
                 label: _search.text.trim().isEmpty
-                    ? 'Create customer'
-                    : 'Create “${_search.text.trim()}”',
+                    ? 'Register new duka'
+                    : 'Register “${_search.text.trim()}”',
                 onPressed: _loading ? null : _quickCreate,
               ),
           ],

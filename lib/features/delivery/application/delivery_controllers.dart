@@ -9,6 +9,7 @@ import '../../../sync/data/outbox_store.dart';
 import '../../../sync/domain/client_uuid.dart';
 import '../../../sync/domain/outbox_entry.dart';
 import '../../../sync/providers.dart';
+import '../../field_orders/domain/field_order.dart';
 import '../data/delivery_api.dart';
 import '../domain/delivery_stop.dart';
 
@@ -211,3 +212,106 @@ final deliveryRouteProvider =
         ref.watch(outboxStoreProvider),
       ),
     );
+
+/// Assigned stops (priority) + claimable ready orders for the delivery home.
+class DeliveryBoardState {
+  const DeliveryBoardState({
+    this.assigned = const [],
+    this.available = const [],
+    this.loading = false,
+    this.acting = false,
+    this.error,
+  });
+
+  final List<DeliveryStop> assigned;
+  final List<FieldOrderSummary> available;
+  final bool loading;
+  final bool acting;
+  final String? error;
+
+  DeliveryBoardState copyWith({
+    List<DeliveryStop>? assigned,
+    List<FieldOrderSummary>? available,
+    bool? loading,
+    bool? acting,
+    String? error,
+    bool clearError = false,
+  }) {
+    return DeliveryBoardState(
+      assigned: assigned ?? this.assigned,
+      available: available ?? this.available,
+      loading: loading ?? this.loading,
+      acting: acting ?? this.acting,
+      error: clearError ? null : (error ?? this.error),
+    );
+  }
+}
+
+class DeliveryBoardController extends StateNotifier<DeliveryBoardState> {
+  DeliveryBoardController(this._api) : super(const DeliveryBoardState());
+
+  final DeliveryApi _api;
+
+  Future<void> load() async {
+    state = state.copyWith(loading: true, clearError: true);
+    final routeResult = await _api.todayRoute();
+    final availableResult = await _api.available();
+
+    if (routeResult.isFailure && availableResult.isFailure) {
+      state = state.copyWith(
+        loading: false,
+        error: (routeResult as Failure).error.toString(),
+      );
+      return;
+    }
+
+    final assigned = routeResult.isSuccess
+        ? routeResult.getOrThrow().stops
+              .where(
+                (s) =>
+                    s.status != DeliveryStopStatus.completed &&
+                    s.status != DeliveryStopStatus.failed,
+              )
+              .toList()
+        : const <DeliveryStop>[];
+    final available = availableResult.isSuccess
+        ? availableResult.getOrThrow()
+        : const <FieldOrderSummary>[];
+
+    String? error;
+    if (routeResult.isFailure) {
+      error = (routeResult as Failure).error.toString();
+    } else if (availableResult.isFailure) {
+      error = (availableResult as Failure).error.toString();
+    }
+
+    state = state.copyWith(
+      assigned: assigned,
+      available: available,
+      loading: false,
+      error: error,
+      clearError: error == null,
+    );
+  }
+
+  Future<bool> claim(int orderId) async {
+    state = state.copyWith(acting: true, clearError: true);
+    final result = await _api.claim(orderId);
+    if (result.isFailure) {
+      state = state.copyWith(
+        acting: false,
+        error: (result as Failure).error.toString(),
+      );
+      return false;
+    }
+    state = state.copyWith(acting: false);
+    await load();
+    return true;
+  }
+}
+
+final deliveryBoardProvider =
+    StateNotifierProvider.autoDispose<
+      DeliveryBoardController,
+      DeliveryBoardState
+    >((ref) => DeliveryBoardController(ref.watch(deliveryApiProvider)));

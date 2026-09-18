@@ -9,7 +9,7 @@ import '../../daily_sales/domain/daily_report.dart';
 import '../../sales_history/domain/payment_status.dart';
 import '../application/home_daily_controller.dart';
 
-/// Shared store home: daily summary + Start New Sale / Customers.
+/// Shared store home: daily summary + Start New Sale / web-like Quick actions.
 class StoreHomeDashboard extends ConsumerWidget {
   const StoreHomeDashboard({
     super.key,
@@ -17,21 +17,28 @@ class StoreHomeDashboard extends ConsumerWidget {
     required this.canAccessPos,
     required this.canViewCustomers,
     this.canViewDailySales = false,
+    this.canViewSales = false,
+    this.canViewDebtors = false,
     this.canDispatch = false,
     this.canPlaceVisitOrders = false,
+    this.canAccessDelivery = false,
   });
 
   final String title;
   final bool canAccessPos;
   final bool canViewCustomers;
   final bool canViewDailySales;
+  final bool canViewSales;
+  final bool canViewDebtors;
   final bool canDispatch;
   final bool canPlaceVisitOrders;
+  final bool canAccessDelivery;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final home = ref.watch(homeDailyProvider);
     final theme = Theme.of(context);
+    final tools = _buildTools(context);
 
     return ColoredBox(
       color: AppColors.background,
@@ -40,190 +47,296 @@ class StoreHomeDashboard extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
           children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title, style: theme.textTheme.titleLarge),
-                        const SizedBox(height: 4),
-                        Text(
-                          home.summary?.scopeAll == true
-                              ? 'Today’s sales — all cashiers'
-                              : 'Today’s sales — yours',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: AppColors.mutedForeground,
-                          ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 4),
+                      Text(
+                        home.summary?.scopeAll == true
+                            ? 'Today’s sales — all cashiers'
+                            : 'Today’s sales — yours only',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppColors.mutedForeground,
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                ),
+                const CbStatusPill(
+                  label: 'Online · Synced',
+                  variant: CbStatusPillVariant.online,
+                  showOnlineDot: true,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _SummarySection(state: home),
+            const SizedBox(height: 12),
+            if (canAccessPos)
+              CbPrimaryButton(
+                key: const Key('home_primary_cta'),
+                label: 'Start New Sale',
+                onPressed: () => context.go(AppRoutes.pos),
+              )
+            else if (canViewCustomers)
+              CbPrimaryButton(
+                key: const Key('home_primary_cta'),
+                label: 'Customers',
+                onPressed: () => context.go(AppRoutes.customers),
+              ),
+            if (tools.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text(
+                'QUICK ACTIONS',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppColors.mutedForeground,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.6,
+                ),
+              ),
+              const SizedBox(height: 10),
+              _QuickActionsGrid(actions: tools),
+            ],
+            if (home.summary != null && home.summary!.orders.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Expanded(
+                    child: CbSectionLabel(
+                      label: 'Recent Completed Receipts',
+                      icon: Icons.receipt_long_outlined,
                     ),
                   ),
                   const CbStatusPill(
-                    label: 'Online · Synced',
+                    label: 'Live',
                     variant: CbStatusPillVariant.online,
                     showOnlineDot: true,
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              _SummarySection(state: home),
-              const SizedBox(height: 12),
-              if (canAccessPos)
-                CbPrimaryButton(
-                  key: const Key('home_primary_cta'),
-                  label: 'Start New Sale',
-                  onPressed: () => context.go(AppRoutes.pos),
-                )
-              else if (canViewCustomers)
-                CbPrimaryButton(
-                  key: const Key('home_primary_cta'),
-                  label: 'Customers',
-                  onPressed: () => context.go(AppRoutes.customers),
-                ),
-              if (_hasQuickActions) ...[
-                const SizedBox(height: 16),
-                _QuickActionsRow(
-                  canViewCustomers: canViewCustomers && canAccessPos,
-                  canPlaceVisitOrders: canPlaceVisitOrders,
-                  canDispatch: canDispatch,
-                ),
-              ],
-              if (canViewDailySales) ...[
-                const SizedBox(height: 12),
-                TextButton(
-                  key: const Key('home_daily_sales'),
-                  onPressed: () => context.go(AppRoutes.dailySales),
-                  child: const Text('Full daily sales'),
-                ),
-              ],
-              if (home.summary != null && home.summary!.orders.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Expanded(
-                      child: CbSectionLabel(
-                        label: 'Recent Completed Receipts',
-                        icon: Icons.receipt_long_outlined,
-                      ),
-                    ),
-                    const CbStatusPill(
-                      label: 'Live',
-                      variant: CbStatusPillVariant.online,
-                      showOnlineDot: true,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                for (final order in home.summary!.orders)
-                  _OrderTile(order: order),
-              ],
+              const SizedBox(height: 10),
+              for (final order in home.summary!.orders)
+                _OrderTile(order: order),
             ],
-          ),
+          ],
         ),
+      ),
     );
   }
 
-  bool get _hasQuickActions =>
-      (canViewCustomers && canAccessPos) || canPlaceVisitOrders || canDispatch;
-}
+  List<_HomeTool> _buildTools(BuildContext context) {
+    final tools = <_HomeTool>[];
 
-class _QuickActionsRow extends StatelessWidget {
-  const _QuickActionsRow({
-    required this.canViewCustomers,
-    required this.canPlaceVisitOrders,
-    required this.canDispatch,
-  });
-
-  final bool canViewCustomers;
-  final bool canPlaceVisitOrders;
-  final bool canDispatch;
-
-  @override
-  Widget build(BuildContext context) {
-    final actions = <_QuickAction>[];
+    // Mirror web Quick actions — only tools that exist on mobile.
+    if (canAccessPos) {
+      tools.add(
+        _HomeTool(
+          key: const Key('home_tool_pos'),
+          icon: Icons.point_of_sale_outlined,
+          label: 'Retail POS',
+          description: 'Fast checkout',
+          onTap: () => context.go(AppRoutes.pos),
+        ),
+      );
+    }
     if (canViewCustomers) {
-      actions.add(
-        _QuickAction(
+      tools.add(
+        _HomeTool(
           key: const Key('home_customers'),
           icon: Icons.people_outline,
-          label: 'Customers',
+          label: 'Dukas',
+          description: 'Shops & credit',
           onTap: () => context.go(AppRoutes.customers),
         ),
       );
     }
+    if (canViewDebtors) {
+      tools.add(
+        _HomeTool(
+          key: const Key('home_debtors'),
+          icon: Icons.account_balance_wallet_outlined,
+          label: 'Debtors',
+          description: 'Collect outstanding',
+          onTap: () => context.go(AppRoutes.debtors),
+        ),
+      );
+    }
+    if (canViewSales) {
+      tools.add(
+        _HomeTool(
+          key: const Key('home_sales_history'),
+          icon: Icons.receipt_long_outlined,
+          label: 'Sales history',
+          description: 'Receipts & audit',
+          onTap: () => context.go(AppRoutes.salesHistory),
+        ),
+      );
+    }
+    if (canViewDailySales) {
+      tools.add(
+        _HomeTool(
+          key: const Key('home_daily_sales'),
+          icon: Icons.calendar_today_outlined,
+          label: 'Daily sales',
+          description: 'Today’s report',
+          onTap: () => context.go(AppRoutes.dailySales),
+        ),
+      );
+    }
     if (canPlaceVisitOrders) {
-      actions.add(
-        _QuickAction(
+      tools.add(
+        _HomeTool(
           key: const Key('home_visit_order'),
           icon: Icons.location_on_outlined,
           label: 'Visit order',
+          description: 'Order on site',
           onTap: () => context.go(AppRoutes.siteVisit),
         ),
       );
     }
     if (canDispatch) {
-      actions.add(
-        _QuickAction(
+      tools.add(
+        _HomeTool(
           key: const Key('home_dispatch'),
-          icon: Icons.local_shipping_outlined,
+          icon: Icons.inventory_2_outlined,
           label: 'Field sales',
+          description: 'Pack & assign',
           onTap: () => context.go(AppRoutes.dispatchQueue),
         ),
       );
     }
+    if (canAccessDelivery) {
+      tools.add(
+        _HomeTool(
+          key: const Key('home_delivery'),
+          icon: Icons.map_outlined,
+          label: 'Today’s route',
+          description: 'Deliver & collect',
+          onTap: () => context.go(AppRoutes.deliveryRoute),
+        ),
+      );
+    }
 
-    return Row(
-      children: [
-        for (var i = 0; i < actions.length; i++) ...[
-          if (i > 0) const SizedBox(width: 10),
-          Expanded(child: actions[i]),
-        ],
-      ],
+    return tools;
+  }
+}
+
+class _HomeTool {
+  const _HomeTool({
+    required this.key,
+    required this.icon,
+    required this.label,
+    required this.description,
+    required this.onTap,
+  });
+
+  final Key key;
+  final IconData icon;
+  final String label;
+  final String description;
+  final VoidCallback onTap;
+}
+
+class _QuickActionsGrid extends StatelessWidget {
+  const _QuickActionsGrid({required this.actions});
+
+  final List<_HomeTool> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final twoCol = constraints.maxWidth >= 420;
+        if (!twoCol) {
+          return Column(
+            children: [
+              for (var i = 0; i < actions.length; i++) ...[
+                if (i > 0) const SizedBox(height: 8),
+                _QuickActionTile(action: actions[i]),
+              ],
+            ],
+          );
+        }
+
+        final rows = <Widget>[];
+        for (var i = 0; i < actions.length; i += 2) {
+          if (i > 0) rows.add(const SizedBox(height: 8));
+          final left = actions[i];
+          final right = i + 1 < actions.length ? actions[i + 1] : null;
+          rows.add(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: _QuickActionTile(action: left)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: right == null
+                      ? const SizedBox.shrink()
+                      : _QuickActionTile(action: right),
+                ),
+              ],
+            ),
+          );
+        }
+        return Column(children: rows);
+      },
     );
   }
 }
 
-class _QuickAction extends StatelessWidget {
-  const _QuickAction({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+class _QuickActionTile extends StatelessWidget {
+  const _QuickActionTile({required this.action});
 
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+  final _HomeTool action;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return CbSurfaceCard(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      key: action.key,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      onTap: action.onTap,
+      child: Row(
         children: [
-          Material(
-            color: AppColors.accentSoft,
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onTap,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Icon(icon, color: AppColors.primary, size: 22),
-              ),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(action.icon, color: AppColors.primary, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  action.label,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  action.description,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+          const Icon(
+            Icons.chevron_right,
+            color: AppColors.mutedForeground,
+            size: 20,
           ),
         ],
       ),

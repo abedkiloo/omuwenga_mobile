@@ -41,6 +41,19 @@ void main() {
         persona: AppPersona.cashier,
       );
       expect(homeShowsAllSales(cashier), isFalse);
+
+      final manager = AuthSession(
+        user: const AuthUser(id: 3, username: 'm'),
+        profile: const UserProfileSnapshot(
+          role: 'manager',
+          isSuperAdmin: false,
+          isAdmin: false,
+          isManager: true,
+        ),
+        permissions: PermissionSet(const []),
+        persona: AppPersona.manager,
+      );
+      expect(homeShowsAllSales(manager), isTrue);
     });
   });
 

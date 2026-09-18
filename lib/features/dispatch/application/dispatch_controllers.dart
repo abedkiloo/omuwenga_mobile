@@ -14,6 +14,7 @@ final dispatchApiProvider = Provider<DispatchApi>((ref) {
 class DispatchQueueState {
   const DispatchQueueState({
     this.orders = const [],
+    this.drivers = const [],
     this.loading = false,
     this.error,
     this.selectedDeliveryDriverId,
@@ -21,6 +22,7 @@ class DispatchQueueState {
   });
 
   final List<FieldOrderSummary> orders;
+  final List<DeliveryDriverOption> drivers;
   final bool loading;
   final String? error;
   final int? selectedDeliveryDriverId;
@@ -30,6 +32,7 @@ class DispatchQueueState {
 
   DispatchQueueState copyWith({
     List<FieldOrderSummary>? orders,
+    List<DeliveryDriverOption>? drivers,
     bool? loading,
     String? error,
     int? selectedDeliveryDriverId,
@@ -39,6 +42,7 @@ class DispatchQueueState {
   }) {
     return DispatchQueueState(
       orders: orders ?? this.orders,
+      drivers: drivers ?? this.drivers,
       loading: loading ?? this.loading,
       error: clearError ? null : (error ?? this.error),
       selectedDeliveryDriverId: clearDriver
@@ -58,12 +62,31 @@ class DispatchQueueController extends StateNotifier<DispatchQueueState> {
 
   Future<void> load() async {
     state = state.copyWith(loading: true, clearError: true);
-    final result = await _api.queue();
-    result.when(
-      success: (orders) =>
-          state = state.copyWith(orders: orders, loading: false),
-      failure: (e, _) =>
-          state = state.copyWith(loading: false, error: e.toString()),
+    final queueResult = await _api.queue();
+    final driversResult = await _api.drivers();
+
+    if (queueResult.isFailure) {
+      final f = queueResult as Failure;
+      state = state.copyWith(loading: false, error: f.error.toString());
+      return;
+    }
+
+    final drivers = driversResult.isSuccess
+        ? driversResult.getOrThrow()
+        : const <DeliveryDriverOption>[];
+    final selected = state.selectedDeliveryDriverId;
+    final stillValid =
+        selected != null && drivers.any((d) => d.id == selected);
+
+    state = state.copyWith(
+      orders: queueResult.getOrThrow(),
+      drivers: drivers,
+      loading: false,
+      clearDriver: selected != null && !stillValid,
+      error: driversResult.isFailure
+          ? 'Could not load drivers — ${ (driversResult as Failure).error}'
+          : null,
+      clearError: driversResult.isSuccess,
     );
   }
 

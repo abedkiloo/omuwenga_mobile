@@ -149,7 +149,7 @@ class _PosPageState extends ConsumerState<PosPage> {
       builder: (context) => AlertDialog(
         title: const Text('Clear current sale?'),
         content: const Text(
-          'This removes every item and customer from the current cart.',
+          'This removes every item and duka from the current cart.',
         ),
         actions: [
           TextButton(
@@ -273,7 +273,7 @@ class _PosPageState extends ConsumerState<PosPage> {
                 collapsed: _chromeCollapsed,
                 onToggle: () =>
                     setState(() => _chromeCollapsed = !_chromeCollapsed),
-                collapsedLabel: 'Sale header & customer',
+                collapsedLabel: 'Sale header & duka',
                 collapsedSummary: cart.isEmpty
                     ? userName
                     : '${cart.itemCount} items · ${_kes(cart.total)}'
@@ -1041,8 +1041,8 @@ class _CustomerStrip extends StatelessWidget {
     final theme = Theme.of(context);
     final hasCustomer = cart.customerId != null;
     final customerLabel = hasCustomer
-        ? cart.customerName ?? 'Customer'
-        : 'Walk-in Retail';
+        ? cart.customerName ?? 'Duka'
+        : 'No duka assigned';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1071,7 +1071,7 @@ class _CustomerStrip extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ACCOUNT ACTIVE',
+                  hasCustomer ? 'DUKA' : 'ASSIGN DUKA',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
@@ -1091,7 +1091,7 @@ class _CustomerStrip extends StatelessWidget {
                         ? Padding(
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(
-                              'Customer required before pay',
+                              'Duka required before pay',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: AppColors.warning,
                               ),
@@ -1115,7 +1115,7 @@ class _CustomerStrip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(hasCustomer ? 'Change' : 'Assign Duka'),
+                Text(hasCustomer ? 'Change duka' : 'Assign Duka'),
                 const SizedBox(width: 4),
                 const Icon(Icons.keyboard_arrow_down, size: 18),
               ],
@@ -1124,7 +1124,7 @@ class _CustomerStrip extends StatelessWidget {
           if (hasCustomer)
             IconButton(
               key: const Key('pos_clear_customer'),
-              tooltip: 'Clear customer',
+              tooltip: 'Clear duka',
               onPressed: onClearCustomer,
               icon: const Icon(Icons.close),
             ),
@@ -1222,7 +1222,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     final amountPaid = double.tryParse(_amount.text) ?? 0;
     final changeDue = amountPaid > cart.total ? amountPaid - cart.total : 0.0;
     final isMpesa = draft.method == PosPaymentMethod.mpesa;
-    final customerLabel = cart.customerName ?? 'Walk-in';
+    final customerLabel = cart.customerName ?? 'No duka';
 
     String confirmLabel;
     if (checkout.phase == CheckoutPhase.submitting) {

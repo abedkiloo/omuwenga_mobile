@@ -9,6 +9,9 @@ import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../sync/presentation/sync_failures_sheet.dart';
 import '../../../sync/presentation/sync_status_chip.dart';
 import '../../../sync/providers.dart';
+import '../../delivery/application/delivery_controllers.dart';
+import '../../delivery/domain/delivery_stop.dart';
+import '../../field_orders/domain/field_order.dart';
 import '../../home/presentation/store_home_dashboard.dart';
 import '../application/auth_controller.dart';
 import '../domain/persona.dart';
@@ -44,7 +47,7 @@ class StoreShellPage extends ConsumerWidget {
         ),
       if (perms == null || perms.canViewCustomers)
         const _NavDest(
-          label: 'Customers',
+          label: 'Dukas',
           icon: Icons.people_outline,
           route: AppRoutes.customers,
         ),
@@ -181,7 +184,11 @@ class PersonaHomePage extends ConsumerWidget {
           canAccessPos: session.permissions.canAccessPos,
           canViewCustomers: session.permissions.canViewCustomers,
           canViewDailySales: session.permissions.canViewDailySales,
+          canViewSales: session.permissions.canViewSales,
+          canViewDebtors: session.permissions.canViewDebtManagement,
           canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
+          canDispatch: session.permissions.canDispatch,
+          canAccessDelivery: session.permissions.canAccessDelivery,
         );
       case AppPersona.dispatcher:
         return _DispatcherHome(name: session.user.displayName);
@@ -196,31 +203,53 @@ class PersonaHomePage extends ConsumerWidget {
           canAccessPos: session.permissions.canAccessPos,
           canViewCustomers: session.permissions.canViewCustomers,
           canViewDailySales: session.permissions.canViewDailySales,
+          canViewSales: session.permissions.canViewSales,
+          canViewDebtors: session.permissions.canViewDebtManagement,
           canDispatch: session.permissions.canDispatch,
           canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
+          canAccessDelivery: session.permissions.canAccessDelivery,
         );
     }
   }
 }
 
-class _DeliveryHome extends StatelessWidget {
+class _DeliveryHome extends ConsumerStatefulWidget {
   const _DeliveryHome({required this.name});
   final String name;
 
   @override
+  ConsumerState<_DeliveryHome> createState() => _DeliveryHomeState();
+}
+
+class _DeliveryHomeState extends ConsumerState<_DeliveryHome> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(deliveryBoardProvider.notifier).load();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final board = ref.watch(deliveryBoardProvider);
+
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: RefreshIndicator(
+        onRefresh: () => ref.read(deliveryBoardProvider.notifier).load(),
+        child: ListView(
+          padding: const EdgeInsets.all(12),
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            Text('Delivery · $name', style: theme.textTheme.titleLarge),
+            Text(
+              'Delivery · ${widget.name}',
+              style: theme.textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             Text(
-              'Recognize the place, do the work, prove it, next.',
-              style: theme.textTheme.bodyLarge?.copyWith(
+              'Assigned stops first. Claim ready orders when you can take more.',
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: AppColors.mutedForeground,
               ),
             ),
@@ -229,6 +258,142 @@ class _DeliveryHome extends StatelessWidget {
               key: const Key('home_primary_cta'),
               label: 'Open today’s route',
               onPressed: () => context.go(AppRoutes.deliveryRoute),
+            ),
+            if (board.error != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                board.error!,
+                key: const Key('delivery_home_error'),
+                style: const TextStyle(color: AppColors.destructive),
+              ),
+            ],
+            const SizedBox(height: 20),
+            Text('Assigned to you', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
+            if (board.loading && board.assigned.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (board.assigned.isEmpty)
+              Text(
+                'No assigned stops yet.',
+                key: const Key('delivery_home_assigned_empty'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.mutedForeground,
+                ),
+              )
+            else
+              for (final stop in board.assigned)
+                _AssignedStopTile(stop: stop),
+            const SizedBox(height: 20),
+            Text(
+              'Ready to pick up',
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Unassigned packed orders you can claim.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.mutedForeground,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (!board.loading && board.available.isEmpty)
+              Text(
+                'Nothing ready to claim.',
+                key: const Key('delivery_home_available_empty'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.mutedForeground,
+                ),
+              )
+            else
+              for (final order in board.available)
+                _ClaimableOrderTile(
+                  order: order,
+                  acting: board.acting,
+                  onClaim: () => ref
+                      .read(deliveryBoardProvider.notifier)
+                      .claim(order.id),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AssignedStopTile extends StatelessWidget {
+  const _AssignedStopTile({required this.stop});
+  final DeliveryStop stop;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = stop.customerName?.isNotEmpty == true
+        ? stop.customerName!
+        : (stop.site.label.isNotEmpty
+              ? stop.site.label
+              : 'Stop #${stop.id}');
+    final orderLabel = stop.fieldOrderId != null
+        ? 'Order #${stop.fieldOrderId}'
+        : 'Stop #${stop.id}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: CbSurfaceCard(
+        key: Key('delivery_home_assigned_${stop.id}'),
+        padding: EdgeInsets.zero,
+        onTap: () => context.push(AppRoutes.deliveryStop(stop.id)),
+        child: ListTile(
+          title: Text(title),
+          subtitle: Text('$orderLabel · ${stop.status.name}'),
+          trailing: const Icon(Icons.chevron_right),
+        ),
+      ),
+    );
+  }
+}
+
+class _ClaimableOrderTile extends StatelessWidget {
+  const _ClaimableOrderTile({
+    required this.order,
+    required this.acting,
+    required this.onClaim,
+  });
+
+  final FieldOrderSummary order;
+  final bool acting;
+  final VoidCallback onClaim;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = order.customerName?.isNotEmpty == true
+        ? order.customerName!
+        : 'Order #${order.id}';
+    final qty = order.lines.fold<double>(0, (s, l) => s + l.quantity);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: CbSurfaceCard(
+        key: Key('delivery_home_claimable_${order.id}'),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 4),
+            Text(
+              '#${order.id} · ${order.lines.length} lines · qty ${qty.toStringAsFixed(0)}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.mutedForeground,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                key: Key('delivery_home_claim_${order.id}'),
+                onPressed: acting ? null : onClaim,
+                child: const Text('Claim for my route'),
+              ),
             ),
           ],
         ),

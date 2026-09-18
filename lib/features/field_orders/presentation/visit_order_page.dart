@@ -137,7 +137,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
 
   String _stepHeadline(VisitOrderStep step) {
     return switch (step) {
-      VisitOrderStep.customer => 'Step 1 of 4: Select Customer & Verify Debt',
+      VisitOrderStep.customer => 'Step 1 of 4: Select Duka & Verify Debt',
       VisitOrderStep.products => 'Step 2 of 4: Order Items & Packs',
       VisitOrderStep.location => 'Step 3 of 4: Pin Delivery Drop & Landmark',
       VisitOrderStep.review => 'Step 4 of 4: Final Review & Handoff',
@@ -149,7 +149,8 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
       VisitOrderStep.customer =>
         'Verify store standing before placing the booking.',
       VisitOrderStep.products => 'Search the catalog and set pack quantities.',
-      VisitOrderStep.location => 'Drop a pin so dispatch can find the outlet.',
+      VisitOrderStep.location =>
+          'Snap GPS first, then adjust the pin if needed.',
       VisitOrderStep.review => 'Ready to submit — sent to the packing queue.',
     };
   }
@@ -198,7 +199,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
       }
     });
 
-    const stepLabels = ['Customer', 'Products', 'Pin Drop', 'Review'];
+    const stepLabels = ['Duka', 'Products', 'Pin Drop', 'Review'];
     final stepIndex = VisitOrderStep.values.indexOf(state.step);
 
     return PopScope(
@@ -484,7 +485,7 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
           children: [
             Expanded(
               child: CbSectionLabel(
-                label: selected == null ? 'Customers' : 'Alternate stores',
+                label: selected == null ? 'Dukas' : 'Alternate dukas',
                 icon: Icons.storefront_outlined,
               ),
             ),
@@ -1181,7 +1182,7 @@ class _LocationStep extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  customer?.name ?? 'Customer',
+                  customer?.name ?? 'Duka',
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -1201,6 +1202,33 @@ class _LocationStep extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 12),
+        CbPrimaryButton(
+          key: const Key('visit_use_current_location'),
+          label: locating
+              ? 'Getting location…'
+              : 'Snap to Current GPS Location',
+          onPressed: locating ? null : onUseCurrent,
+        ),
+        if (pin != null) ...[
+          const SizedBox(height: 10),
+          Container(
+            key: const Key('visit_pin_coords'),
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(AppColors.radius - 2),
+            ),
+            child: Text(
+              '${pin!.latitude.toStringAsFixed(6)}, ${pin!.longitude.toStringAsFixed(6)}'
+              '${pin!.label.isNotEmpty ? ' · ${pin!.label}' : ''}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.primaryForeground,
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         SizedBox(
           height: 240,
@@ -1229,33 +1257,6 @@ class _LocationStep extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        CbPrimaryButton(
-          key: const Key('visit_use_current_location'),
-          label: locating
-              ? 'Getting location…'
-              : 'Snap to Current GPS Location',
-          onPressed: locating ? null : onUseCurrent,
-        ),
-        if (pin != null) ...[
-          const SizedBox(height: 10),
-          Container(
-            key: const Key('visit_pin_coords'),
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(AppColors.radius - 2),
-            ),
-            child: Text(
-              '${pin!.latitude.toStringAsFixed(6)}, ${pin!.longitude.toStringAsFixed(6)}'
-              '${pin!.label.isNotEmpty ? ' · ${pin!.label}' : ''}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: AppColors.primaryForeground,
-              ),
-            ),
-          ),
-        ],
         const SizedBox(height: 16),
         CbSurfaceCard(
           child: Column(

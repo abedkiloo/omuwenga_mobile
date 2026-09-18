@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
+import '../../auth/application/auth_controller.dart';
+import '../../home/application/home_daily_controller.dart';
 import '../../sales_history/domain/payment_status.dart';
 import '../data/daily_sales_api.dart';
 import '../domain/daily_report.dart';
@@ -53,10 +55,14 @@ class DailySalesState {
 }
 
 class DailySalesController extends StateNotifier<DailySalesState> {
-  DailySalesController(this._api, {DateTime? initialDay})
-    : super(DailySalesState(day: initialDay));
+  DailySalesController(
+    this._api, {
+    this.cashierId,
+    DateTime? initialDay,
+  }) : super(DailySalesState(day: initialDay));
 
   final DailySalesApi _api;
+  final int? cashierId;
 
   Future<void> load() async {
     state = state.copyWith(loading: true, clearError: true);
@@ -64,6 +70,7 @@ class DailySalesController extends StateNotifier<DailySalesState> {
       date: state.dateApi,
       paymentStatus: state.statusFilter,
       search: state.search,
+      cashierId: cashierId,
     );
     result.when(
       success: (report) =>
@@ -104,7 +111,14 @@ final dailySalesProvider =
     StateNotifierProvider.autoDispose<DailySalesController, DailySalesState>((
       ref,
     ) {
-      final controller = DailySalesController(ref.watch(dailySalesApiProvider));
+      final session = ref.watch(authControllerProvider).session;
+      final showAll =
+          session != null && homeShowsAllSales(session);
+      final cashierId = showAll ? null : session?.user.id;
+      final controller = DailySalesController(
+        ref.watch(dailySalesApiProvider),
+        cashierId: cashierId,
+      );
       // ignore: discarded_futures
       controller.load();
       return controller;

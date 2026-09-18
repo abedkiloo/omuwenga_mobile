@@ -424,7 +424,7 @@ void main() {
         .read(cartControllerProvider.notifier)
         .addProduct(const CatalogProduct(id: 1, name: 'X', price: 1));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Customer required'), findsOneWidget);
+    expect(find.textContaining('Duka required'), findsOneWidget);
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -518,7 +518,7 @@ void main() {
       ..attachCustomer(id: 2, name: 'Ada');
     await tester.pumpAndSettle();
     expect(find.text('Ada'), findsOneWidget);
-    expect(find.text('ACCOUNT ACTIVE'), findsOneWidget);
+    expect(find.text('DUKA'), findsOneWidget);
   });
 
   testWidgets('offline pay shows queued receipt', (tester) async {

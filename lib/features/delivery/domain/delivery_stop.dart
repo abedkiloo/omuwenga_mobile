@@ -150,6 +150,7 @@ class DeliveryStop {
     required this.sequence,
     required this.status,
     required this.site,
+    this.fieldOrderId,
     this.lines = const [],
     this.customerName,
     this.customerPhone,
@@ -164,6 +165,7 @@ class DeliveryStop {
   final int sequence;
   final DeliveryStopStatus status;
   final DeliverySiteSnapshot site;
+  final int? fieldOrderId;
   final List<DeliveryLine> lines;
   final String? customerName;
   final String? customerPhone;
@@ -203,6 +205,7 @@ class DeliveryStop {
       sequence: (json['sequence'] as num?)?.toInt() ?? 0,
       status: DeliveryStopStatus.parse(json['status']?.toString()),
       site: site,
+      fieldOrderId: (json['field_order_id'] as num?)?.toInt(),
       lines: lines,
       customerName: json['customer_name']?.toString() ?? site.customerName,
       customerPhone: json['customer_phone']?.toString() ?? site.customerPhone,
