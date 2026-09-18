@@ -127,6 +127,14 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
     }
   }
 
+  /// App-bar / system back: previous wizard step, or leave from step 1.
+  void _handleBack() {
+    final state = ref.read(visitOrderProvider);
+    if (state.submitting) return;
+    if (ref.read(visitOrderProvider.notifier).goBack()) return;
+    _exitVisit();
+  }
+
   String _stepHeadline(VisitOrderStep step) {
     return switch (step) {
       VisitOrderStep.customer => 'Step 1 of 4: Select Customer & Verify Debt',
@@ -193,42 +201,49 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
     const stepLabels = ['Customer', 'Products', 'Pin Drop', 'Review'];
     final stepIndex = VisitOrderStep.values.indexOf(state.step);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: CbFlowHeader(
-        title: 'Field Visit Order',
-        leadingIcon: Icons.assignment_outlined,
-        subtitle: 'Sales visit',
-        onBack: _exitVisit,
-      ),
-      body: Column(
-        children: [
-          CbStepProgress(labels: stepLabels, currentIndex: stepIndex),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _stepHeadline(state.step),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _stepCaption(state.step),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.mutedForeground,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _handleBack();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: CbFlowHeader(
+          title: 'Field Visit Order',
+          leadingIcon: Icons.assignment_outlined,
+          subtitle: 'Sales visit',
+          onBack: _handleBack,
+        ),
+        body: Column(
+          children: [
+            CbStepProgress(labels: stepLabels, currentIndex: stepIndex),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _stepHeadline(state.step),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    _stepCaption(state.step),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Expanded(child: _buildStep(state)),
-        ],
+            Expanded(child: _buildStep(state)),
+          ],
+        ),
+        bottomNavigationBar: _bottomBar(state),
       ),
-      bottomNavigationBar: _bottomBar(state),
     );
   }
 
@@ -310,9 +325,8 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
             '${state.lines.length} SKU · ${state.lines.fold<double>(0, (s, l) => s + l.quantity).round()} packs';
         summaryTrailing = _kes(state.subtotal);
         back = TextButton(
-          onPressed: () => ref
-              .read(visitOrderProvider.notifier)
-              .goTo(VisitOrderStep.customer),
+          key: const Key('visit_back'),
+          onPressed: () => ref.read(visitOrderProvider.notifier).goBack(),
           child: const Text('Back'),
         );
       case VisitOrderStep.location:
@@ -324,9 +338,8 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
                   .goTo(VisitOrderStep.review)
             : null;
         back = TextButton(
-          onPressed: () => ref
-              .read(visitOrderProvider.notifier)
-              .goTo(VisitOrderStep.products),
+          key: const Key('visit_back'),
+          onPressed: () => ref.read(visitOrderProvider.notifier).goBack(),
           child: const Text('Back'),
         );
       case VisitOrderStep.review:
@@ -336,11 +349,10 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
         summary = '${state.lines.length} items';
         summaryTrailing = _kes(state.subtotal);
         back = TextButton(
+          key: const Key('visit_back'),
           onPressed: state.submitting
               ? null
-              : () => ref
-                    .read(visitOrderProvider.notifier)
-                    .goTo(VisitOrderStep.location),
+              : () => ref.read(visitOrderProvider.notifier).goBack(),
           child: const Text('Back'),
         );
     }
@@ -438,7 +450,7 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
         : _items.where((c) => c.id != selected.id).toList();
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       children: [
         CbSearchField(
           fieldKey: const Key('visit_customer_search'),
@@ -849,7 +861,7 @@ class _ProductsStepState extends ConsumerState<_ProductsStep> {
       children: [
         if (customer != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
@@ -891,7 +903,7 @@ class _ProductsStepState extends ConsumerState<_ProductsStep> {
             ),
           ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           child: CbSearchField(
             fieldKey: const Key('visit_product_search'),
             controller: _search,
@@ -904,7 +916,7 @@ class _ProductsStepState extends ConsumerState<_ProductsStep> {
           const LinearProgressIndicator(minHeight: 2),
         if (_catalog.error != null)
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Text(
               _catalog.error!,
               style: const TextStyle(color: AppColors.destructive),
@@ -923,7 +935,7 @@ class _ProductsStepState extends ConsumerState<_ProductsStep> {
                   onNotification: _onScroll,
                   child: ListView(
                     key: const Key('visit_product_results'),
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
                     children: [
                       if (lines.isNotEmpty) ...[
                         for (final line in lines) ...[
@@ -1161,7 +1173,7 @@ class _LocationStep extends StatelessWidget {
     final packCount = lines.fold<double>(0, (s, l) => s + l.quantity).round();
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       children: [
         CbSurfaceCard(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1299,7 +1311,7 @@ class _ReviewStep extends StatelessWidget {
         .round();
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       children: [
         if (state.error != null) ...[
           Text(

@@ -121,7 +121,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     return Scaffold(
       appBar: AppBar(title: Text(_isEdit ? 'Edit customer' : 'New customer')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         children: [
           TextField(
             key: const Key('customer_form_name'),
@@ -166,7 +166,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             const SizedBox(height: 12),
             Text(_error!, style: const TextStyle(color: AppColors.destructive)),
           ],
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
           CbPrimaryButton(
             key: const Key('customer_form_save'),
             label: _saving ? 'Saving…' : 'Save',

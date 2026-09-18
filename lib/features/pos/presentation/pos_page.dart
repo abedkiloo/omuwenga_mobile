@@ -14,6 +14,7 @@ import '../data/pos_api.dart';
 import '../domain/cart.dart';
 import '../domain/payment.dart';
 import 'receipt_page.dart';
+import 'pos_cart_sheet.dart';
 import 'variant_picker_sheet.dart';
 
 String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
@@ -31,6 +32,7 @@ class _PosPageState extends ConsumerState<PosPage> {
   final _catalogScroll = ScrollController();
   final _catalog = ProductCatalogPaging();
   List<ProductCategory> _categories = const [];
+  bool _chromeCollapsed = false;
 
   @override
   void initState() {
@@ -87,6 +89,14 @@ class _PosPageState extends ConsumerState<PosPage> {
   }
 
   bool _onScroll(ScrollNotification notification) {
+    handleChromeScrollCollapse(
+      notification: notification,
+      collapsed: _chromeCollapsed,
+      setCollapsed: (value) {
+        if (_chromeCollapsed == value) return;
+        setState(() => _chromeCollapsed = value);
+      },
+    );
     if (notification.metrics.extentAfter < 240) {
       _loadMore();
     }
@@ -182,6 +192,14 @@ class _PosPageState extends ConsumerState<PosPage> {
     return ok ?? false;
   }
 
+  Future<void> _openCartSheet() async {
+    await showPosCartSheet(
+      context: context,
+      onCheckout: _openPay,
+      onClearCart: _confirmClearCart,
+    );
+  }
+
   Future<void> _openPay() async {
     final cart = ref.read(cartControllerProvider);
     final settings = ref
@@ -246,36 +264,49 @@ class _PosPageState extends ConsumerState<PosPage> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         body: SafeArea(
+          top: false,
+          bottom: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _PosHeaderCard(
-                  userName: userName,
-                  roleLabel: roleLabel,
-                  cartItemCount: cart.itemCount,
-                  onCartTap: cart.isEmpty
-                      ? null
-                      : () => _catalogScroll.animateTo(
-                          0,
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeOut,
-                        ),
+              CbCollapsibleChrome(
+                collapsed: _chromeCollapsed,
+                onToggle: () =>
+                    setState(() => _chromeCollapsed = !_chromeCollapsed),
+                collapsedLabel: 'Sale header & customer',
+                collapsedSummary: cart.isEmpty
+                    ? userName
+                    : '${cart.itemCount} items · ${_kes(cart.total)}'
+                          '${cart.customerName == null ? '' : ' · ${cart.customerName}'}',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: _PosHeaderCard(
+                        userName: userName,
+                        roleLabel: roleLabel,
+                        cartItemCount: cart.itemCount,
+                        onCartTap: _openCartSheet,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: _CustomerStrip(
+                        cart: cart,
+                        settingsAsync: settingsAsync,
+                        onPickCustomer: () =>
+                            showCustomerPickerSheet(context, ref),
+                        onClearCustomer: () => ref
+                            .read(cartControllerProvider.notifier)
+                            .clearCustomer(),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _CustomerStrip(
-                  cart: cart,
-                  settingsAsync: settingsAsync,
-                  onPickCustomer: () => showCustomerPickerSheet(context, ref),
-                  onClearCustomer: () =>
-                      ref.read(cartControllerProvider.notifier).clearCustomer(),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
                 child: _PosSearchRow(
                   controller: _search,
                   focusNode: _searchFocus,
@@ -290,7 +321,7 @@ class _PosPageState extends ConsumerState<PosPage> {
                     height: 36,
                     child: ListView(
                       scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       children: [
                         _CategoryChip(
                           label: 'All',
@@ -331,7 +362,7 @@ class _PosPageState extends ConsumerState<PosPage> {
                   child: ListView(
                     key: const Key('pos_catalog_scroll'),
                     controller: _catalogScroll,
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                     children: [
                       if (!cart.isEmpty) ...[
                         Row(

@@ -197,15 +197,15 @@ void main() {
     await controller.load();
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('daily_date_label')), findsOneWidget);
-    expect(find.text('2026-09-14'), findsOneWidget);
+    expect(find.text('Mon, 14 Sep'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('daily_prev_day')));
     await tester.pumpAndSettle();
-    expect(find.text('2026-09-13'), findsOneWidget);
+    expect(find.text('Sun, 13 Sep'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('daily_next_day')));
     await tester.pumpAndSettle();
-    expect(find.text('2026-09-14'), findsOneWidget);
+    expect(find.text('Mon, 14 Sep'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('daily_tab_debt')));
     await tester.pumpAndSettle();

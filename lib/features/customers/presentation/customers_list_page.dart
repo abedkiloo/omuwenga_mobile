@@ -30,6 +30,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
   int? _expandedId;
   _CustomerFilter _filter = _CustomerFilter.all;
   _CustomerSort _sort = _CustomerSort.highestDebt;
+  bool _chromeCollapsed = false;
 
   @override
   void initState() {
@@ -43,6 +44,17 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  bool _onListScroll(ScrollNotification notification) {
+    return handleChromeScrollCollapse(
+      notification: notification,
+      collapsed: _chromeCollapsed,
+      setCollapsed: (value) {
+        if (_chromeCollapsed == value) return;
+        setState(() => _chromeCollapsed = value);
+      },
+    );
   }
 
   List<CustomerSummary> _visible(List<CustomerSummary> items) {
@@ -115,36 +127,52 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
+        top: false,
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Text(
-                'Customer Directory',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            CbCollapsibleChrome(
+              collapsed: _chromeCollapsed,
+              onToggle: () =>
+                  setState(() => _chromeCollapsed = !_chromeCollapsed),
+              collapsedLabel: 'Customer directory summary',
+              collapsedSummary: state.items.isEmpty
+                  ? null
+                  : '${state.items.length} shops · ${_kes(totalOutstanding)} outstanding',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                    child: Text(
+                      'Customer Directory',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                    child: _DirectoryHeaderCard(
+                      userName: userName,
+                      roleLabel: roleLabel,
+                    ),
+                  ),
+                  if (state.items.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: _DirectorySummaryCard(
+                        totalOutstanding: totalOutstanding,
+                        debtorCount: debtorCount,
+                        shopCount: state.items.length,
+                      ),
+                    ),
+                ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _DirectoryHeaderCard(
-                userName: userName,
-                roleLabel: roleLabel,
-              ),
-            ),
-            if (state.items.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _DirectorySummaryCard(
-                  totalOutstanding: totalOutstanding,
-                  debtorCount: debtorCount,
-                  shopCount: state.items.length,
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
               child: CbSearchField(
                 fieldKey: const Key('customers_search'),
                 controller: _search,
@@ -160,7 +188,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                   height: 36,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     children: [
                       _FilterChip(
                         label: 'All (${state.items.length})',
@@ -194,7 +222,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
                 child: Row(
                   children: [
                     Text(
@@ -232,15 +260,18 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
             ],
             if (state.loading) const LinearProgressIndicator(minHeight: 2),
             Expanded(
-              child: _buildBody(
-                context,
-                state: state,
-                visible: visible,
-                maxDebt: maxDebt,
-                canPos: canPos,
-                canVisit: canVisit,
-                settings: settings,
-                auth: auth,
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _onListScroll,
+                child: _buildBody(
+                  context,
+                  state: state,
+                  visible: visible,
+                  maxDebt: maxDebt,
+                  canPos: canPos,
+                  canVisit: canVisit,
+                  settings: settings,
+                  auth: auth,
+                ),
               ),
             ),
           ],
@@ -249,7 +280,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
       bottomNavigationBar: canCreate
           ? SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
                 child: SizedBox(
                   height: 52,
                   child: FilledButton(
@@ -323,7 +354,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
       itemCount: visible.length,
       itemBuilder: (context, i) {
         final c = visible[i];
@@ -581,31 +612,11 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: selected ? AppColors.primary : AppColors.surface,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected ? AppColors.primary : AppColors.border,
-            ),
-          ),
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: selected
-                  ? AppColors.primaryForeground
-                  : AppColors.foreground,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
+    return CbFilterChip(
+      label: label,
+      selected: selected,
+      compact: true,
+      onTap: onTap,
     );
   }
 }
@@ -860,6 +871,7 @@ class _CustomerExpandableCard extends StatelessWidget {
                 if (canSettle)
                   Expanded(
                     child: _FilledAction(
+                      key: Key('customer_list_settle_${customer.id}'),
                       label: 'Settle Debt',
                       color: AppColors.brandGreen,
                       onPressed: onSettle,
@@ -1002,6 +1014,7 @@ class _OutlineAction extends StatelessWidget {
 
 class _FilledAction extends StatelessWidget {
   const _FilledAction({
+    super.key,
     required this.label,
     required this.color,
     required this.onPressed,

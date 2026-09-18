@@ -6,6 +6,7 @@ abstract final class AppRoutes {
   static const pos = '/pos';
   static const customers = '/customers';
   static const customerNew = '/customers/new';
+  static const debtors = '/debtors';
   static const more = '/more';
   static const dailySales = '/daily-sales';
   static const salesHistory = '/sales';

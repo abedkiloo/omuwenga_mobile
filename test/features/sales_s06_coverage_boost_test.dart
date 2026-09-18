@@ -311,7 +311,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('sale_row_1')), findsOneWidget);
     expect(find.byKey(const Key('sales_shift_total')), findsOneWidget);
-    expect(find.text('SALES (1)'), findsOneWidget);
+    expect(find.text('All (1)'), findsOneWidget);
     expect(find.byKey(const Key('sales_method_card')), findsNothing);
     expect(find.byKey(const Key('sales_export_shift')), findsNothing);
 

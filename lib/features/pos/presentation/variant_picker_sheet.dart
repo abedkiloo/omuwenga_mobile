@@ -147,7 +147,7 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
               const Divider(height: 1),
               Expanded(child: _body()),
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
                     IconButton(
@@ -246,7 +246,7 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
     final colors = pickerColors(_variants, selectedSizeId: _sizeId);
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       children: [
         if (_mode == VariantPickerMode.sizeColor ||
             _mode == VariantPickerMode.sizeOnly) ...[

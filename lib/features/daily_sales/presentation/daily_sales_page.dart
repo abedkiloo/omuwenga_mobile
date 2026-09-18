@@ -3,11 +3,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../design_system/states/async_states.dart';
+import '../../../design_system/design_system.dart';
 import '../../sales_history/domain/payment_status.dart';
 import '../application/daily_sales_controllers.dart';
 import '../domain/daily_navigation.dart';
 import '../domain/daily_report.dart';
+
+String _friendlyDayLabel(DateTime day) {
+  const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  final weekday = weekdays[day.weekday - 1];
+  return '$weekday, ${day.day} ${months[day.month - 1]}';
+}
 
 class DailySalesPage extends ConsumerWidget {
   const DailySalesPage({super.key});
@@ -19,52 +39,74 @@ class DailySalesPage extends ConsumerWidget {
 
     return Scaffold(
       body: SafeArea(
+        top: false,
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
               child: Text(
                 'Daily sales',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    key: const Key('daily_prev_day'),
-                    onPressed: state.loading
-                        ? null
-                        : () => ref
-                              .read(dailySalesProvider.notifier)
-                              .goToPreviousDay(),
-                    icon: const Icon(Icons.chevron_left),
-                  ),
-                  Expanded(
-                    child: Text(
-                      key: const Key('daily_date_label'),
-                      state.dateApi,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleMedium,
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+              child: CbSurfaceCard(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Row(
+                  children: [
+                    IconButton(
+                      key: const Key('daily_prev_day'),
+                      onPressed: state.loading
+                          ? null
+                          : () => ref
+                                .read(dailySalesProvider.notifier)
+                                .goToPreviousDay(),
+                      icon: const Icon(Icons.chevron_left),
+                      color: AppColors.primary,
                     ),
-                  ),
-                  IconButton(
-                    key: const Key('daily_next_day'),
-                    onPressed: state.loading
-                        ? null
-                        : () => ref
-                              .read(dailySalesProvider.notifier)
-                              .goToNextDay(),
-                    icon: const Icon(Icons.chevron_right),
-                  ),
-                ],
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            'Day',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: AppColors.mutedForeground,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.3,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            key: const Key('daily_date_label'),
+                            _friendlyDayLabel(state.day),
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      key: const Key('daily_next_day'),
+                      onPressed: state.loading
+                          ? null
+                          : () => ref
+                                .read(dailySalesProvider.notifier)
+                                .goToNextDay(),
+                      icon: const Icon(Icons.chevron_right),
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
               ),
             ),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
               child: Row(
                 children: [
                   _StatusChip(
@@ -106,7 +148,7 @@ class DailySalesPage extends ConsumerWidget {
             if (state.loading) const LinearProgressIndicator(minHeight: 2),
             if (report != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
                 child: _SummaryStrip(summary: report.summary),
               ),
             Expanded(child: _body(context, ref, state)),
@@ -137,7 +179,7 @@ class DailySalesPage extends ConsumerWidget {
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
       itemCount: orders.length,
       separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, i) {
@@ -178,10 +220,11 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
+      child: CbFilterChip(
+        label: label,
         selected: selected,
-        onSelected: (_) => onSelected(),
+        compact: true,
+        onTap: onSelected,
       ),
     );
   }

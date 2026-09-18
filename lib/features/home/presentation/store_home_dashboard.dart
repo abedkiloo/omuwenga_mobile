@@ -35,12 +35,11 @@ class StoreHomeDashboard extends ConsumerWidget {
 
     return ColoredBox(
       color: AppColors.background,
-      child: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => ref.read(homeDailyProvider.notifier).load(),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            children: [
+      child: RefreshIndicator(
+        onRefresh: () => ref.read(homeDailyProvider.notifier).load(),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+          children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -68,9 +67,9 @@ class StoreHomeDashboard extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               _SummarySection(state: home),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               if (canAccessPos)
                 CbPrimaryButton(
                   key: const Key('home_primary_cta'),
@@ -100,7 +99,7 @@ class StoreHomeDashboard extends ConsumerWidget {
                 ),
               ],
               if (home.summary != null && home.summary!.orders.isNotEmpty) ...[
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     const Expanded(
@@ -123,7 +122,6 @@ class StoreHomeDashboard extends ConsumerWidget {
             ],
           ),
         ),
-      ),
     );
   }
 

@@ -51,7 +51,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           builder: (context, constraints) {
             final short = constraints.maxHeight < 560;
             return SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(12),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: ConstrainedBox(
                 constraints: BoxConstraints(
@@ -71,7 +71,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
                       TextField(
                         controller: _username,
                         key: const Key('login_username'),
@@ -105,7 +105,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
                       CbPrimaryButton(
                         label: auth.busy ? 'Signing in…' : 'Sign in',
                         onPressed: auth.busy ? null : _submit,

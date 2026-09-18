@@ -20,7 +20,7 @@ class FieldOrderReviewPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Review field order')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         children: [
           Text('Site', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
@@ -89,7 +89,7 @@ class FieldOrderReviewPage extends ConsumerWidget {
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: CbPrimaryButton(
             key: const Key('fo_submit'),
             label: state.submitting ? 'Submitting…' : 'Submit to store',
@@ -201,14 +201,14 @@ class _FieldOrderCartPageState extends ConsumerState<FieldOrderCartPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             child: Text(
               'Building order for site #${widget.siteId}',
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: TextField(
               key: const Key('fo_search'),
               controller: _search,
@@ -229,7 +229,7 @@ class _FieldOrderCartPageState extends ConsumerState<FieldOrderCartPage> {
           if (_searching) const LinearProgressIndicator(minHeight: 2),
           if (_searchError != null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 _searchError!,
                 key: const Key('fo_search_error'),
@@ -273,7 +273,7 @@ class _FieldOrderCartPageState extends ConsumerState<FieldOrderCartPage> {
                     onPrimary: () {},
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
                     itemCount: cart.lines.length,
                     separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, i) {
@@ -293,7 +293,7 @@ class _FieldOrderCartPageState extends ConsumerState<FieldOrderCartPage> {
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: CbPrimaryButton(
             key: const Key('fo_to_review'),
             label: 'Review',

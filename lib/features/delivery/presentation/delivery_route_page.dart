@@ -57,7 +57,7 @@ class _DeliveryRoutePageState extends ConsumerState<DeliveryRoutePage> {
               onPrimary: () => ref.read(deliveryRouteProvider.notifier).load(),
             )
           : ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               children: [
                 if (next != null)
                   CbPrimaryButton(
@@ -172,7 +172,7 @@ class _DeliveryStopPageState extends ConsumerState<DeliveryStopPage> {
         title: Text(current.site.label.isEmpty ? 'Stop' : current.site.label),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         children: [
           Container(
             key: const Key('del_stop_map'),

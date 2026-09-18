@@ -82,6 +82,19 @@ class VisitOrderController extends StateNotifier<VisitOrderState> {
     state = state.copyWith(step: step, clearError: true);
   }
 
+  /// Moves one step earlier. Returns false when already on the first step.
+  bool goBack() {
+    final previous = switch (state.step) {
+      VisitOrderStep.customer => null,
+      VisitOrderStep.products => VisitOrderStep.customer,
+      VisitOrderStep.location => VisitOrderStep.products,
+      VisitOrderStep.review => VisitOrderStep.location,
+    };
+    if (previous == null) return false;
+    goTo(previous);
+    return true;
+  }
+
   void selectCustomer(CustomerSummary customer) {
     state = state.copyWith(customer: customer, clearError: true);
   }

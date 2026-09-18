@@ -111,7 +111,7 @@ class _StkWaitPageState extends ConsumerState<StkWaitPage> {
                     ),
                   ),
                   if (state.polling) ...[
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
                     const Center(
                       child: CircularProgressIndicator(key: Key('stk_spinner')),
                     ),

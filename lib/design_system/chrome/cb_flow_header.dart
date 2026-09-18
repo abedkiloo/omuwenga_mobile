@@ -24,7 +24,7 @@ class CbFlowHeader extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onBack;
 
   @override
-  Size get preferredSize => Size.fromHeight(subtitle != null ? 96 : 72);
+  Size get preferredSize => Size.fromHeight(subtitle != null ? 72 : 56);
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +33,7 @@ class CbFlowHeader extends StatelessWidget implements PreferredSizeWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 4, 12, 8),
+          padding: const EdgeInsets.fromLTRB(2, 2, 8, 4),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [

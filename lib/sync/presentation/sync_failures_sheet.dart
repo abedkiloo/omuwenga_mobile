@@ -36,14 +36,14 @@ class SyncFailuresSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     if (items.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.all(24),
+        padding: EdgeInsets.all(12),
         child: Text('No failed syncs.'),
       );
     }
     return SafeArea(
       child: ListView.separated(
         shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
         itemCount: items.length + 1,
         separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, index) {

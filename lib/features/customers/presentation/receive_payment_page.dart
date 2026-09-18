@@ -108,7 +108,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Receive payment')),
+      appBar: AppBar(title: const Text('Collect payment')),
       body: detail == null
           ? (state.loading
                 ? const LoadingState()
@@ -121,7 +121,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                         .load(widget.customerId),
                   ))
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
               children: [
                 Text(
                   detail.name,
@@ -143,7 +143,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                     color: AppColors.mutedForeground,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
                 TextField(
                   key: const Key('settle_amount'),
                   controller: _amount,
@@ -187,7 +187,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
                 CbPrimaryButton(
                   key: const Key('settle_confirm'),
                   label: state.settling ? 'Processing…' : 'Confirm payment',

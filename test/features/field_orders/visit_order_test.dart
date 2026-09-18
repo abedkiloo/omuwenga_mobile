@@ -140,4 +140,111 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('visit_order_success')), findsOneWidget);
   });
+
+  testWidgets('visit order: back returns to previous step', (tester) async {
+    final client = MockClient((request) async {
+      final path = request.url.path;
+      if (path.contains('/sales/customers/') && request.method == 'GET') {
+        return http.Response(
+          jsonEncode({
+            'results': [
+              {'id': 9, 'name': 'Ada', 'phone': '0700'},
+            ],
+          }),
+          200,
+        );
+      }
+      if (path.contains('/products/') &&
+          !path.contains('/search/') &&
+          !path.contains('/variants/') &&
+          request.method == 'GET') {
+        return http.Response(
+          jsonEncode({
+            'count': 1,
+            'next': null,
+            'previous': null,
+            'results': [
+              {
+                'id': 12,
+                'name': 'Cement',
+                'selling_price': 150,
+                'has_variants': false,
+              },
+            ],
+          }),
+          200,
+        );
+      }
+      if (path.contains('/products/search/')) {
+        return http.Response(
+          jsonEncode([
+            {
+              'id': 12,
+              'name': 'Cement',
+              'selling_price': 150,
+              'has_variants': false,
+            },
+          ]),
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    });
+
+    final tokens = InMemoryTokenStore();
+    final env = const AppEnv(
+      flavor: AppFlavor.dev,
+      apiBaseUrl: 'http://example.com/api',
+    );
+    final apiClient = ApiClient(
+      env: env,
+      tokenStore: tokens,
+      httpClient: client,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appEnvProvider.overrideWithValue(env),
+          httpClientProvider.overrideWithValue(client),
+          apiClientProvider.overrideWithValue(apiClient),
+          customersApiProvider.overrideWithValue(CustomersApi(apiClient)),
+          fieldOrdersApiProvider.overrideWithValue(FieldOrdersApi(apiClient)),
+          posApiProvider.overrideWithValue(PosApi(apiClient)),
+        ],
+        child: MaterialApp(
+          home: VisitOrderPage(mapBuilder: fakeMapPinPickerBuilder),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('visit_customer_9')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('visit_next_customer')));
+    await tester.pumpAndSettle();
+    expect(find.text('Step 2 of 4: Order Items & Packs'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('visit_back')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Step 1 of 4: Select Customer & Verify Debt'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('visit_next_customer')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('visit_product_12')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('visit_next_products')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Step 3 of 4: Pin Delivery Drop & Landmark'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+    expect(find.text('Step 2 of 4: Order Items & Packs'), findsOneWidget);
+  });
 }

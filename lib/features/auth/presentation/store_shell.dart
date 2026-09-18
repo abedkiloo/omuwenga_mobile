@@ -59,13 +59,13 @@ class StoreShellPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: SyncStatusChip(
@@ -91,11 +91,18 @@ class StoreShellPage extends ConsumerWidget {
                 ),
               ),
             ),
-          ),
-          Expanded(child: child),
-        ],
+            Expanded(
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                child: child,
+              ),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: NavigationBar(
+        height: 64,
         selectedIndex: _selectedVisualIndex(location, destinations),
         onDestinationSelected: (i) => context.go(destinations[i].route),
         destinations: [
@@ -205,7 +212,7 @@ class _DeliveryHome extends StatelessWidget {
     final theme = Theme.of(context);
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -217,7 +224,7 @@ class _DeliveryHome extends StatelessWidget {
                 color: AppColors.mutedForeground,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
             CbPrimaryButton(
               key: const Key('home_primary_cta'),
               label: 'Open today’s route',
@@ -239,7 +246,7 @@ class _DispatcherHome extends StatelessWidget {
     final theme = Theme.of(context);
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -251,7 +258,7 @@ class _DispatcherHome extends StatelessWidget {
                 color: AppColors.mutedForeground,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 16),
             CbPrimaryButton(
               key: const Key('home_primary_cta'),
               label: 'Open dispatch queue',
@@ -275,12 +282,15 @@ class MorePage extends ConsumerWidget {
     final canPlaceVisit = session?.permissions.canPlaceVisitOrders ?? false;
     final canDispatch = session?.permissions.canDispatch ?? false;
     final canDelivery = session?.permissions.canAccessDelivery ?? false;
+    final canDebtors = session?.permissions.canViewDebtManagement ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
+        top: false,
+        bottom: false,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           children: [
             if (canPlaceVisit)
               _MoreTile(
@@ -317,6 +327,13 @@ class MorePage extends ConsumerWidget {
                 icon: Icons.calendar_today_outlined,
                 onTap: () => context.go(AppRoutes.dailySales),
               ),
+            if (canDebtors)
+              _MoreTile(
+                key: const Key('more_debtors'),
+                title: 'Debtors',
+                icon: Icons.account_balance_wallet_outlined,
+                onTap: () => context.go(AppRoutes.debtors),
+              ),
             _MoreTile(
               title: 'API health',
               icon: Icons.monitor_heart_outlined,
@@ -350,7 +367,7 @@ class FeaturePlaceholderPage extends StatelessWidget {
     return SafeArea(
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

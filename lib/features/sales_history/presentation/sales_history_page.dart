@@ -18,6 +18,7 @@ class SalesHistoryPage extends ConsumerStatefulWidget {
 
 class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
   final _search = TextEditingController();
+  bool _chromeCollapsed = false;
 
   @override
   void initState() {
@@ -31,6 +32,17 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  bool _onListScroll(ScrollNotification notification) {
+    return handleChromeScrollCollapse(
+      notification: notification,
+      collapsed: _chromeCollapsed,
+      setCollapsed: (value) {
+        if (_chromeCollapsed == value) return;
+        setState(() => _chromeCollapsed = value);
+      },
+    );
   }
 
   Future<void> _pickDate({required bool from}) async {
@@ -67,34 +79,52 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
     final state = ref.watch(salesHistoryProvider);
     final filters = state.filters;
 
+    final gross = state.items.fold<double>(0, (sum, sale) => sum + sale.total);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
+        top: false,
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: const _HistoryHeader(),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _RangeSelector(
-                filters: filters,
-                onToday: () => _setRange(0),
-                onYesterday: () => _setRange(1),
-                onWeek: () => _setRange(7),
-                onFrom: () => _pickDate(from: true),
-                onTo: () => _pickDate(from: false),
+            CbCollapsibleChrome(
+              collapsed: _chromeCollapsed,
+              onToggle: () =>
+                  setState(() => _chromeCollapsed = !_chromeCollapsed),
+              collapsedLabel: 'Sales filters & summary',
+              collapsedSummary: state.items.isEmpty
+                  ? null
+                  : '${state.items.length} sales · ${_money(gross)}',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(12, 6, 12, 0),
+                    child: _HistoryHeader(),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                    child: _RangeSelector(
+                      filters: filters,
+                      onToday: () => _setRange(0),
+                      onYesterday: () => _setRange(1),
+                      onWeek: () => _setRange(7),
+                      onFrom: () => _pickDate(from: true),
+                      onTo: () => _pickDate(from: false),
+                    ),
+                  ),
+                  if (state.items.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: _ShiftSummary(items: state.items),
+                    ),
+                ],
               ),
             ),
-            if (state.items.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _ShiftSummary(items: state.items),
-              ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
               child: Row(
                 children: [
                   Expanded(
@@ -131,22 +161,23 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
               height: 44,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
                 children: [
                   for (final method in const ['', 'mpesa', 'cash'])
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
+                      child: CbFilterChip(
                         key: Key(
                           'sales_method_${method.isEmpty ? 'all' : method}',
                         ),
-                        label: Text(
-                          method.isEmpty
-                              ? 'SALES (${state.items.length})'
-                              : method.toUpperCase(),
-                        ),
+                        label: method.isEmpty
+                            ? 'All (${state.items.length})'
+                            : method == 'mpesa'
+                            ? 'M-Pesa'
+                            : 'Cash',
                         selected: filters.paymentMethod == method,
-                        onSelected: (_) => ref
+                        compact: true,
+                        onTap: () => ref
                             .read(salesHistoryProvider.notifier)
                             .load(
                               filters: filters.copyWith(paymentMethod: method),
@@ -157,7 +188,12 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
               ),
             ),
             if (state.loading) const LinearProgressIndicator(minHeight: 2),
-            Expanded(child: _body(state)),
+            Expanded(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _onListScroll,
+                child: _body(state),
+              ),
+            ),
           ],
         ),
       ),
@@ -184,7 +220,7 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
       );
     }
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       itemCount: state.items.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, i) {
@@ -249,36 +285,147 @@ class _RangeSelector extends StatelessWidget {
   final VoidCallback onFrom;
   final VoidCallback onTo;
 
+  _DatePreset get _preset {
+    final today = formatApiDate(DateTime.now());
+    final yesterday = formatApiDate(
+      DateTime.now().subtract(const Duration(days: 1)),
+    );
+    final weekFrom = formatApiDate(
+      DateTime.now().subtract(const Duration(days: 7)),
+    );
+    final from = filters.dateFrom;
+    final to = filters.dateTo;
+    if (from == today && to == today) return _DatePreset.today;
+    if (from == yesterday && to == today) return _DatePreset.yesterday;
+    if (from == weekFrom && to == today) return _DatePreset.week;
+    return _DatePreset.custom;
+  }
+
+  String _friendlyDate(String? raw, String empty) {
+    final d = parseApiDate(raw);
+    if (d == null) return empty;
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${d.day} ${months[d.month - 1]}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final preset = _preset;
+    final theme = Theme.of(context);
+
     return CbSurfaceCard(
-      padding: const EdgeInsets.all(10),
-      child: Wrap(
-        spacing: 7,
-        runSpacing: 7,
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ActionChip(
-            avatar: const Icon(Icons.check, size: 15),
-            label: const Text('Today'),
-            onPressed: onToday,
+          Text(
+            'Period',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.mutedForeground,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+            ),
           ),
-          ActionChip(label: const Text('Yesterday'), onPressed: onYesterday),
-          ActionChip(label: const Text('Past 7 Days'), onPressed: onWeek),
-          ActionChip(
-            key: const Key('sales_filter_from'),
-            label: Text(filters.dateFrom ?? 'From date'),
-            onPressed: onFrom,
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: CbFilterChip(
+                  key: const Key('sales_range_today'),
+                  label: 'Today',
+                  selected: preset == _DatePreset.today,
+                  expand: true,
+                  onTap: onToday,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: CbFilterChip(
+                  key: const Key('sales_range_yesterday'),
+                  label: 'Yesterday',
+                  selected: preset == _DatePreset.yesterday,
+                  expand: true,
+                  onTap: onYesterday,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: CbFilterChip(
+                  key: const Key('sales_range_week'),
+                  label: '7 days',
+                  selected: preset == _DatePreset.week,
+                  expand: true,
+                  onTap: onWeek,
+                ),
+              ),
+            ],
           ),
-          ActionChip(
-            key: const Key('sales_filter_to'),
-            label: Text(filters.dateTo ?? 'To date'),
-            onPressed: onTo,
+          const SizedBox(height: 10),
+          Text(
+            'Custom range',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.mutedForeground,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: CbFilterChip(
+                  key: const Key('sales_filter_from'),
+                  label: _friendlyDate(filters.dateFrom, 'From'),
+                  selected: preset == _DatePreset.custom &&
+                      (filters.dateFrom?.isNotEmpty ?? false),
+                  leading: const Icon(Icons.calendar_today_outlined),
+                  expand: true,
+                  onTap: onFrom,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Text(
+                  '→',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: CbFilterChip(
+                  key: const Key('sales_filter_to'),
+                  label: _friendlyDate(filters.dateTo, 'To'),
+                  selected: preset == _DatePreset.custom &&
+                      (filters.dateTo?.isNotEmpty ?? false),
+                  leading: const Icon(Icons.event_outlined),
+                  expand: true,
+                  onTap: onTo,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 }
+
+enum _DatePreset { today, yesterday, week, custom }
+
 
 class _ShiftSummary extends StatelessWidget {
   const _ShiftSummary({required this.items});

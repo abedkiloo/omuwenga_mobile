@@ -13,6 +13,7 @@ import '../features/auth/presentation/store_shell.dart';
 import '../features/customers/presentation/customer_detail_page.dart';
 import '../features/customers/presentation/customer_form_page.dart';
 import '../features/customers/presentation/customers_list_page.dart';
+import '../features/customers/presentation/debt_management_page.dart';
 import '../features/customers/presentation/receive_payment_page.dart';
 import '../features/daily_sales/presentation/customer_day_page.dart';
 import '../features/daily_sales/presentation/daily_sales_page.dart';
@@ -96,12 +97,16 @@ GoRouter createAppRouter({
           !(permissions?.canUpdateCustomers ?? false)) {
         return AppRoutes.home;
       }
-      if (RegExp(r'^/customers/\d+/settle$').hasMatch(loc) &&
-          !(permissions?.canUpdateDebtManagement ?? false)) {
+      if (RegExp(r'^/customers/\d+/settle$').hasMatch(loc)) {
+        if (!(permissions?.canUpdateDebtManagement ?? false)) {
+          return AppRoutes.home;
+        }
+      } else if (loc.startsWith(AppRoutes.customers) &&
+          !(permissions?.canViewCustomers ?? false)) {
         return AppRoutes.home;
       }
-      if (loc.startsWith(AppRoutes.customers) &&
-          !(permissions?.canViewCustomers ?? false)) {
+      if (loc.startsWith(AppRoutes.debtors) &&
+          !(permissions?.canViewDebtManagement ?? false)) {
         return AppRoutes.home;
       }
       if (loc.startsWith(AppRoutes.salesHistory) &&
@@ -184,6 +189,10 @@ GoRouter createAppRouter({
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return ReceivePaymentPage(customerId: id);
             },
+          ),
+          GoRoute(
+            path: AppRoutes.debtors,
+            builder: (context, state) => const DebtManagementPage(),
           ),
           GoRoute(
             path: AppRoutes.more,

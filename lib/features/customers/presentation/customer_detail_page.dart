@@ -123,7 +123,7 @@ class CustomerDetailPage extends ConsumerWidget {
     };
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
       children: [
         _ProfileCard(detail: detail),
         const SizedBox(height: 12),
@@ -173,7 +173,7 @@ class _LedgerBottomBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
           child: Row(
             children: [
               if (canVisit) ...[

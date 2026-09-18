@@ -6,7 +6,7 @@ class CbSurfaceCard extends StatelessWidget {
   const CbSurfaceCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = const EdgeInsets.all(12),
     this.margin,
     this.onTap,
   });

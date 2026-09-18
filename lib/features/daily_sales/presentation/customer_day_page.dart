@@ -47,7 +47,7 @@ class CustomerDayPage extends ConsumerWidget {
           );
         }
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           children: [
             Text(
               key: const Key('customer_day_standing'),

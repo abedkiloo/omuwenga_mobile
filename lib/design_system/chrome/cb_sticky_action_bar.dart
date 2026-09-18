@@ -32,14 +32,14 @@ class CbStickyActionBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (summary != null || summaryTrailing != null)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.only(bottom: 6),
                   child: Row(
                     children: [
                       if (summary != null)
@@ -59,7 +59,7 @@ class CbStickyActionBar extends StatelessWidget {
                     ],
                   ),
                 ),
-              if (secondary != null) ...[secondary!, const SizedBox(height: 8)],
+              if (secondary != null) ...[secondary!, const SizedBox(height: 4)],
               child ??
                   CbPrimaryButton(
                     key: primaryKey,

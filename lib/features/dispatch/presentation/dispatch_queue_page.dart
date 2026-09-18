@@ -64,7 +64,7 @@ class _DispatchQueuePageState extends ConsumerState<DispatchQueuePage> {
               onPrimary: () => ref.read(dispatchQueueProvider.notifier).load(),
             )
           : ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               itemCount: state.orders.length,
               itemBuilder: (context, i) {
                 final order = state.orders[i];
@@ -171,7 +171,7 @@ class _DispatchOrderDetailPageState
       backgroundColor: AppColors.background,
       appBar: AppBar(title: Text('Order #${order.id}')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         children: [
           Text(
             order.customerName?.isNotEmpty == true
