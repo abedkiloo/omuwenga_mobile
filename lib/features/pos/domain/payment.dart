@@ -41,12 +41,14 @@ class PosSettings {
       PosPaymentMethod.mpesa,
       PosPaymentMethod.card,
     ],
+    this.allowPartialPayment = true,
   });
 
   final bool requireCustomer;
   final bool showTax;
   final bool showDiscount;
   final List<PosPaymentMethod> enabledPaymentMethods;
+  final bool allowPartialPayment;
 
   factory PosSettings.fromApis({
     Map<String, dynamic>? sales,
@@ -55,6 +57,7 @@ class PosSettings {
     final requireCustomer = sales?['require_customer'] == true;
     final showTax = sales?['show_tax'] == true;
     final showDiscount = sales?['show_discount'] == true;
+    final allowPartial = sales?['allow_partial_payment'];
 
     final rawMethods = store?['enabled_payment_methods'];
     final methods = <PosPaymentMethod>[];
@@ -69,6 +72,7 @@ class PosSettings {
       requireCustomer: requireCustomer,
       showTax: showTax,
       showDiscount: showDiscount,
+      allowPartialPayment: allowPartial == null ? true : allowPartial == true,
       enabledPaymentMethods: methods.isEmpty
           ? const PosSettings().enabledPaymentMethods
           : methods,
@@ -81,11 +85,65 @@ class CheckoutDraft {
     required this.method,
     required this.amountPaid,
     this.paymentReference = '',
+    this.paymentOnAccount = false,
   });
 
   final PosPaymentMethod method;
   final double amountPaid;
   final String paymentReference;
+
+  /// Cashier opted to put unpaid balance on the customer account.
+  final bool paymentOnAccount;
+
+  CheckoutDraft copyWith({
+    PosPaymentMethod? method,
+    double? amountPaid,
+    String? paymentReference,
+    bool? paymentOnAccount,
+  }) {
+    return CheckoutDraft(
+      method: method ?? this.method,
+      amountPaid: amountPaid ?? this.amountPaid,
+      paymentReference: paymentReference ?? this.paymentReference,
+      paymentOnAccount: paymentOnAccount ?? this.paymentOnAccount,
+    );
+  }
+}
+
+enum CheckoutKind { full, partial, payLater }
+
+CheckoutKind checkoutKind({required double total, required double paid}) {
+  if (paid + 1e-9 >= total) return CheckoutKind.full;
+  if (paid <= 0) return CheckoutKind.payLater;
+  return CheckoutKind.partial;
+}
+
+double accountBalanceDue(double total, double paid) {
+  final due = total - paid;
+  return due < 0 ? 0 : due;
+}
+
+bool isUnderpaid({required double total, required double paid}) =>
+    paid + 1e-9 < total;
+
+Map<String, dynamic> posSaleRequestBody({
+  required PosCart cart,
+  required CheckoutDraft draft,
+}) {
+  final underpaid = isUnderpaid(total: cart.total, paid: draft.amountPaid);
+  return <String, dynamic>{
+    'sale_type': 'pos',
+    'items': cart.toSaleItemsJson(),
+    'payment_method': draft.method.apiValue,
+    'amount_paid': draft.amountPaid,
+    'tax_amount': cart.taxAmount,
+    'discount_amount': cart.discountAmount,
+    'allow_partial_payment': draft.paymentOnAccount && underpaid,
+    'excess_payment_choice': 'change',
+    if (cart.customerId != null) 'customer_id': cart.customerId,
+    if (draft.paymentReference.trim().isNotEmpty)
+      'payment_reference': draft.paymentReference.trim(),
+  };
 }
 
 /// Returns null when checkout is valid; otherwise a short human reason.
@@ -96,15 +154,28 @@ String? validateCheckout({
 }) {
   if (cart.isEmpty) return 'Add at least one product.';
   if (settings.requireCustomer && cart.customerId == null) {
-    return 'Duka is required.';
+    return 'Customer is required.';
   }
   if (!settings.enabledPaymentMethods.contains(draft.method)) {
     return 'Payment method is not enabled.';
   }
-  if (draft.amountPaid + 1e-9 < cart.total) {
-    return 'Amount paid is less than total.';
+  if (draft.amountPaid < 0) {
+    return 'Enter a valid amount received.';
   }
-  if (draft.method.requiresReference && draft.paymentReference.trim().isEmpty) {
+  if (isUnderpaid(total: cart.total, paid: draft.amountPaid)) {
+    if (!settings.allowPartialPayment) {
+      return 'Payment on account is disabled in store settings.';
+    }
+    if (!draft.paymentOnAccount) {
+      return 'Enable “Payment on customer account” for a partial payment or pay later.';
+    }
+    if (cart.customerId == null) {
+      return 'Assign a customer before recording a balance on their account.';
+    }
+  }
+  if (draft.method.requiresReference &&
+      draft.paymentReference.trim().isEmpty &&
+      !isUnderpaid(total: cart.total, paid: draft.amountPaid)) {
     return 'Payment reference is required.';
   }
   return null;

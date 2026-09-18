@@ -228,7 +228,7 @@ void main() {
     await tester.tap(find.byKey(const Key('visit_back')));
     await tester.pumpAndSettle();
     expect(
-      find.text('Step 1 of 4: Select Duka & Verify Debt'),
+      find.text('Step 1 of 4: Select Customer & Verify Debt'),
       findsOneWidget,
     );
 

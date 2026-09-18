@@ -149,8 +149,8 @@ class StoreHomeDashboard extends ConsumerWidget {
         _HomeTool(
           key: const Key('home_customers'),
           icon: Icons.people_outline,
-          label: 'Dukas',
-          description: 'Shops & credit',
+          label: 'Customers',
+          description: 'Accounts & credit',
           onTap: () => context.go(AppRoutes.customers),
         ),
       );

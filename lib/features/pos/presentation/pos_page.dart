@@ -149,7 +149,7 @@ class _PosPageState extends ConsumerState<PosPage> {
       builder: (context) => AlertDialog(
         title: const Text('Clear current sale?'),
         content: const Text(
-          'This removes every item and duka from the current cart.',
+          'This removes every item and customer from the current cart.',
         ),
         actions: [
           TextButton(
@@ -273,7 +273,7 @@ class _PosPageState extends ConsumerState<PosPage> {
                 collapsed: _chromeCollapsed,
                 onToggle: () =>
                     setState(() => _chromeCollapsed = !_chromeCollapsed),
-                collapsedLabel: 'Sale header & duka',
+                collapsedLabel: 'Sale header & customer',
                 collapsedSummary: cart.isEmpty
                     ? userName
                     : '${cart.itemCount} items · ${_kes(cart.total)}'
@@ -1041,8 +1041,8 @@ class _CustomerStrip extends StatelessWidget {
     final theme = Theme.of(context);
     final hasCustomer = cart.customerId != null;
     final customerLabel = hasCustomer
-        ? cart.customerName ?? 'Duka'
-        : 'No duka assigned';
+        ? cart.customerName ?? 'Customer'
+        : 'No customer assigned';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1071,7 +1071,7 @@ class _CustomerStrip extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  hasCustomer ? 'DUKA' : 'ASSIGN DUKA',
+                  hasCustomer ? 'CUSTOMER' : 'ASSIGN CUSTOMER',
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
@@ -1091,7 +1091,7 @@ class _CustomerStrip extends StatelessWidget {
                         ? Padding(
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(
-                              'Duka required before pay',
+                              'Customer required before pay',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: AppColors.warning,
                               ),
@@ -1115,7 +1115,7 @@ class _CustomerStrip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(hasCustomer ? 'Change duka' : 'Assign Duka'),
+                Text(hasCustomer ? 'Change customer' : 'Assign customer'),
                 const SizedBox(width: 4),
                 const Icon(Icons.keyboard_arrow_down, size: 18),
               ],
@@ -1124,7 +1124,7 @@ class _CustomerStrip extends StatelessWidget {
           if (hasCustomer)
             IconButton(
               key: const Key('pos_clear_customer'),
-              tooltip: 'Clear duka',
+              tooltip: 'Clear customer',
               onPressed: onClearCustomer,
               icon: const Icon(Icons.close),
             ),
@@ -1165,7 +1165,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     super.dispose();
   }
 
-  void _pushDraft({PosPaymentMethod? method}) {
+  void _pushDraft({PosPaymentMethod? method, bool? paymentOnAccount}) {
     final checkout = ref.read(checkoutControllerProvider);
     final amount = double.tryParse(_amount.text) ?? 0;
     ref
@@ -1175,29 +1175,62 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
             method: method ?? checkout.draft.method,
             amountPaid: amount,
             paymentReference: _reference.text,
+            paymentOnAccount:
+                paymentOnAccount ?? checkout.draft.paymentOnAccount,
           ),
         );
   }
 
-  Future<bool?> _confirmCloseSale(PosCart cart) {
+  void _setPaid(double amount) {
+    _amount.text = amount.toStringAsFixed(2);
+    _pushDraft();
+  }
+
+  void _payFullAmountLater() {
+    _amount.text = '0.00';
+    _pushDraft(paymentOnAccount: true);
+  }
+
+  Future<bool?> _confirmCloseSale({
+    required PosCart cart,
+    required CheckoutKind kind,
+    required double paid,
+  }) {
+    final balance = accountBalanceDue(cart.total, paid);
+    final title = switch (kind) {
+      CheckoutKind.payLater => 'Record full amount as pay later?',
+      CheckoutKind.partial => 'Record balance as debt?',
+      CheckoutKind.full => 'Confirm and close sale?',
+    };
+    final confirm = switch (kind) {
+      CheckoutKind.payLater => 'Record sale — pay later',
+      CheckoutKind.partial => 'Record sale & debt',
+      CheckoutKind.full => 'Confirm & close sale',
+    };
+    final body = switch (kind) {
+      CheckoutKind.payLater =>
+        'No payment is collected now. The full ${ _kes(cart.total) } will be added to ${cart.customerName ?? 'the customer'}\'s account.',
+      CheckoutKind.partial =>
+        'Collected ${ _kes(paid) } now. Balance ${ _kes(balance) } will be added to ${cart.customerName ?? 'the customer'}\'s account.',
+      CheckoutKind.full =>
+        'Confirm payment of ${_kes(cart.total)} and record this sale. '
+            'Choose Back to sale if you need to change any item first.',
+    };
     return showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Confirm and close sale?'),
-        content: Text(
-          'Confirm payment of ${_kes(cart.total)} and record this sale. '
-          'Choose Review cart if you need to change any item first.',
-        ),
+        title: Text(title),
+        content: Text(body),
         actions: [
           TextButton(
             key: const Key('pos_review_cart'),
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Review cart'),
+            child: const Text('Back to sale'),
           ),
           FilledButton(
             key: const Key('pos_close_sale_confirm'),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Confirm & close sale'),
+            child: Text(confirm),
           ),
         ],
       ),
@@ -1222,15 +1255,29 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     final amountPaid = double.tryParse(_amount.text) ?? 0;
     final changeDue = amountPaid > cart.total ? amountPaid - cart.total : 0.0;
     final isMpesa = draft.method == PosPaymentMethod.mpesa;
-    final customerLabel = cart.customerName ?? 'No duka';
+    final customerLabel = cart.customerName ?? 'No customer';
+
+    final kind = checkoutKind(total: cart.total, paid: amountPaid);
+    final balanceDue = accountBalanceDue(cart.total, amountPaid);
+    final showAccount =
+        settings.allowPartialPayment &&
+        (draft.method == PosPaymentMethod.cash ||
+            draft.method == PosPaymentMethod.mpesa);
+    final collectNow = kind != CheckoutKind.payLater;
+    final needsStk = isMpesa && collectNow;
 
     String confirmLabel;
     if (checkout.phase == CheckoutPhase.submitting) {
       confirmLabel = 'Processing…';
-    } else if (isMpesa) {
+    } else if (kind == CheckoutKind.payLater) {
+      confirmLabel = 'Pay later — ${_kes(cart.total)}';
+    } else if (kind == CheckoutKind.partial) {
+      confirmLabel =
+          'Pay ${_kes(amountPaid)} · debt ${_kes(balanceDue)}';
+    } else if (needsStk) {
       confirmLabel = 'Send STK Push';
     } else {
-      confirmLabel = 'Confirm Payment - KES ${cart.total.toStringAsFixed(2)}';
+      confirmLabel = 'Confirm Payment - ${_kes(cart.total)}';
     }
 
     return Padding(
@@ -1240,13 +1287,25 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Checkout & Tender',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+            Row(
+              children: [
+                IconButton(
+                  key: const Key('pos_pay_back'),
+                  tooltip: 'Back to sale',
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back),
+                ),
+                Expanded(
+                  child: Text(
+                    'Checkout & Tender',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
             CbSurfaceCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1314,61 +1373,137 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                   selected: draft.method == m,
                   onTap: () {
                     _pushDraft(method: m);
-                    if (m == PosPaymentMethod.mpesa) {
-                      _amount.text = cart.total.toStringAsFixed(2);
+                    if (m == PosPaymentMethod.mpesa &&
+                        !draft.paymentOnAccount) {
+                      _setPaid(cart.total);
                       _pushDraft(method: m);
                     }
                   },
                 ),
               ),
             ],
-            if (!isMpesa) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final amount in [1000.0, 2000.0, 5000.0, cart.total])
-                    ChoiceChip(
-                      label: Text(
-                        amount == cart.total
-                            ? 'Exact ${cart.total.toStringAsFixed(2)}'
-                            : 'KES ${amount.toStringAsFixed(0)}',
-                      ),
-                      selected: (double.tryParse(_amount.text) ?? 0) == amount,
-                      selectedColor: AppColors.accentSoft,
-                      onSelected: (_) {
-                        _amount.text = amount.toStringAsFixed(2);
-                        _pushDraft();
+            if (showAccount) ...[
+              const SizedBox(height: 4),
+              CbSurfaceCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    InkWell(
+                      key: const Key('pos_payment_on_account'),
+                      onTap: () {
+                        final on = !draft.paymentOnAccount;
+                        if (!on && amountPaid <= 0) {
+                          _amount.text = cart.total.toStringAsFixed(2);
+                        }
+                        _pushDraft(paymentOnAccount: on);
                       },
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Checkbox(
+                            value: draft.paymentOnAccount,
+                            onChanged: (checked) {
+                              final on = checked == true;
+                              if (!on && amountPaid <= 0) {
+                                _amount.text = cart.total.toStringAsFixed(2);
+                              }
+                              _pushDraft(paymentOnAccount: on);
+                            },
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Payment on customer account',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  cart.customerId == null
+                                      ? 'Assign a customer to charge a balance to their account.'
+                                      : 'Collect part now, or pay the full amount later. The balance is added to the customer account.',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: AppColors.mutedForeground,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                ],
+                    if (draft.paymentOnAccount && cart.customerId != null) ...[
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        key: const Key('pos_pay_later'),
+                        onPressed: _payFullAmountLater,
+                        icon: const Icon(Icons.schedule, size: 18),
+                        label: const Text('Pay full amount later'),
+                      ),
+                      if (kind != CheckoutKind.full) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          kind == CheckoutKind.payLater
+                              ? 'Pay later: entire ${_kes(cart.total)} will be added to the customer account.'
+                              : 'Balance on account: ${_kes(balanceDue)}',
+                          key: const Key('pos_account_balance'),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppColors.warning,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                key: const Key('pos_amount_paid'),
-                controller: _amount,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'Amount paid',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (_) => _pushDraft(),
-              ),
-              if (changeDue > 0) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Change due: KES ${changeDue.toStringAsFixed(2)}',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.success,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
             ],
-            if (isMpesa) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final amount in [1000.0, 2000.0, 5000.0, cart.total])
+                  ChoiceChip(
+                    label: Text(
+                      amount == cart.total
+                          ? 'Exact ${cart.total.toStringAsFixed(2)}'
+                          : 'KES ${amount.toStringAsFixed(0)}',
+                    ),
+                    selected: (double.tryParse(_amount.text) ?? 0) == amount,
+                    selectedColor: AppColors.accentSoft,
+                    onSelected: (_) => _setPaid(amount),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: const Key('pos_amount_paid'),
+              controller: _amount,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(
+                labelText: 'Amount paid',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (_) => _pushDraft(),
+            ),
+            if (changeDue > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Change due: KES ${changeDue.toStringAsFixed(2)}',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: AppColors.success,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            if (needsStk) ...[
               const SizedBox(height: 8),
               TextField(
                 key: const Key('pos_mpesa_phone'),
@@ -1380,7 +1515,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                 ),
               ),
             ],
-            if (draft.method.requiresReference) ...[
+            if (draft.method.requiresReference && collectNow) ...[
               const SizedBox(height: 12),
               TextField(
                 key: const Key('pos_payment_ref'),
@@ -1408,14 +1543,18 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                   ? null
                   : () async {
                       final phone = _phone.text.trim();
-                      if (isMpesa && phone.isEmpty) {
+                      if (needsStk && phone.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Enter M-Pesa phone')),
                         );
                         return;
                       }
 
-                      final closeSale = await _confirmCloseSale(cart);
+                      final closeSale = await _confirmCloseSale(
+                        cart: cart,
+                        kind: kind,
+                        paid: amountPaid,
+                      );
                       if (!context.mounted) return;
                       if (closeSale == false) {
                         Navigator.pop(context);
@@ -1423,13 +1562,13 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                       }
                       if (closeSale != true) return;
 
-                      if (isMpesa) {
-                        final amount = cart.total;
-                        _amount.text = amount.toStringAsFixed(2);
-                        _pushDraft();
+                      if (needsStk) {
+                        final stkAmount = amountPaid > 0
+                            ? amountPaid
+                            : cart.total;
                         final paid = await showStkWaitSheet(
                           context,
-                          amount: amount,
+                          amount: stkAmount,
                           phone: phone,
                           purpose: 'pos',
                         );

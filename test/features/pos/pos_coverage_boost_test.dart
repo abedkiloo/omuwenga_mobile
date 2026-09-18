@@ -424,7 +424,7 @@ void main() {
         .read(cartControllerProvider.notifier)
         .addProduct(const CatalogProduct(id: 1, name: 'X', price: 1));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Duka required'), findsOneWidget);
+    expect(find.textContaining('Customer required'), findsOneWidget);
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -518,7 +518,7 @@ void main() {
       ..attachCustomer(id: 2, name: 'Ada');
     await tester.pumpAndSettle();
     expect(find.text('Ada'), findsOneWidget);
-    expect(find.text('DUKA'), findsOneWidget);
+    expect(find.text('CUSTOMER'), findsOneWidget);
   });
 
   testWidgets('offline pay shows queued receipt', (tester) async {
@@ -554,6 +554,76 @@ void main() {
     await tester.tap(find.byKey(const Key('pos_close_sale_confirm')));
     await tester.pumpAndSettle();
     expect(find.textContaining('waiting to sync'), findsOneWidget);
+  });
+
+  testWidgets('pay sheet back returns to pos; pay later records debt', (
+    tester,
+  ) async {
+    late WidgetRef widgetRef;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: overrides(
+          client: MockClient((request) async {
+            if (request.method == 'POST' &&
+                request.url.path.contains('/sales/')) {
+              final body = jsonDecode(request.body) as Map;
+              expect(body['allow_partial_payment'], isTrue);
+              expect(body['amount_paid'], 0);
+              expect(body['customer_id'], 9);
+              return http.Response(
+                jsonEncode({
+                  'id': 8,
+                  'sale_number': 'S-8',
+                  'total': 10,
+                  'payment_method': 'cash',
+                  'amount_paid': 0,
+                  'change': 0,
+                  'items': [],
+                }),
+                201,
+              );
+            }
+            return http.Response('[]', 200);
+          }),
+          settings: const PosSettings(allowPartialPayment: true),
+        ),
+        child: MaterialApp(
+          home: Consumer(
+            builder: (context, ref, _) {
+              widgetRef = ref;
+              return const PosPage();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    widgetRef.read(cartControllerProvider.notifier)
+      ..addProduct(const CatalogProduct(id: 1, name: 'A', price: 10))
+      ..attachCustomer(id: 9, name: 'Ada');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pos_pay')));
+    await tester.pumpAndSettle();
+    expect(find.text('Checkout & Tender'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('pos_pay_back')));
+    await tester.pumpAndSettle();
+    expect(find.text('Active Cart Items'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('pos_pay')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('pos_payment_on_account')));
+    await tester.tap(find.byKey(const Key('pos_payment_on_account')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pos_pay_later')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Pay later'), findsWidgets);
+    await tester.ensureVisible(find.byKey(const Key('pos_confirm_pay')));
+    await tester.tap(find.byKey(const Key('pos_confirm_pay')));
+    await tester.pumpAndSettle();
+    expect(find.text('Record full amount as pay later?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('pos_close_sale_confirm')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('receipt_title')), findsOneWidget);
   });
 
   testWidgets('search failure shows error', (tester) async {

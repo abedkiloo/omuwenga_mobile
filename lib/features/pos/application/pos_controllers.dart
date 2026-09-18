@@ -137,19 +137,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final online = await _connectivity.isOnline;
 
     if (!online) {
-      final body = <String, dynamic>{
-        'sale_type': 'pos',
-        'items': cart.toSaleItemsJson(),
-        'payment_method': state.draft.method.apiValue,
-        'amount_paid': state.draft.amountPaid,
-        'tax_amount': cart.taxAmount,
-        'discount_amount': cart.discountAmount,
-        'allow_partial_payment': false,
-        'excess_payment_choice': 'change',
-        if (cart.customerId != null) 'customer_id': cart.customerId,
-        if (state.draft.paymentReference.trim().isNotEmpty)
-          'payment_reference': state.draft.paymentReference.trim(),
-      };
+      final body = posSaleRequestBody(cart: cart, draft: state.draft);
       await _outbox.enqueue(
         EnqueueMutation(
           method: 'POST',

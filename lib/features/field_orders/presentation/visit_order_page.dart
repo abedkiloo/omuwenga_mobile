@@ -137,7 +137,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
 
   String _stepHeadline(VisitOrderStep step) {
     return switch (step) {
-      VisitOrderStep.customer => 'Step 1 of 4: Select Duka & Verify Debt',
+      VisitOrderStep.customer => 'Step 1 of 4: Select Customer & Verify Debt',
       VisitOrderStep.products => 'Step 2 of 4: Order Items & Packs',
       VisitOrderStep.location => 'Step 3 of 4: Pin Delivery Drop & Landmark',
       VisitOrderStep.review => 'Step 4 of 4: Final Review & Handoff',
@@ -147,7 +147,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
   String _stepCaption(VisitOrderStep step) {
     return switch (step) {
       VisitOrderStep.customer =>
-        'Verify store standing before placing the booking.',
+        'Verify customer standing before placing the booking.',
       VisitOrderStep.products => 'Search the catalog and set pack quantities.',
       VisitOrderStep.location =>
           'Snap GPS first, then adjust the pin if needed.',
@@ -199,7 +199,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
       }
     });
 
-    const stepLabels = ['Duka', 'Products', 'Pin Drop', 'Review'];
+    const stepLabels = ['Customer', 'Products', 'Pin Drop', 'Review'];
     final stepIndex = VisitOrderStep.values.indexOf(state.step);
 
     return PopScope(
@@ -456,7 +456,7 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
         CbSearchField(
           fieldKey: const Key('visit_customer_search'),
           controller: _search,
-          hintText: 'Search shop, owner, or phone',
+          hintText: 'Search name, phone, or code',
           onSubmitted: _load,
           onSearchTap: () => _load(),
         ),
@@ -485,12 +485,12 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
           children: [
             Expanded(
               child: CbSectionLabel(
-                label: selected == null ? 'Dukas' : 'Alternate dukas',
+                label: selected == null ? 'Customers' : 'Other customers',
                 icon: Icons.storefront_outlined,
               ),
             ),
             Text(
-              '${_items.length} stores',
+              '${_items.length} customers',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: AppColors.mutedForeground,
               ),
@@ -1182,7 +1182,7 @@ class _LocationStep extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  customer?.name ?? 'Duka',
+                  customer?.name ?? 'Customer',
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),

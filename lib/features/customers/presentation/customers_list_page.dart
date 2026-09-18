@@ -139,7 +139,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
               collapsedLabel: 'Customer directory summary',
               collapsedSummary: state.items.isEmpty
                   ? null
-                  : '${state.items.length} shops · ${_kes(totalOutstanding)} outstanding',
+                  : '${state.items.length} customers · ${_kes(totalOutstanding)} outstanding',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -534,7 +534,7 @@ class _DirectorySummaryCard extends StatelessWidget {
                 child: _SummaryMetric(
                   label: 'Total Outstanding',
                   value: _kes(totalOutstanding),
-                  subtitle: 'Across $shopCount shops',
+                  subtitle: 'Across $shopCount customers',
                 ),
               ),
               Expanded(
@@ -542,8 +542,8 @@ class _DirectorySummaryCard extends StatelessWidget {
                   label: 'Debtors',
                   value: '$debtorCount',
                   subtitle: debtorCount == 1
-                      ? '1 shop owes'
-                      : '$debtorCount shops owe',
+                      ? '1 customer owes'
+                      : '$debtorCount customers owe',
                   valueColor: debtorCount > 0 ? AppColors.destructive : null,
                 ),
               ),

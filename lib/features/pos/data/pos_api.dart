@@ -345,19 +345,7 @@ class PosApi {
     required CheckoutDraft draft,
     required String idempotencyKey,
   }) async {
-    final body = <String, dynamic>{
-      'sale_type': 'pos',
-      'items': cart.toSaleItemsJson(),
-      'payment_method': draft.method.apiValue,
-      'amount_paid': draft.amountPaid,
-      'tax_amount': cart.taxAmount,
-      'discount_amount': cart.discountAmount,
-      'allow_partial_payment': false,
-      'excess_payment_choice': 'change',
-      if (cart.customerId != null) 'customer_id': cart.customerId,
-      if (draft.paymentReference.trim().isNotEmpty)
-        'payment_reference': draft.paymentReference.trim(),
-    };
+    final body = posSaleRequestBody(cart: cart, draft: draft);
 
     final response = await _client.post(
       'sales/',

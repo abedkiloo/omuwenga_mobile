@@ -120,5 +120,82 @@ void main() {
       expect(PosPaymentMethod.card.label, 'Card');
       expect(PosPaymentMethodX.tryParse('other'), PosPaymentMethod.other);
     });
+
+    test('partial and pay-later need customer account', () {
+      final cart = const PosCart()
+          .addProduct(product)
+          .attachCustomer(id: 4, name: 'Ada');
+      const settings = PosSettings(allowPartialPayment: true);
+      expect(
+        canSubmitCheckout(
+          cart: cart,
+          settings: settings,
+          draft: const CheckoutDraft(
+            method: PosPaymentMethod.cash,
+            amountPaid: 50,
+          ),
+        ),
+        isFalse,
+      );
+      expect(
+        canSubmitCheckout(
+          cart: cart,
+          settings: settings,
+          draft: const CheckoutDraft(
+            method: PosPaymentMethod.cash,
+            amountPaid: 50,
+            paymentOnAccount: true,
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        checkoutKind(total: 150, paid: 50),
+        CheckoutKind.partial,
+      );
+      expect(
+        canSubmitCheckout(
+          cart: cart,
+          settings: settings,
+          draft: const CheckoutDraft(
+            method: PosPaymentMethod.cash,
+            amountPaid: 0,
+            paymentOnAccount: true,
+          ),
+        ),
+        isTrue,
+      );
+      expect(checkoutKind(total: 150, paid: 0), CheckoutKind.payLater);
+      expect(accountBalanceDue(150, 40), 110);
+      final body = posSaleRequestBody(
+        cart: cart,
+        draft: const CheckoutDraft(
+          method: PosPaymentMethod.cash,
+          amountPaid: 40,
+          paymentOnAccount: true,
+        ),
+      );
+      expect(body['allow_partial_payment'], isTrue);
+      expect(body['amount_paid'], 40);
+      expect(body['customer_id'], 4);
+    });
+
+    test('partial payment blocked when store setting is off', () {
+      final cart = const PosCart()
+          .addProduct(product)
+          .attachCustomer(id: 4, name: 'Ada');
+      expect(
+        validateCheckout(
+          cart: cart,
+          settings: const PosSettings(allowPartialPayment: false),
+          draft: const CheckoutDraft(
+            method: PosPaymentMethod.cash,
+            amountPaid: 10,
+            paymentOnAccount: true,
+          ),
+        ),
+        contains('disabled'),
+      );
+    });
   });
 }

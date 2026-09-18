@@ -47,7 +47,7 @@ class StoreShellPage extends ConsumerWidget {
         ),
       if (perms == null || perms.canViewCustomers)
         const _NavDest(
-          label: 'Dukas',
+          label: 'Customers',
           icon: Icons.people_outline,
           route: AppRoutes.customers,
         ),
