@@ -1115,7 +1115,7 @@ class _CustomerStrip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(hasCustomer ? 'Change customer' : 'Assign customer'),
+                Text(hasCustomer ? 'Change customer' : 'Select customer'),
                 const SizedBox(width: 4),
                 const Icon(Icons.keyboard_arrow_down, size: 18),
               ],

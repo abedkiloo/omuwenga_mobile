@@ -13,6 +13,7 @@ import '../../../design_system/chrome/cb_step_progress.dart';
 import '../../../design_system/chrome/cb_sticky_action_bar.dart';
 import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../design_system/states/async_states.dart';
+import '../../customers/application/customer_list_paging.dart';
 import '../../customers/application/customers_controllers.dart';
 import '../../customers/domain/customer.dart';
 import '../../customers/domain/wallet_debt.dart';
@@ -394,14 +395,14 @@ class _CustomerStep extends ConsumerStatefulWidget {
 
 class _CustomerStepState extends ConsumerState<_CustomerStep> {
   final _search = TextEditingController();
-  List<CustomerSummary> _items = const [];
-  bool _loading = false;
-  String? _error;
+  final _paging = CustomerListPaging();
 
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load();
+    });
   }
 
   @override
@@ -410,25 +411,22 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
     super.dispose();
   }
 
-  Future<void> _load([String? q]) async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    final result = await ref
-        .read(customersApiProvider)
-        .list(search: q ?? _search.text);
-    if (!mounted) return;
-    result.when(
-      success: (items) => setState(() {
-        _items = items;
-        _loading = false;
-      }),
-      failure: (e, _) => setState(() {
-        _loading = false;
-        _error = e.toString();
-        _items = const [];
-      }),
+  Future<void> _load([String? q]) {
+    return _paging.refresh(
+      ref.read(customersApiProvider),
+      search: q ?? _search.text,
+      onUpdate: () {
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  Future<void> _loadMore() {
+    return _paging.loadMore(
+      ref.read(customersApiProvider),
+      onUpdate: () {
+        if (mounted) setState(() {});
+      },
     );
   }
 
@@ -446,11 +444,25 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
   @override
   Widget build(BuildContext context) {
     final selected = widget.selected;
+    final items = _paging.items;
     final alternates = selected == null
-        ? _items
-        : _items.where((c) => c.id != selected.id).toList();
+        ? items
+        : items.where((c) => c.id != selected.id).toList();
 
-    return ListView(
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (shouldFetchMoreCustomers(
+          hasMore: _paging.hasMore,
+          loading: _paging.loading,
+          loadingMore: _paging.loadingMore,
+          extentAfter: notification.metrics.extentAfter,
+          maxScrollExtent: notification.metrics.maxScrollExtent,
+        )) {
+          _loadMore();
+        }
+        return false;
+      },
+      child: ListView(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       children: [
         CbSearchField(
@@ -467,12 +479,12 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
           icon: const Icon(Icons.person_add_outlined),
           label: const Text('Add new customer'),
         ),
-        if (_loading) const LinearProgressIndicator(minHeight: 2),
-        if (_error != null)
+        if (_paging.loading) const LinearProgressIndicator(minHeight: 2),
+        if (_paging.error != null)
           Padding(
             padding: const EdgeInsets.only(top: 12),
             child: Text(
-              _error!,
+              _paging.error!,
               style: const TextStyle(color: AppColors.destructive),
             ),
           ),
@@ -490,7 +502,7 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
               ),
             ),
             Text(
-              '${_items.length} customers',
+              '${_paging.count > 0 ? _paging.count : items.length} customers',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: AppColors.mutedForeground,
               ),
@@ -498,7 +510,7 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
           ],
         ),
         const SizedBox(height: 8),
-        for (final c in (selected == null ? _items : alternates))
+        for (final c in (selected == null ? items : alternates))
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: _CustomerListCard(
@@ -506,7 +518,24 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
               onTap: () => widget.onSelected(c),
             ),
           ),
+        if (_paging.hasMore)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: _paging.loadingMore
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : TextButton(
+                      onPressed: _loadMore,
+                      child: const Text('Load more customers'),
+                    ),
+            ),
+          ),
       ],
+    ),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:completebyte_pos_mobile/core/env/app_env.dart';
 import 'package:completebyte_pos_mobile/core/network/api_client.dart';
 import 'package:completebyte_pos_mobile/core/secure/token_store.dart';
+import 'package:completebyte_pos_mobile/features/customers/application/customer_list_paging.dart';
 import 'package:completebyte_pos_mobile/features/customers/application/customers_controllers.dart';
 import 'package:completebyte_pos_mobile/features/customers/data/customers_api.dart';
 import 'package:completebyte_pos_mobile/sync/domain/client_uuid.dart';
@@ -103,5 +104,96 @@ void main() {
     await list.load(search: 'a');
     expect(list.state.items.single.name, 'A');
     expect(list.state.error, isNull);
+    expect(list.state.hasMore, isFalse);
+  });
+
+  test('list controller appends the next page when loading more', () async {
+    final client = MockClient((request) async {
+      final page = request.url.queryParameters['page'] ?? '1';
+      if (page == '1') {
+        return http.Response(
+          jsonEncode({
+            'count': 2,
+            'next': 'http://example.com/api/sales/customers/?page=2',
+            'results': [
+              {'id': 1, 'name': 'Ann', 'wallet_balance': '0'},
+            ],
+          }),
+          200,
+        );
+      }
+      return http.Response(
+        jsonEncode({
+          'count': 2,
+          'next': null,
+          'results': [
+            {'id': 2, 'name': 'Zed', 'wallet_balance': '0'},
+          ],
+        }),
+        200,
+      );
+    });
+    final tokens = InMemoryTokenStore();
+    await tokens.writeTokens(access: 'a', refresh: 'r');
+    final api = CustomersApi(
+      ApiClient(
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
+        tokenStore: tokens,
+        httpClient: client,
+      ),
+    );
+    final list = CustomersListController(api);
+    await list.load();
+    expect(list.state.items.map((c) => c.name), ['Ann']);
+    expect(list.state.hasMore, isTrue);
+    await list.loadMore();
+    expect(list.state.items.map((c) => c.name), ['Ann', 'Zed']);
+    expect(list.state.hasMore, isFalse);
+  });
+
+  test('shouldFetchMoreCustomers when list ends or cannot scroll', () {
+    expect(
+      shouldFetchMoreCustomers(
+        hasMore: true,
+        loading: false,
+        loadingMore: false,
+        extentAfter: 10,
+        maxScrollExtent: 400,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldFetchMoreCustomers(
+        hasMore: true,
+        loading: false,
+        loadingMore: false,
+        extentAfter: 400,
+        maxScrollExtent: 0,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldFetchMoreCustomers(
+        hasMore: true,
+        loading: false,
+        loadingMore: false,
+        extentAfter: 400,
+        maxScrollExtent: 800,
+      ),
+      isFalse,
+    );
+    expect(
+      shouldFetchMoreCustomers(
+        hasMore: false,
+        loading: false,
+        loadingMore: false,
+        extentAfter: 0,
+        maxScrollExtent: 0,
+      ),
+      isFalse,
+    );
   });
 }

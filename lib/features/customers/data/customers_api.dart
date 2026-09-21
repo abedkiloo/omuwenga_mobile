@@ -29,16 +29,47 @@ class ReceiveWalletPaymentResult {
   }
 }
 
+/// One page from `GET /sales/customers/` (DRF page-number pagination).
+class CustomerPage {
+  const CustomerPage({
+    required this.results,
+    required this.count,
+    required this.page,
+    required this.pageSize,
+    required this.hasNext,
+  });
+
+  final List<CustomerSummary> results;
+  final int count;
+  final int page;
+  final int pageSize;
+  final bool hasNext;
+}
+
 class CustomersApi {
   CustomersApi(this._client);
 
   final ApiClient _client;
 
-  Future<Result<List<CustomerSummary>>> list({String search = ''}) async {
-    final q = search.trim().isEmpty
-        ? 'sales/customers/'
-        : 'sales/customers/?search=${Uri.encodeQueryComponent(search.trim())}';
-    final response = await _client.get(q);
+  /// Paginated customer directory. Backend default page size is 10.
+  Future<Result<CustomerPage>> list({
+    String search = '',
+    int page = 1,
+    int pageSize = 25,
+  }) async {
+    final params = <String, String>{
+      'page': '$page',
+      'page_size': '$pageSize',
+    };
+    final q = search.trim();
+    if (q.isNotEmpty) params['search'] = q;
+    final query = params.entries
+        .map(
+          (e) =>
+              '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}',
+        )
+        .join('&');
+    final response = await _client.get('sales/customers/?$query');
     if (response.isFailure) {
       final f = response as Failure;
       return Failure(f.error, f.stackTrace);
@@ -47,18 +78,57 @@ class CustomersApi {
     if (res.statusCode < 200 || res.statusCode >= 300) {
       return Failure(CustomersApiException(_safeError(res.body)));
     }
-    final decoded = jsonDecode(res.body);
-    final list = <dynamic>[];
+    return Success(_parseCustomerPage(res.body, page: page, pageSize: pageSize));
+  }
+
+  static CustomerPage _parseCustomerPage(
+    String body, {
+    required int page,
+    required int pageSize,
+  }) {
+    final decoded = jsonDecode(body);
     if (decoded is List) {
-      list.addAll(decoded);
-    } else if (decoded is Map && decoded['results'] is List) {
-      list.addAll(decoded['results'] as List);
+      final results = [
+        for (final item in decoded)
+          if (item is Map)
+            CustomerSummary.fromJson(Map<String, dynamic>.from(item)),
+      ];
+      return CustomerPage(
+        results: results,
+        count: results.length,
+        page: page,
+        pageSize: pageSize,
+        hasNext: false,
+      );
     }
-    return Success([
-      for (final item in list)
-        if (item is Map)
-          CustomerSummary.fromJson(Map<String, dynamic>.from(item)),
-    ]);
+    if (decoded is! Map) {
+      return CustomerPage(
+        results: const [],
+        count: 0,
+        page: page,
+        pageSize: pageSize,
+        hasNext: false,
+      );
+    }
+    final map = Map<String, dynamic>.from(decoded);
+    final raw = map['results'];
+    final results = <CustomerSummary>[];
+    if (raw is List) {
+      for (final item in raw) {
+        if (item is Map) {
+          results.add(CustomerSummary.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
+    }
+    final count = (map['count'] as num?)?.toInt() ?? results.length;
+    final hasNext = map['next'] != null && results.isNotEmpty;
+    return CustomerPage(
+      results: results,
+      count: count,
+      page: page,
+      pageSize: pageSize,
+      hasNext: hasNext,
+    );
   }
 
   Future<Result<CustomerDetail>> detail(int id) async {

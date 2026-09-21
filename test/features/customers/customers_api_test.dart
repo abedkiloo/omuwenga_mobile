@@ -35,8 +35,13 @@ void main() {
       MockClient((request) async {
         expect(request.url.path, contains('/sales/customers/'));
         expect(request.url.queryParameters['search'], 'ann');
+        expect(request.url.queryParameters['page'], '1');
+        expect(request.url.queryParameters['page_size'], '25');
         return http.Response(
           jsonEncode({
+            'count': 1,
+            'next': null,
+            'previous': null,
             'results': [
               {
                 'id': 3,
@@ -50,9 +55,34 @@ void main() {
         );
       }),
     );
-    final list = (await api.list(search: 'ann')).getOrThrow();
-    expect(list.single.name, 'Ann');
-    expect(list.single.debtAmount, 40);
+    final page = (await api.list(search: 'ann')).getOrThrow();
+    expect(page.results.single.name, 'Ann');
+    expect(page.results.single.debtAmount, 40);
+    expect(page.hasNext, isFalse);
+  });
+
+  test('list pagination follows next page', () async {
+    final api = apiWith(
+      MockClient((request) async {
+        expect(request.url.queryParameters['page'], '2');
+        expect(request.url.queryParameters['page_size'], '25');
+        return http.Response(
+          jsonEncode({
+            'count': 30,
+            'next': 'http://example.com/api/sales/customers/?page=3',
+            'previous': 'http://example.com/api/sales/customers/?page=1',
+            'results': [
+              {'id': 12, 'name': 'Zed', 'wallet_balance': '0'},
+            ],
+          }),
+          200,
+        );
+      }),
+    );
+    final page = (await api.list(page: 2)).getOrThrow();
+    expect(page.results.single.name, 'Zed');
+    expect(page.hasNext, isTrue);
+    expect(page.count, 30);
   });
 
   test('detail parses standing, orders and ledger', () async {

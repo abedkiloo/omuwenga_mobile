@@ -494,6 +494,7 @@ void main() {
     await tester.tap(find.byKey(const Key('open_picker')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('pos_customer_search')), findsOneWidget);
+    expect(find.text('Select customer'), findsOneWidget);
     await tester.tap(find.byKey(const Key('pos_pick_customer_1')));
     await tester.pumpAndSettle();
 
@@ -932,5 +933,66 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('customer_form_name')), findsOneWidget);
+  });
+
+  testWidgets('picker loads more customers when the first page ends', (
+    tester,
+  ) async {
+    final client = MockClient((request) async {
+      if (!request.url.path.contains('/sales/customers')) {
+        return http.Response('{}', 200);
+      }
+      final page = request.url.queryParameters['page'] ?? '1';
+      if (page == '1') {
+        return http.Response(
+          jsonEncode({
+            'count': 2,
+            'next': 'http://example.com/api/sales/customers/?page=2',
+            'results': [
+              {'id': 1, 'name': 'Ann Alpha', 'phone': '0700'},
+            ],
+          }),
+          200,
+        );
+      }
+      return http.Response(
+        jsonEncode({
+          'count': 2,
+          'next': null,
+          'results': [
+            {'id': 2, 'name': 'Zed Zulu', 'phone': '0701'},
+          ],
+        }),
+        200,
+      );
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _base(client),
+        child: Consumer(
+          builder: (context, ref, _) {
+            return MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    key: const Key('open_picker_pages'),
+                    onPressed: () => showCustomerPickerSheet(context, ref),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('open_picker_pages')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Select customer'), findsOneWidget);
+    expect(find.text('Ann Alpha'), findsOneWidget);
+    expect(find.text('Zed Zulu'), findsOneWidget);
   });
 }

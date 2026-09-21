@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../design_system/states/async_states.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../pos/application/pos_controllers.dart';
+import '../application/customer_list_paging.dart';
 import '../application/customers_controllers.dart';
 import '../domain/customer.dart';
 
@@ -30,45 +33,85 @@ class CustomerPickerSheet extends ConsumerStatefulWidget {
 
 class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
   final _search = TextEditingController();
-  List<CustomerSummary> _items = const [];
-  bool _loading = false;
-  String? _error;
+  final _scroll = ScrollController();
+  final _paging = CustomerListPaging();
+  Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _scroll.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _reload();
+    });
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _scroll.dispose();
     _search.dispose();
     super.dispose();
   }
 
-  Future<void> _load([String? q]) async {
-    setState(() {
-      _loading = true;
-      _error = null;
+  void _onScroll() {
+    if (!_scroll.hasClients) return;
+    if (shouldFetchMoreCustomers(
+      hasMore: _paging.hasMore,
+      loading: _paging.loading,
+      loadingMore: _paging.loadingMore,
+      extentAfter: _scroll.position.extentAfter,
+      maxScrollExtent: _scroll.position.maxScrollExtent,
+    )) {
+      _loadMore();
+    }
+  }
+
+  void _fillIfNeeded() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      if (shouldFetchMoreCustomers(
+        hasMore: _paging.hasMore,
+        loading: _paging.loading,
+        loadingMore: _paging.loadingMore,
+        extentAfter: _scroll.position.extentAfter,
+        maxScrollExtent: _scroll.position.maxScrollExtent,
+      )) {
+        _loadMore();
+      }
     });
-    final result = await ref
-        .read(customersApiProvider)
-        .list(search: q ?? _search.text);
-    if (!mounted) return;
-    result.when(
-      success: (items) => setState(() {
-        _items = items;
-        _loading = false;
-      }),
-      failure: (e, _) => setState(() {
-        _loading = false;
-        _error = e.toString();
-        _items = const [];
-      }),
+  }
+
+  Future<void> _reload([String? q]) async {
+    await _paging.refresh(
+      ref.read(customersApiProvider),
+      search: q ?? _search.text,
+      onUpdate: () {
+        if (mounted) setState(() {});
+      },
     );
+    _fillIfNeeded();
+  }
+
+  Future<void> _loadMore() async {
+    await _paging.loadMore(
+      ref.read(customersApiProvider),
+      onUpdate: () {
+        if (mounted) setState(() {});
+      },
+    );
+    _fillIfNeeded();
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      _reload(value);
+    });
   }
 
   void _select(CustomerSummary c) {
+    _searchDebounce?.cancel();
     ref
         .read(cartControllerProvider.notifier)
         .attachCustomer(id: c.id, name: c.name);
@@ -76,13 +119,14 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
   }
 
   Future<void> _quickCreate() async {
+    _searchDebounce?.cancel();
     final name = _search.text.trim();
     if (name.isEmpty) {
       Navigator.pop(context);
       context.push('${AppRoutes.customerNew}?returnTo=pos');
       return;
     }
-    setState(() => _loading = true);
+    setState(() => _paging.loading = true);
     final result = await ref
         .read(customersApiProvider)
         .create(CustomerDraft(name: name));
@@ -96,8 +140,8 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
       },
       failure: (e, _) {
         setState(() {
-          _loading = false;
-          _error = e.toString();
+          _paging.loading = false;
+          _paging.error = e.toString();
         });
       },
     );
@@ -117,6 +161,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
         settings.enableCustomerCreate &&
         settings.allowQuickAddAtPos;
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final items = _paging.items;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottom),
@@ -126,7 +171,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Assign customer',
+              'Select customer',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
@@ -138,19 +183,20 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.search),
               ),
-              onSubmitted: _load,
+              onChanged: _onSearchChanged,
+              onSubmitted: _reload,
             ),
-            if (_loading) const LinearProgressIndicator(minHeight: 2),
-            if (_error != null)
+            if (_paging.loading) const LinearProgressIndicator(minHeight: 2),
+            if (_paging.error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  _error!,
+                  _paging.error!,
                   style: const TextStyle(color: AppColors.destructive),
                 ),
               ),
             Expanded(
-              child: _items.isEmpty && !_loading
+              child: items.isEmpty && !_paging.loading
                   ? Center(
                       child: Text(
                         'No customers found',
@@ -160,9 +206,29 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
                       ),
                     )
                   : ListView.builder(
-                      itemCount: _items.length,
+                      controller: _scroll,
+                      itemCount: items.length + (_paging.hasMore ? 1 : 0),
                       itemBuilder: (context, i) {
-                        final c = _items[i];
+                        if (i >= items.length) {
+                          if (!_paging.loadingMore &&
+                              _paging.hasMore &&
+                              _paging.error == null) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) _loadMore();
+                            });
+                          }
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            child: Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                          );
+                        }
+                        final c = items[i];
                         return ListTile(
                           key: Key('pos_pick_customer_${c.id}'),
                           leading: const Icon(Icons.storefront_outlined),
@@ -181,7 +247,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
                 label: _search.text.trim().isEmpty
                     ? 'Register new customer'
                     : 'Register “${_search.text.trim()}”',
-                onPressed: _loading ? null : _quickCreate,
+                onPressed: _paging.loading ? null : _quickCreate,
               ),
           ],
         ),

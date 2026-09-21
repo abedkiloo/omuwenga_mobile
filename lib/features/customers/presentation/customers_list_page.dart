@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../pos/application/pos_controllers.dart';
+import '../application/customer_list_paging.dart';
 import '../application/customers_controllers.dart';
 import '../domain/customer.dart';
 import '../domain/wallet_debt.dart';
@@ -47,7 +48,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
   }
 
   bool _onListScroll(ScrollNotification notification) {
-    return handleChromeScrollCollapse(
+    handleChromeScrollCollapse(
       notification: notification,
       collapsed: _chromeCollapsed,
       setCollapsed: (value) {
@@ -55,6 +56,18 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
         setState(() => _chromeCollapsed = value);
       },
     );
+    final metrics = notification.metrics;
+    final list = ref.read(customersListProvider);
+    if (shouldFetchMoreCustomers(
+      hasMore: list.hasMore,
+      loading: list.loading,
+      loadingMore: list.loadingMore,
+      extentAfter: metrics.extentAfter,
+      maxScrollExtent: metrics.maxScrollExtent,
+    )) {
+      ref.read(customersListProvider.notifier).loadMore();
+    }
+    return false;
   }
 
   List<CustomerSummary> _visible(List<CustomerSummary> items) {
@@ -139,7 +152,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
               collapsedLabel: 'Customer directory summary',
               collapsedSummary: state.items.isEmpty
                   ? null
-                  : '${state.items.length} customers · ${_kes(totalOutstanding)} outstanding',
+                  : '${state.count > 0 ? state.count : state.items.length} customers · ${_kes(totalOutstanding)} outstanding',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -191,7 +204,8 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     children: [
                       _FilterChip(
-                        label: 'All (${state.items.length})',
+                        label:
+                            'All (${state.count > 0 ? state.count : state.items.length})',
                         selected: _filter == _CustomerFilter.all,
                         onTap: () =>
                             setState(() => _filter = _CustomerFilter.all),
@@ -355,8 +369,28 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-      itemCount: visible.length,
+      itemCount: visible.length + (state.hasMore ? 1 : 0),
       itemBuilder: (context, i) {
+        if (i >= visible.length) {
+          if (!state.loadingMore && state.hasMore && state.error == null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              ref.read(customersListProvider.notifier).loadMore();
+            });
+          }
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: state.loadingMore
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const SizedBox(height: 20),
+            ),
+          );
+        }
         final c = visible[i];
         final expanded = _expandedId == c.id;
         final canSettle = canSettleCustomerDebt(

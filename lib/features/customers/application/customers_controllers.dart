@@ -6,6 +6,7 @@ import '../../../sync/domain/client_uuid.dart';
 import '../../auth/application/auth_controller.dart';
 import '../data/customers_api.dart';
 import '../domain/customer.dart';
+import 'customer_list_paging.dart';
 
 final customersApiProvider = Provider<CustomersApi>((ref) {
   return CustomersApi(ref.watch(apiClientProvider));
@@ -22,18 +23,27 @@ class CustomersListState {
   const CustomersListState({
     this.items = const [],
     this.loading = false,
+    this.loadingMore = false,
+    this.hasMore = true,
+    this.count = 0,
     this.query = '',
     this.error,
   });
 
   final List<CustomerSummary> items;
   final bool loading;
+  final bool loadingMore;
+  final bool hasMore;
+  final int count;
   final String query;
   final String? error;
 
   CustomersListState copyWith({
     List<CustomerSummary>? items,
     bool? loading,
+    bool? loadingMore,
+    bool? hasMore,
+    int? count,
     String? query,
     String? error,
     bool clearError = false,
@@ -41,6 +51,9 @@ class CustomersListState {
     return CustomersListState(
       items: items ?? this.items,
       loading: loading ?? this.loading,
+      loadingMore: loadingMore ?? this.loadingMore,
+      hasMore: hasMore ?? this.hasMore,
+      count: count ?? this.count,
       query: query ?? this.query,
       error: clearError ? null : (error ?? this.error),
     );
@@ -51,19 +64,26 @@ class CustomersListController extends StateNotifier<CustomersListState> {
   CustomersListController(this._api) : super(const CustomersListState());
 
   final CustomersApi _api;
+  final _paging = CustomerListPaging();
 
-  Future<void> load({String? search}) async {
-    final query = search ?? state.query;
-    state = state.copyWith(loading: true, query: query, clearError: true);
-    final result = await _api.list(search: query);
-    result.when(
-      success: (items) => state = state.copyWith(items: items, loading: false),
-      failure: (e, _) => state = state.copyWith(
-        loading: false,
-        error: e.toString(),
-        items: const [],
-      ),
+  void _sync() {
+    state = CustomersListState(
+      items: _paging.items,
+      loading: _paging.loading,
+      loadingMore: _paging.loadingMore,
+      hasMore: _paging.hasMore,
+      count: _paging.count,
+      query: _paging.query,
+      error: _paging.error,
     );
+  }
+
+  Future<void> load({String? search}) {
+    return _paging.refresh(_api, search: search, onUpdate: _sync);
+  }
+
+  Future<void> loadMore() {
+    return _paging.loadMore(_api, onUpdate: _sync);
   }
 }
 
