@@ -116,6 +116,7 @@ class SaleDetail {
     this.status,
     this.refundStatus,
     this.canRefund = false,
+    this.canRollback = false,
     this.amountRefunded = 0,
     this.notes,
     this.subtotal = 0,
@@ -141,6 +142,7 @@ class SaleDetail {
   final String? status;
   final String? refundStatus;
   final bool canRefund;
+  final bool canRollback;
   final double amountRefunded;
   final String? notes;
   final double subtotal;
@@ -180,6 +182,7 @@ class SaleDetail {
       status: json['status']?.toString(),
       refundStatus: json['refund_status']?.toString(),
       canRefund: json['can_refund'] == true,
+      canRollback: json['can_rollback'] == true,
       amountRefunded: _asDouble(json['amount_refunded']) ?? 0,
       notes: json['notes']?.toString(),
       subtotal: _asDouble(json['subtotal']) ?? 0,

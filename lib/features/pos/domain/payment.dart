@@ -1,3 +1,4 @@
+import '../../../core/validation/field_types.dart';
 import 'cart.dart';
 
 enum PosPaymentMethod { cash, mpesa, card, other }
@@ -161,7 +162,7 @@ String? validateCheckout({
     return 'Payment method is not enabled.';
   }
   if (draft.amountPaid < 0) {
-    return 'Enter a valid amount received.';
+    return 'Enter a KES amount, e.g. $kPaymentAmountExample';
   }
   if (isUnderpaid(total: cart.total, paid: draft.amountPaid)) {
     if (!settings.allowPartialPayment) {
@@ -177,7 +178,10 @@ String? validateCheckout({
   if (draft.method.requiresReference &&
       draft.paymentReference.trim().isEmpty &&
       !isUnderpaid(total: cart.total, paid: draft.amountPaid)) {
-    return 'Payment reference is required.';
+    if (draft.method == PosPaymentMethod.mpesa) {
+      return mpesaReceiptValidationMessage(draft.paymentReference);
+    }
+    return 'Enter the payment reference, e.g. card slip number.';
   }
   return null;
 }

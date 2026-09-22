@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/states/async_states.dart';
-import '../../payments/presentation/stk_wait_page.dart';
 import '../../pos/domain/payment.dart';
 import '../application/customers_controllers.dart';
+import '../domain/mpesa_receipt.dart';
 
 class ReceivePaymentPage extends ConsumerStatefulWidget {
   const ReceivePaymentPage({super.key, required this.customerId});
@@ -22,6 +23,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
   late final TextEditingController _reference;
   PosPaymentMethod _method = PosPaymentMethod.cash;
   bool _initialized = false;
+  bool _attempted = false;
 
   @override
   void initState() {
@@ -45,39 +47,33 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     }
   }
 
-  Future<void> _confirm() async {
-    final amount = double.tryParse(_amount.text.trim()) ?? 0;
-    if (amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter an amount greater than zero.')),
-      );
-      return;
+  String? get _amountError {
+    if (!_attempted && _amount.text.trim().isEmpty) return null;
+    return paymentAmountValidationMessage(_amount.text);
+  }
+
+  String? get _referenceError {
+    if (_method == PosPaymentMethod.mpesa) {
+      if (!_attempted && _reference.text.trim().isEmpty) return null;
+      return mpesaReceiptValidationMessage(_reference.text);
     }
+    if (_method.requiresReference && _attempted && _reference.text.trim().isEmpty) {
+      return 'Enter the card or receipt reference.';
+    }
+    return null;
+  }
+
+  Future<void> _confirm() async {
+    setState(() => _attempted = true);
+    final amountError = paymentAmountValidationMessage(_amount.text);
+    if (amountError != null) return;
+    final amount = parsePaymentAmount(_amount.text)!;
 
     var reference = _reference.text;
     if (_method == PosPaymentMethod.mpesa) {
-      final detail = ref.read(customerDetailProvider(widget.customerId)).detail;
-      final phone = detail?.phone?.trim() ?? '';
-      if (phone.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Customer phone required for M-Pesa')),
-        );
-        return;
-      }
-      final paid = await showStkWaitSheet(
-        context,
-        amount: amount,
-        phone: phone,
-        purpose: 'debt',
-        customerId: widget.customerId,
-        customerName: detail?.name ?? '',
-      );
-      if (paid == null || !mounted) return;
-      reference = paid.mpesaReceipt ?? paid.invoiceNumber;
+      if (mpesaReceiptValidationMessage(reference) != null) return;
+      reference = normalizeMpesaReceipt(reference);
     } else if (_method.requiresReference && reference.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment reference is required.')),
-      );
       return;
     }
 
@@ -150,9 +146,17 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  decoration: const InputDecoration(
-                    labelText: 'Amount',
-                    border: OutlineInputBorder(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                  ],
+                  decoration: InputDecoration(
+                    labelText: 'Amount (KES) *',
+                    hintText: kPaymentAmountExample,
+                    helperText: kPaymentAmountHelper,
+                    helperMaxLines: 3,
+                    errorText: _amountError,
+                    errorMaxLines: 3,
+                    border: const OutlineInputBorder(),
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -176,15 +180,36 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                       ),
                   ],
                 ),
-                if (_method.requiresReference) ...[
+                if (_method == PosPaymentMethod.mpesa ||
+                    _method.requiresReference) ...[
                   const SizedBox(height: 16),
                   TextField(
                     key: const Key('settle_reference'),
                     controller: _reference,
-                    decoration: const InputDecoration(
-                      labelText: 'Payment reference',
-                      border: OutlineInputBorder(),
+                    textCapitalization: TextCapitalization.characters,
+                    inputFormatters: _method == PosPaymentMethod.mpesa
+                        ? [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'[A-Za-z0-9 ]'),
+                            ),
+                          ]
+                        : const [],
+                    decoration: InputDecoration(
+                      labelText: _method == PosPaymentMethod.mpesa
+                          ? 'M-Pesa code *'
+                          : 'Payment reference',
+                      hintText: _method == PosPaymentMethod.mpesa
+                          ? kMpesaReceiptExample
+                          : 'Receipt or last 4 digits',
+                      helperText: _method == PosPaymentMethod.mpesa
+                          ? kMpesaReceiptHelper
+                          : 'Optional for cash; required for card.',
+                      helperMaxLines: 3,
+                      errorText: _referenceError,
+                      errorMaxLines: 3,
+                      border: const OutlineInputBorder(),
                     ),
+                    onChanged: (_) => setState(() {}),
                   ),
                 ],
                 const SizedBox(height: 16),

@@ -13,6 +13,7 @@ import '../application/product_catalog_paging.dart';
 import '../data/pos_api.dart';
 import '../domain/cart.dart';
 import '../domain/payment.dart';
+import '../../../core/validation/field_types.dart';
 import '../domain/pos_commit.dart';
 import 'receipt_page.dart';
 import 'pos_cart_sheet.dart';
@@ -1168,7 +1169,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
 
   void _pushDraft({PosPaymentMethod? method, bool? paymentOnAccount}) {
     final checkout = ref.read(checkoutControllerProvider);
-    final amount = double.tryParse(_amount.text) ?? 0;
+    final amount = parseMoney(_amount.text, allowZero: true, required: false) ?? 0;
     ref
         .read(checkoutControllerProvider.notifier)
         .setDraft(
@@ -1244,7 +1245,19 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     );
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final theme = Theme.of(context);
-    final amountPaid = double.tryParse(_amount.text) ?? 0;
+    final amountPaid =
+        parseMoney(_amount.text, allowZero: true, required: false) ?? 0;
+    final amountFormatError = () {
+      final text = _amount.text.trim();
+      final accountMode = draft.paymentOnAccount &&
+          settings.allowPartialPayment &&
+          cart.customerId != null;
+      if (text.isEmpty) {
+        if (accountMode) return null;
+        return 'Enter the amount received, e.g. $kPaymentAmountExample';
+      }
+      return moneyValidationMessage(text, allowZero: true);
+    }();
     final changeDue = amountPaid > cart.total ? amountPaid - cart.total : 0.0;
     final isMpesa = draft.method == PosPaymentMethod.mpesa;
     final customerLabel = cart.customerName ?? 'No customer';
@@ -1479,9 +1492,11 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Amount paid',
-                border: OutlineInputBorder(),
+                helperText: kPaymentAmountHelper,
+                errorText: amountFormatError,
+                border: const OutlineInputBorder(),
               ),
               onChanged: (_) => _pushDraft(),
             ),
@@ -1503,6 +1518,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(
                   labelText: 'Target Safaricom line',
+                  hintText: kPhoneExample,
+                  helperText: kPhoneHelper,
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -1512,9 +1529,11 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
               TextField(
                 key: const Key('pos_payment_ref'),
                 controller: _reference,
-                decoration: const InputDecoration(
-                  labelText: 'Payment reference',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: isMpesa ? 'M-Pesa code' : 'Payment reference',
+                  hintText: isMpesa ? kMpesaReceiptExample : 'Card slip / receipt',
+                  helperText: isMpesa ? kMpesaReceiptHelper : null,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (_) => _pushDraft(),
               ),
@@ -1535,11 +1554,36 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                   ? null
                   : () async {
                       final phone = _phone.text.trim();
-                      if (needsStk && phone.isEmpty) {
+                      if (amountFormatError != null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Enter M-Pesa phone')),
+                          SnackBar(content: Text(amountFormatError)),
                         );
                         return;
+                      }
+                      if (needsStk) {
+                        final phoneErr = phoneValidationMessage(
+                          phone,
+                          required: true,
+                        );
+                        if (phoneErr != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(phoneErr)),
+                          );
+                          return;
+                        }
+                      }
+                      if (draft.method.requiresReference && collectNow) {
+                        final refErr = isMpesa
+                            ? mpesaReceiptValidationMessage(_reference.text)
+                            : (_reference.text.trim().isEmpty
+                                ? 'Enter the payment reference, e.g. card slip number.'
+                                : null);
+                        if (refErr != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(refErr)),
+                          );
+                          return;
+                        }
                       }
 
                       final closeSale = await _confirmCloseSale(

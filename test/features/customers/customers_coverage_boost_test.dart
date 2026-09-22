@@ -539,17 +539,40 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.textContaining('up to 2 decimal places'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('settle_method_mpesa')));
+    await tester.pumpAndSettle();
+    expect(find.text('M-Pesa code *'), findsOneWidget);
+    expect(find.textContaining('10 letters and numbers'), findsOneWidget);
+    expect(find.byKey(const Key('settle_reference')), findsOneWidget);
+
     await tester.enterText(find.byKey(const Key('settle_amount')), '0');
+    await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
     await tester.tap(find.byKey(const Key('settle_confirm')));
     await tester.pumpAndSettle();
     expect(find.textContaining('greater than zero'), findsOneWidget);
 
+    await tester.enterText(find.byKey(const Key('settle_amount')), '5');
+    await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
+    await tester.tap(find.byKey(const Key('settle_confirm')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('10-character'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('settle_reference')), 'AB12');
+    await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
+    await tester.tap(find.byKey(const Key('settle_confirm')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('you entered 4'), findsOneWidget);
+
     await tester.tap(find.byKey(const Key('settle_method_card')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('settle_amount')), '5');
+    await tester.enterText(find.byKey(const Key('settle_reference')), '');
+    await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
     await tester.tap(find.byKey(const Key('settle_confirm')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('reference'), findsOneWidget);
+    expect(find.textContaining('card or receipt reference'), findsOneWidget);
   });
 
   test('list state copyWith keeps prior error', () {
@@ -779,6 +802,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Retry'), findsOneWidget);
+    await tester.tap(find.text('Retry'));
+    await tester.pump();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -793,6 +818,13 @@ void main() {
     await tester.tap(find.byKey(const Key('settle_confirm')));
     await tester.pumpAndSettle();
     expect(find.textContaining('rejected'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('settle_method_mpesa')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('settle_reference')), 'QHX7K2L9M1');
+    await tester.tap(find.byKey(const Key('settle_confirm')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('rejected'), findsWidgets);
   });
 
   testWidgets('picker failure empty create and create error', (tester) async {

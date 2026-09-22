@@ -10,6 +10,15 @@ import 'package:share_plus/share_plus.dart';
 
 import '../data/pos_api.dart';
 
+const kReceiptReachUsPhone = '0718515142';
+const kReceiptReachUsLabel = 'You can reach us via $kReceiptReachUsPhone';
+
+PdfPageFormat receiptPdfPageFormat() => PdfPageFormat(
+  52 * PdfPageFormat.mm,
+  double.infinity,
+  marginAll: 2.2 * PdfPageFormat.mm,
+);
+
 String _money(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 String _timestamp(DateTime value) {
@@ -39,91 +48,113 @@ Future<Uint8List> buildReceiptPdf(SaleReceipt receipt) async {
   final reference = receipt.paymentReference?.trim() ?? '';
 
   document.addPage(
-    pw.MultiPage(
-      pageFormat: PdfPageFormat(
-        58 * PdfPageFormat.mm,
-        210 * PdfPageFormat.mm,
-        marginAll: 4 * PdfPageFormat.mm,
-      ),
-      build: (_) => [
-        pw.Center(
-          child: pw.Column(
-            children: [
-              pw.Text(
-                'COMPLETEBYTE POS',
+    pw.Page(
+      pageFormat: receiptPdfPageFormat(),
+      build: (_) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: [
+          pw.Center(
+            child: pw.Column(
+              children: [
+                pw.Text(
+                  'COMPLETEBYTE POS',
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.SizedBox(height: 1),
+                pw.Text('SALE RECEIPT', style: const pw.TextStyle(fontSize: 7)),
+                pw.Text(
+                  _timestamp(printedAt),
+                  style: const pw.TextStyle(fontSize: 6),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 5),
+          _pdfRule(),
+          pw.SizedBox(height: 4),
+          _pdfPair('Sale', receipt.saleNumber),
+          if (receipt.customerName?.trim().isNotEmpty == true)
+            _pdfPair('Customer', receipt.customerName!.trim()),
+          if (receipt.servedByName?.trim().isNotEmpty == true)
+            _pdfPair('Served by', receipt.servedByName!.trim()),
+          pw.SizedBox(height: 4),
+          _pdfRule(),
+          pw.SizedBox(height: 3),
+          for (final line in receipt.items) ...[
+            pw.Text(
+              '${_quantity(line.quantity)}x ${line.displayName}',
+              style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
+            ),
+            _pdfPair(
+              '@ ${_money(line.unitPrice)}',
+              _money(line.lineTotal),
+              fontSize: 6,
+            ),
+            pw.SizedBox(height: 2),
+          ],
+          _pdfRule(),
+          pw.SizedBox(height: 3),
+          _pdfPair('Subtotal', _money(subtotal)),
+          if (receipt.taxAmount > 0) _pdfPair('Tax', _money(receipt.taxAmount)),
+          if (receipt.discountAmount > 0)
+            _pdfPair('Discount', '-${_money(receipt.discountAmount)}'),
+          pw.SizedBox(height: 2),
+          _pdfPair('TOTAL NET', _money(receipt.total), bold: true, fontSize: 8),
+          pw.SizedBox(height: 4),
+          _pdfRule(),
+          pw.SizedBox(height: 3),
+          _pdfPair('Payment', receipt.paymentMethod.toUpperCase()),
+          _pdfPair('Paid', _money(receipt.amountPaid)),
+          if (receipt.change > 0) _pdfPair('Change', _money(receipt.change)),
+          if (reference.isNotEmpty) _pdfPair('Reference', reference),
+          pw.SizedBox(height: 5),
+          pw.BarcodeWidget(
+            barcode: pw.Barcode.code128(),
+            data: receipt.saleNumber,
+            height: 16,
+            drawText: false,
+          ),
+          pw.SizedBox(height: 2),
+          pw.Center(
+            child: pw.Text(
+              receipt.saleNumber,
+              style: const pw.TextStyle(fontSize: 6),
+            ),
+          ),
+          pw.SizedBox(height: 5),
+          pw.Center(
+            child: pw.Container(
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 3,
+              ),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.black, width: 0.6),
+                borderRadius: pw.BorderRadius.circular(3),
+              ),
+              child: pw.Text(
+                kReceiptReachUsLabel,
+                textAlign: pw.TextAlign.center,
                 style: pw.TextStyle(
-                  fontSize: 11,
+                  fontSize: 6.5,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
-              pw.SizedBox(height: 2),
-              pw.Text('SALE RECEIPT', style: const pw.TextStyle(fontSize: 8)),
-              pw.Text(
-                _timestamp(printedAt),
-                style: const pw.TextStyle(fontSize: 7),
-              ),
-            ],
+            ),
           ),
-        ),
-        pw.SizedBox(height: 8),
-        _pdfRule(),
-        pw.SizedBox(height: 6),
-        _pdfPair('Sale', receipt.saleNumber),
-        if (receipt.customerName?.trim().isNotEmpty == true)
-          _pdfPair('Customer', receipt.customerName!.trim()),
-        pw.SizedBox(height: 6),
-        _pdfRule(),
-        pw.SizedBox(height: 4),
-        for (final line in receipt.items) ...[
-          pw.Text(
-            '${_quantity(line.quantity)}x ${line.displayName}',
-            style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+          pw.SizedBox(height: 4),
+          pw.Center(
+            child: pw.Text(
+              'Asante kwa biashara yako. Karibu tena.',
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(fontSize: 6, fontStyle: pw.FontStyle.italic),
+            ),
           ),
-          _pdfPair(
-            '@ ${_money(line.unitPrice)}',
-            _money(line.lineTotal),
-            fontSize: 7,
-          ),
-          pw.SizedBox(height: 3),
         ],
-        _pdfRule(),
-        pw.SizedBox(height: 5),
-        _pdfPair('Subtotal', _money(subtotal)),
-        if (receipt.taxAmount > 0) _pdfPair('Tax', _money(receipt.taxAmount)),
-        if (receipt.discountAmount > 0)
-          _pdfPair('Discount', '-${_money(receipt.discountAmount)}'),
-        pw.SizedBox(height: 3),
-        _pdfPair('TOTAL NET', _money(receipt.total), bold: true, fontSize: 9),
-        pw.SizedBox(height: 6),
-        _pdfRule(),
-        pw.SizedBox(height: 5),
-        _pdfPair('Payment', receipt.paymentMethod.toUpperCase()),
-        _pdfPair('Paid', _money(receipt.amountPaid)),
-        if (receipt.change > 0) _pdfPair('Change', _money(receipt.change)),
-        if (reference.isNotEmpty) _pdfPair('Reference', reference),
-        pw.SizedBox(height: 8),
-        pw.BarcodeWidget(
-          barcode: pw.Barcode.code128(),
-          data: receipt.saleNumber,
-          height: 24,
-          drawText: false,
-        ),
-        pw.SizedBox(height: 3),
-        pw.Center(
-          child: pw.Text(
-            receipt.saleNumber,
-            style: const pw.TextStyle(fontSize: 7),
-          ),
-        ),
-        pw.SizedBox(height: 8),
-        pw.Center(
-          child: pw.Text(
-            'Asante kwa biashara yako. Karibu tena.',
-            textAlign: pw.TextAlign.center,
-            style: pw.TextStyle(fontSize: 7, fontStyle: pw.FontStyle.italic),
-          ),
-        ),
-      ],
+      ),
     ),
   );
 
@@ -134,7 +165,7 @@ Future<void> downloadOrPrintReceipt(SaleReceipt receipt) async {
   final bytes = await buildReceiptPdf(receipt);
   await Printing.layoutPdf(
     name: receiptFileName(receipt),
-    format: PdfPageFormat(58 * PdfPageFormat.mm, 210 * PdfPageFormat.mm),
+    format: receiptPdfPageFormat(),
     onLayout: (_) async => bytes,
   );
 }
@@ -171,7 +202,7 @@ pw.Widget _pdfPair(
   String label,
   String value, {
   bool bold = false,
-  double fontSize = 8,
+  double fontSize = 7,
 }) {
   final style = pw.TextStyle(
     fontSize: fontSize,

@@ -58,6 +58,7 @@ class PermissionSet {
   bool get canViewSales => has('sales', 'view');
   bool get canViewAllSales => has('sales', 'view_all');
   bool get canRefundSales => has('sales', 'refund');
+  bool get canRollbackSales => has('sales', 'rollback');
 
   /// Visit / field orders — normal sales users with POS or sales access.
   bool get canPlaceVisitOrders =>

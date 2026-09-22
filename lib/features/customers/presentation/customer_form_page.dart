@@ -11,6 +11,7 @@ import '../../../design_system/states/async_states.dart';
 import '../../pos/application/pos_controllers.dart';
 import '../application/customers_controllers.dart';
 import '../domain/customer.dart';
+import '../../../core/validation/field_types.dart';
 
 class CustomerFormPage extends ConsumerStatefulWidget {
   const CustomerFormPage({
@@ -76,6 +77,24 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     if (name.isEmpty) {
       setState(() => _error = 'Duka name is required.');
       _nameFocus.requestFocus();
+      return;
+    }
+    if (name.length < 2) {
+      setState(
+        () => _error =
+            'Duka name must be at least 2 characters, e.g. Wambua Hardware',
+      );
+      _nameFocus.requestFocus();
+      return;
+    }
+    final phoneErr = phoneValidationMessage(_phone.text);
+    if (phoneErr != null) {
+      setState(() => _error = phoneErr);
+      return;
+    }
+    final emailErr = emailValidationMessage(_email.text);
+    if (emailErr != null) {
+      setState(() => _error = emailErr);
       return;
     }
     setState(() {
@@ -220,7 +239,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             ],
             decoration: const InputDecoration(
               labelText: 'Phone',
-              hintText: '07XX XXX XXX',
+              hintText: 'e.g. 0712 345 678',
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.phone_outlined),
             ),
@@ -241,6 +260,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             textInputAction: TextInputAction.next,
             decoration: const InputDecoration(
               labelText: 'Email',
+              hintText: kEmailExample,
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.email_outlined),
             ),

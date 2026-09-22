@@ -40,6 +40,13 @@ void main() {
         ]).canRefundSales,
         isTrue,
       );
+      expect(
+        PermissionSet([
+          const PermissionGrant(module: 'sales', action: 'rollback'),
+        ]).canRollbackSales,
+        isTrue,
+      );
+      expect(PermissionSet(const []).canRollbackSales, isFalse);
     });
 
     test('canViewSales and Map grants', () {

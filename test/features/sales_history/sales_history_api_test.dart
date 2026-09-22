@@ -68,6 +68,10 @@ void main() {
           expect(request.headers['Idempotency-Key'], 'k1');
           return http.Response(jsonEncode({'id': 9}), 201);
         }
+        if (request.url.path.endsWith('/rollback/')) {
+          expect(request.headers['Idempotency-Key'], 'k2');
+          return http.Response(jsonEncode({'id': 10}), 201);
+        }
         return http.Response(
           jsonEncode({
             'id': '1',
@@ -76,6 +80,7 @@ void main() {
             'amount_paid': '100',
             'status': 'completed',
             'can_refund': true,
+            'can_rollback': true,
             'customer': {'id': '4'},
             'items': [
               {
@@ -95,6 +100,7 @@ void main() {
     expect(detail.customerId, 4);
     expect(detail.items.single.productId, 7);
     expect(detail.items.single.productName, 'Cement');
+    expect(detail.canRollback, isTrue);
     expect(
       (await api.refund(
         saleId: 1,
@@ -103,7 +109,15 @@ void main() {
       )).isSuccess,
       isTrue,
     );
-    expect(n, 2);
+    expect(
+      (await api.rollback(
+        saleId: 1,
+        reason: 'Duplicate',
+        idempotencyKey: 'k2',
+      )).isSuccess,
+      isTrue,
+    );
+    expect(n, 3);
   });
 
   test('api errors', () async {

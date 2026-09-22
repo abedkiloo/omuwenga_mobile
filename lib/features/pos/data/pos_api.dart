@@ -21,6 +21,7 @@ class SaleReceipt {
     this.discountAmount = 0,
     this.paymentReference,
     this.createdAt,
+    this.servedByName,
     this.queuedOffline = false,
   });
 
@@ -37,6 +38,7 @@ class SaleReceipt {
   final double discountAmount;
   final String? paymentReference;
   final DateTime? createdAt;
+  final String? servedByName;
   final bool queuedOffline;
 
   factory SaleReceipt.fromJson(Map<String, dynamic> json) {
@@ -81,6 +83,12 @@ class SaleReceipt {
       createdAt: DateTime.tryParse(
         (json['occurred_at'] ?? json['created_at'] ?? '').toString(),
       ),
+      servedByName: () {
+        final served = json['served_by_name']?.toString().trim() ?? '';
+        if (served.isNotEmpty) return served;
+        final cashier = json['cashier_name']?.toString().trim() ?? '';
+        return cashier.isEmpty ? null : cashier;
+      }(),
     );
   }
 }

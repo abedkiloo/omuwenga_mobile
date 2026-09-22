@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart' as app;
+import '../../auth/application/auth_controller.dart';
 import '../../../sync/application/connectivity_monitor.dart';
 import '../../../sync/data/outbox_store.dart';
 import '../../../sync/domain/client_uuid.dart';
@@ -161,6 +162,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         discountAmount: cart.discountAmount,
         paymentReference: state.draft.paymentReference,
         createdAt: DateTime.now(),
+        servedByName: _ref.read(authControllerProvider).session?.user.displayName,
         queuedOffline: true,
       );
       state = state.copyWith(phase: CheckoutPhase.queued, receipt: queued);

@@ -135,10 +135,15 @@ void main() {
 
   test('controllers load refund and daily navigation', () async {
     var refunded = false;
+    var rolledBack = false;
     final client = MockClient((request) async {
       if (request.url.path.contains('/refund/')) {
         refunded = true;
         return http.Response('{}', 202);
+      }
+      if (request.url.path.contains('/rollback/')) {
+        rolledBack = true;
+        return http.Response('{}', 201);
       }
       if (request.url.path.contains('/daily/customer/')) {
         return http.Response(
@@ -188,6 +193,7 @@ void main() {
             'amount_paid': '10',
             'status': 'completed',
             'can_refund': true,
+            'can_rollback': true,
             'items': [],
           }),
           200,
@@ -228,6 +234,8 @@ void main() {
     await detail.load(1);
     expect(await detail.refund(reason: 'wrong item'), isTrue);
     expect(refunded, isTrue);
+    expect(await detail.rollback(reason: 'duplicate till'), isTrue);
+    expect(rolledBack, isTrue);
 
     final daily = DailySalesController(
       dailyApi,

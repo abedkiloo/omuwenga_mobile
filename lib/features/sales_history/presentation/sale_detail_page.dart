@@ -31,11 +31,19 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
     final canRefundPerm =
         ref.watch(authControllerProvider).session?.permissions.canRefundSales ??
         false;
+    final canRollbackPerm =
+        ref.watch(authControllerProvider).session?.permissions.canRollbackSales ??
+        false;
     final detail = state.detail;
     final showRefund =
         canRefundPerm &&
         detail != null &&
         detail.canRefund &&
+        detail.status == 'completed';
+    final showRollback =
+        canRollbackPerm &&
+        detail != null &&
+        detail.canRollback &&
         detail.status == 'completed';
 
     return Scaffold(
@@ -61,10 +69,12 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
           : _SaleActions(
               exporting: _exporting,
               showRefund: showRefund,
+              showRollback: showRollback,
               onPrint: () =>
                   _export(() => downloadOrPrintReceipt(_receipt(detail))),
               onShare: () => _export(() => shareReceipt(_receipt(detail))),
               onRefund: () => _openRefund(context, ref),
+              onRollback: () => _openRollback(context, ref),
             ),
     );
   }
@@ -190,6 +200,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
       discountAmount: detail.discountAmount,
       paymentReference: detail.paymentReference,
       createdAt: DateTime.tryParse(detail.occurredAt ?? ''),
+      servedByName: detail.servedByName ?? detail.cashierName,
     );
   }
 
@@ -231,6 +242,62 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
     await ref
         .read(saleDetailProvider(widget.saleId).notifier)
         .refund(reason: reason);
+  }
+
+  Future<void> _openRollback(BuildContext context, WidgetRef ref) async {
+    var reason = '';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Roll back sale'),
+          content: TextField(
+            key: const Key('rollback_reason'),
+            onChanged: (value) => reason = value,
+            decoration: const InputDecoration(
+              labelText: 'Reason (required)',
+              helperText: 'Goes to Pending approvals. Stock and books change only after an admin approves.',
+              helperMaxLines: 2,
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              key: const Key('rollback_confirm'),
+              onPressed: () {
+                if (reason.trim().isEmpty) return;
+                Navigator.pop(context, true);
+              },
+              child: const Text('Roll back'),
+            ),
+          ],
+        );
+      },
+    );
+    if (ok != true || !context.mounted) {
+      return;
+    }
+    final applied = await ref
+        .read(saleDetailProvider(widget.saleId).notifier)
+        .rollback(reason: reason);
+    if (!context.mounted) return;
+    final stillOpen =
+        ref.read(saleDetailProvider(widget.saleId)).detail?.canRollback ?? false;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          applied && stillOpen
+              ? 'Rollback sent for admin approval. Books stay unchanged until it is approved.'
+              : applied
+              ? 'Sale rolled back.'
+              : 'Could not roll back this sale.',
+        ),
+      ),
+    );
   }
 }
 
@@ -587,15 +654,19 @@ class _SaleActions extends StatelessWidget {
   const _SaleActions({
     required this.exporting,
     required this.showRefund,
+    required this.showRollback,
     required this.onPrint,
     required this.onShare,
     required this.onRefund,
+    required this.onRollback,
   });
   final bool exporting;
   final bool showRefund;
+  final bool showRollback;
   final VoidCallback onPrint;
   final VoidCallback onShare;
   final VoidCallback onRefund;
+  final VoidCallback onRollback;
 
   @override
   Widget build(BuildContext context) {
@@ -648,6 +719,21 @@ class _SaleActions extends StatelessWidget {
                   ],
                 ],
               ),
+              if (showRollback) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    key: const Key('sale_rollback'),
+                    onPressed: onRollback,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.destructive,
+                    ),
+                    icon: const Icon(Icons.undo_outlined),
+                    label: const Text('Roll back sale'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

@@ -224,6 +224,7 @@ void main() {
             paymentMethod: 'cash',
             amountPaid: 200,
             change: 50,
+            servedByName: 'Amina',
             items: const [
               CartLine(
                 productId: 1,
@@ -237,9 +238,13 @@ void main() {
       ),
     );
     expect(find.textContaining('Payment Confirmed'), findsOneWidget);
+    expect(find.textContaining('Served by: Amina'), findsOneWidget);
+    expect(find.textContaining('You can reach us via'), findsOneWidget);
+    expect(find.textContaining('0718515142'), findsOneWidget);
     expect(find.byKey(const Key('receipt_total')), findsOneWidget);
     expect(find.byKey(const Key('receipt_download')), findsOneWidget);
     expect(find.byKey(const Key('receipt_share')), findsOneWidget);
+    expect(find.byKey(const Key('receipt_reach_us')), findsOneWidget);
     await tester.tap(find.byKey(const Key('receipt_done')));
     await tester.pumpAndSettle();
   });
