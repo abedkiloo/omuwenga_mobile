@@ -7,15 +7,17 @@ void main() {
       expect(AppEnv.parseFlavor('dev'), AppFlavor.dev);
       expect(AppEnv.parseFlavor('development'), AppFlavor.dev);
       expect(AppEnv.parseFlavor('staging'), AppFlavor.staging);
+      expect(AppEnv.parseFlavor('uat'), AppFlavor.staging);
       expect(AppEnv.parseFlavor('prod'), AppFlavor.prod);
       expect(AppEnv.parseFlavor('production'), AppFlavor.prod);
       expect(AppEnv.parseFlavor('unknown'), AppFlavor.dev);
     });
 
-    test('defaultBaseUrl points at shop.omuwenga.com', () {
+    test('defaultBaseUrl uses UAT API for debug/staging and shop for prod', () {
+      const uat = 'https://api.uat.omuwenga.com/api';
       const shop = 'https://shop.omuwenga.com/api';
-      expect(AppEnv.defaultBaseUrl(AppFlavor.dev), shop);
-      expect(AppEnv.defaultBaseUrl(AppFlavor.staging), shop);
+      expect(AppEnv.defaultBaseUrl(AppFlavor.dev), uat);
+      expect(AppEnv.defaultBaseUrl(AppFlavor.staging), uat);
       expect(AppEnv.defaultBaseUrl(AppFlavor.prod), shop);
     });
 

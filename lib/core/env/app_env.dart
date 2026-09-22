@@ -25,6 +25,7 @@ class AppEnv {
   static AppFlavor parseFlavor(String raw) {
     switch (raw.toLowerCase().trim()) {
       case 'staging':
+      case 'uat':
         return AppFlavor.staging;
       case 'prod':
       case 'production':
@@ -37,11 +38,12 @@ class AppEnv {
   }
 
   static String defaultBaseUrl(AppFlavor flavor) {
-    // Production shop https://shop.omuwenga.com/ — DRF API under /api.
+    const uatApi = 'https://api.uat.omuwenga.com/api';
     const shopApi = 'https://shop.omuwenga.com/api';
     switch (flavor) {
       case AppFlavor.dev:
       case AppFlavor.staging:
+        return uatApi;
       case AppFlavor.prod:
         return shopApi;
     }
