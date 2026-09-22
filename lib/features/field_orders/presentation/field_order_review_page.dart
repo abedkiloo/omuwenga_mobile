@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../design_system/chrome/cb_commit_confirm.dart';
 import '../../../design_system/states/async_states.dart';
 import '../../pos/application/pos_controllers.dart';
 import '../../pos/domain/cart.dart';
 import '../../pos/presentation/variant_picker_sheet.dart';
 import '../application/field_order_controllers.dart';
+import '../domain/field_order_commit.dart';
 
 /// Review: site map/photos first, then lines, then submit.
 class FieldOrderReviewPage extends ConsumerWidget {
@@ -94,7 +96,27 @@ class FieldOrderReviewPage extends ConsumerWidget {
             key: const Key('fo_submit'),
             label: state.submitting ? 'Submitting…' : 'Submit to store',
             onPressed: state.canSubmit
-                ? () => ref.read(fieldOrderCartProvider.notifier).submit()
+                ? () async {
+                    final error = fieldOrderReviewError(cart);
+                    if (error != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(error)),
+                      );
+                      return;
+                    }
+                    final confirmed = await showCommitConfirm(
+                      context: context,
+                      title: 'Submit this field order?',
+                      description:
+                          'The store will pack it and mark it ready for pickup. Nothing is sent until you confirm.',
+                      rows: fieldOrderReviewRows(cart),
+                      confirmLabel: 'Confirm & send',
+                      confirmKey: const Key('fo_submit_confirm'),
+                      cancelKey: const Key('fo_submit_cancel'),
+                    );
+                    if (!confirmed || !context.mounted) return;
+                    await ref.read(fieldOrderCartProvider.notifier).submit();
+                  }
                 : null,
           ),
         ),

@@ -144,6 +144,8 @@ void main() {
     expect(find.byKey(const Key('fo_photo_0')), findsOneWidget);
     await tester.tap(find.byKey(const Key('fo_submit')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('fo_submit_confirm')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('fo_submit_error')), findsOneWidget);
   });
 
@@ -155,6 +157,18 @@ void main() {
       _client(
         MockClient((request) async {
           calls++;
+          if (request.url.path.contains('/drivers/')) {
+            return http.Response(
+              jsonEncode([
+                {
+                  'id': 101,
+                  'display_name': 'Driver A (101)',
+                  'username': 'drv',
+                },
+              ]),
+              200,
+            );
+          }
           if (request.url.path.contains('/queue/')) {
             if (calls == 1) return http.Response('x', 500);
             return http.Response(
@@ -237,8 +251,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('dispatch_pack')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('dispatch_pack_confirm')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('dispatch_error')), findsOneWidget);
     await tester.tap(find.byKey(const Key('dispatch_assign')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('dispatch_assign_confirm')));
     await tester.pumpAndSettle();
   });
 

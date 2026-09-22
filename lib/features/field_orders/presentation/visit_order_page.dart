@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../design_system/chrome/cb_commit_confirm.dart';
 import '../../../design_system/chrome/cb_flow_header.dart';
 import '../../../design_system/chrome/cb_search_field.dart';
 import '../../../design_system/chrome/cb_section_label.dart';
@@ -23,6 +24,7 @@ import '../../pos/application/product_catalog_paging.dart';
 import '../../pos/domain/cart.dart';
 import '../../pos/presentation/variant_picker_sheet.dart';
 import '../application/visit_order_controller.dart';
+import '../domain/field_order_commit.dart';
 import '../domain/site_pin.dart';
 import 'map_pin_picker.dart';
 
@@ -157,6 +159,35 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
   }
 
   Future<void> _place() async {
+    final state = ref.read(visitOrderProvider);
+    final validation = visitOrderPlaceError(
+      hasCustomer: state.hasCustomer,
+      hasProducts: state.hasProducts,
+      hasPin: state.hasPin,
+      lines: state.lines,
+    );
+    if (validation != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(validation)),
+      );
+      return;
+    }
+    final confirmed = await showCommitConfirm(
+      context: context,
+      title: 'Place this visit order?',
+      description:
+          'The office will pack it and mark it ready for pickup. Nothing is sent until you confirm.',
+      rows: visitOrderCommitRows(
+        customerName: state.customer?.name ?? 'Customer',
+        lines: state.lines,
+        pin: state.pin,
+        landmark: state.landmark,
+      ),
+      confirmLabel: 'Confirm & send',
+      confirmKey: const Key('visit_place_confirm'),
+      cancelKey: const Key('visit_place_cancel'),
+    );
+    if (!confirmed || !mounted) return;
     final ok = await ref.read(visitOrderProvider.notifier).placeOrder();
     if (!mounted) return;
     if (ok) {

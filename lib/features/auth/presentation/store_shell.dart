@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_commit_confirm.dart';
 import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../sync/presentation/sync_failures_sheet.dart';
 import '../../../sync/presentation/sync_status_chip.dart';
@@ -12,6 +13,7 @@ import '../../../sync/providers.dart';
 import '../../delivery/application/delivery_controllers.dart';
 import '../../delivery/domain/delivery_stop.dart';
 import '../../field_orders/domain/field_order.dart';
+import '../../field_orders/domain/field_order_commit.dart';
 import '../../home/presentation/store_home_dashboard.dart';
 import '../application/auth_controller.dart';
 import '../domain/persona.dart';
@@ -230,6 +232,20 @@ class _DeliveryHomeState extends ConsumerState<_DeliveryHome> {
     });
   }
 
+  Future<void> _confirmClaim(FieldOrderSummary order) async {
+    final confirmed = await showCommitConfirm(
+      context: context,
+      title: 'Claim this order?',
+      description: 'It will be added to your delivery route.',
+      rows: deliveryClaimRows(order),
+      confirmLabel: 'Confirm & claim',
+      confirmKey: const Key('delivery_claim_confirm'),
+      cancelKey: const Key('delivery_claim_cancel'),
+    );
+    if (!confirmed || !mounted) return;
+    await ref.read(deliveryBoardProvider.notifier).claim(order.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -312,9 +328,7 @@ class _DeliveryHomeState extends ConsumerState<_DeliveryHome> {
                 _ClaimableOrderTile(
                   order: order,
                   acting: board.acting,
-                  onClaim: () => ref
-                      .read(deliveryBoardProvider.notifier)
-                      .claim(order.id),
+                  onClaim: () => _confirmClaim(order),
                 ),
           ],
         ),

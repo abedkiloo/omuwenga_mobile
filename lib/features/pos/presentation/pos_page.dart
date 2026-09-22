@@ -13,6 +13,7 @@ import '../application/product_catalog_paging.dart';
 import '../data/pos_api.dart';
 import '../domain/cart.dart';
 import '../domain/payment.dart';
+import '../domain/pos_commit.dart';
 import 'receipt_page.dart';
 import 'pos_cart_sheet.dart';
 import 'variant_picker_sheet.dart';
@@ -1216,24 +1217,15 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
         'Confirm payment of ${_kes(cart.total)} and record this sale. '
             'Choose Back to sale if you need to change any item first.',
     };
-    return showDialog<bool>(
+    return showCommitConfirm(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Text(body),
-        actions: [
-          TextButton(
-            key: const Key('pos_review_cart'),
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Back to sale'),
-          ),
-          FilledButton(
-            key: const Key('pos_close_sale_confirm'),
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(confirm),
-          ),
-        ],
-      ),
+      title: title,
+      description: body,
+      rows: posCloseSaleRows(cart: cart, kind: kind, paid: paid),
+      confirmLabel: confirm,
+      cancelLabel: 'Back to sale',
+      confirmKey: const Key('pos_close_sale_confirm'),
+      cancelKey: const Key('pos_review_cart'),
     );
   }
 

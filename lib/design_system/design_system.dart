@@ -1,5 +1,6 @@
 export 'buttons/cb_primary_button.dart';
 export 'chrome/cb_collapsible_chrome.dart';
+export 'chrome/cb_commit_confirm.dart';
 export 'chrome/cb_filter_chip.dart';
 export 'chrome/cb_flow_header.dart';
 export 'chrome/cb_search_field.dart';

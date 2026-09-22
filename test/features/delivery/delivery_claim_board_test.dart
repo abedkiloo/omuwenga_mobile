@@ -293,6 +293,9 @@ void main() {
 
       await tester.tap(find.byKey(const Key('delivery_home_claim_77')));
       await tester.pumpAndSettle();
+      expect(find.byKey(const Key('delivery_claim_confirm')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('delivery_claim_confirm')));
+      await tester.pumpAndSettle();
     });
   });
 

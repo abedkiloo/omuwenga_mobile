@@ -138,6 +138,15 @@ void main() {
 
     await tester.tap(find.byKey(const Key('visit_place_order')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('visit_place_confirm')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('visit_place_cancel')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('visit_order_success')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('visit_place_order')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('visit_place_confirm')));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('visit_order_success')), findsOneWidget);
   });
 

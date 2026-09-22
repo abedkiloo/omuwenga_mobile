@@ -333,6 +333,14 @@ void main() {
       expect(find.byKey(const Key('fo_submit')), findsOneWidget);
       await tester.tap(find.byKey(const Key('fo_submit')));
       await tester.pumpAndSettle();
+      expect(push.sent, isEmpty);
+      await tester.tap(find.byKey(const Key('fo_submit_cancel')));
+      await tester.pumpAndSettle();
+      expect(push.sent, isEmpty);
+      await tester.tap(find.byKey(const Key('fo_submit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('fo_submit_confirm')));
+      await tester.pumpAndSettle();
       expect(push.sent, isNotEmpty);
     });
   });

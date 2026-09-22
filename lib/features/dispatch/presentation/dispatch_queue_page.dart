@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../design_system/chrome/cb_commit_confirm.dart';
 import '../../../design_system/chrome/cb_status_pill.dart';
 import '../../../design_system/chrome/cb_sticky_action_bar.dart';
 import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../design_system/states/async_states.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../field_orders/domain/field_order.dart';
+import '../../field_orders/domain/field_order_commit.dart';
 import '../application/dispatch_controllers.dart';
 
 CbStatusPillVariant _dispatchStatusVariant(FieldOrderStatus status) {
@@ -134,6 +136,49 @@ class _DispatchOrderDetailPageState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(dispatchQueueProvider.notifier).load();
     });
+  }
+
+  Future<void> _confirmPack(FieldOrderSummary order) async {
+    final confirmed = await showCommitConfirm(
+      context: context,
+      title: 'Pack this order?',
+      description:
+          'Stock will be allocated and the order marked ready for pickup.',
+      rows: dispatchPackRows(order),
+      confirmLabel: 'Confirm & pack',
+      confirmKey: const Key('dispatch_pack_confirm'),
+      cancelKey: const Key('dispatch_pack_cancel'),
+    );
+    if (!confirmed || !mounted) return;
+    await ref.read(dispatchQueueProvider.notifier).pack(order.id);
+  }
+
+  Future<void> _confirmAssign(FieldOrderSummary order) async {
+    final state = ref.read(dispatchQueueProvider);
+    final error = dispatchAssignError(
+      canAssign: state.canAssign,
+      driverId: state.selectedDeliveryDriverId,
+    );
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    final driverName = state.drivers
+            .where((d) => d.id == state.selectedDeliveryDriverId)
+            .map((d) => d.displayName)
+            .firstOrNull ??
+        'Selected driver';
+    final confirmed = await showCommitConfirm(
+      context: context,
+      title: 'Assign this order?',
+      description: 'The driver will see it on their route after you confirm.',
+      rows: dispatchAssignRows(order: order, driverName: driverName),
+      confirmLabel: 'Confirm & assign',
+      confirmKey: const Key('dispatch_assign_confirm'),
+      cancelKey: const Key('dispatch_assign_cancel'),
+    );
+    if (!confirmed || !mounted) return;
+    await ref.read(dispatchQueueProvider.notifier).assign(order.id);
   }
 
   @override
@@ -262,18 +307,14 @@ class _DispatchOrderDetailPageState
                         : 'Pack & mark ready for pickup',
                     onPressed: state.acting || alreadyReady
                         ? null
-                        : () => ref
-                              .read(dispatchQueueProvider.notifier)
-                              .pack(order.id),
+                        : () => _confirmPack(order),
                   ),
                   const SizedBox(height: 8),
                   CbPrimaryButton(
                     key: const Key('dispatch_assign'),
                     label: 'Assign delivery driver',
                     onPressed: state.canAssign
-                        ? () => ref
-                              .read(dispatchQueueProvider.notifier)
-                              .assign(order.id)
+                        ? () => _confirmAssign(order)
                         : null,
                   ),
                 ],
