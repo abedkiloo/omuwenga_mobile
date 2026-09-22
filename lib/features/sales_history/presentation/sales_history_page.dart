@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
 import '../application/sales_history_controllers.dart';
 import '../domain/payment_status.dart';
@@ -561,8 +562,9 @@ class _SaleHistoryCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    '#${sale.saleNumber}',
+                  child: SaleNumberLabel(
+                    saleNumber: '#${sale.saleNumber}',
+                    channel: sale.clientChannel,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: AppColors.mutedForeground,
                     ),

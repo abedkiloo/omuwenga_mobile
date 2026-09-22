@@ -60,6 +60,7 @@ class ApiClient {
     if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
       headers['Idempotency-Key'] = idempotencyKey;
     }
+    headers['X-Client-Channel'] = 'mobile';
     return headers;
   }
 

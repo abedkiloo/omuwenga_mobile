@@ -26,6 +26,7 @@ class SaleSummary {
     this.refundStatus,
     this.cashierName,
     this.itemCount = 0,
+    this.clientChannel,
   });
 
   final int id;
@@ -39,6 +40,7 @@ class SaleSummary {
   final String? refundStatus;
   final String? cashierName;
   final int itemCount;
+  final String? clientChannel;
 
   PaymentStatusDisplay get paymentStatus =>
       classifyPaymentStatus(total: total, amountPaid: amountPaid);
@@ -62,6 +64,7 @@ class SaleSummary {
       refundStatus: json['refund_status']?.toString(),
       cashierName: json['cashier_name']?.toString(),
       itemCount: (json['item_count'] as num?)?.toInt() ?? 0,
+      clientChannel: json['client_channel']?.toString(),
     );
   }
 }
@@ -122,6 +125,7 @@ class SaleDetail {
     this.servedByName,
     this.saleType,
     this.items = const [],
+    this.clientChannel,
   });
 
   final int id;
@@ -146,6 +150,7 @@ class SaleDetail {
   final String? servedByName;
   final String? saleType;
   final List<SaleLine> items;
+  final String? clientChannel;
 
   PaymentStatusDisplay get paymentStatus =>
       classifyPaymentStatus(total: total, amountPaid: amountPaid);
@@ -184,6 +189,7 @@ class SaleDetail {
       servedByName: json['served_by_name']?.toString(),
       saleType: json['sale_type']?.toString(),
       items: items,
+      clientChannel: json['client_channel']?.toString(),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
 import '../../sales_history/domain/payment_status.dart';
 import '../application/daily_sales_controllers.dart';
@@ -187,7 +188,10 @@ class DailySalesPage extends ConsumerWidget {
         return ListTile(
           key: Key('daily_order_${order.id}'),
           contentPadding: EdgeInsets.zero,
-          title: Text(order.saleNumber),
+          title: SaleNumberLabel(
+            saleNumber: order.saleNumber,
+            channel: order.clientChannel,
+          ),
           subtitle: Text(
             [
               if (order.customerName != null && order.customerName!.isNotEmpty)

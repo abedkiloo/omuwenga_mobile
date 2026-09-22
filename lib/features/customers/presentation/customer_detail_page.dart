@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/customers_controllers.dart';
@@ -869,8 +870,9 @@ class _OrderDebtRow extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  order.saleNumber,
+                child: SaleNumberLabel(
+                  saleNumber: order.saleNumber,
+                  channel: order.clientChannel,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),

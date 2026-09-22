@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/states/async_states.dart';
 import '../../sales_history/domain/payment_status.dart';
 import '../application/daily_sales_controllers.dart';
@@ -66,7 +67,10 @@ class CustomerDayPage extends ConsumerWidget {
               ListTile(
                 key: Key('customer_day_order_${order.id}'),
                 contentPadding: EdgeInsets.zero,
-                title: Text(order.saleNumber),
+                title: SaleNumberLabel(
+                  saleNumber: order.saleNumber,
+                  channel: order.clientChannel,
+                ),
                 subtitle: Text(paymentStatusLabel(order.paymentStatus)),
                 trailing: Text(order.total.toStringAsFixed(2)),
                 onTap: () => context.push(AppRoutes.saleDetail(order.id)),

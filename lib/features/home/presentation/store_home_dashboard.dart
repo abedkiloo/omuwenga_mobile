@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
 import '../../daily_sales/domain/daily_report.dart';
 import '../../sales_history/domain/payment_status.dart';
@@ -517,9 +518,10 @@ class _OrderTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  saleLabel,
+                SaleNumberLabel(
                   key: Key('home_order_${order.id}'),
+                  saleNumber: saleLabel,
+                  channel: order.clientChannel,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),

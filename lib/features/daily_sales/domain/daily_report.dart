@@ -58,6 +58,7 @@ class DailyOrder {
     this.debtAmount = 0,
     this.cashierName,
     this.servedByName,
+    this.clientChannel,
   });
 
   final int id;
@@ -72,6 +73,7 @@ class DailyOrder {
   final double debtAmount;
   final String? cashierName;
   final String? servedByName;
+  final String? clientChannel;
 
   factory DailyOrder.fromJson(Map<String, dynamic> json) {
     final customer = json['customer'];
@@ -100,6 +102,7 @@ class DailyOrder {
       debtAmount: _asDouble(json['debt_amount']) ?? 0,
       cashierName: json['cashier_name']?.toString(),
       servedByName: json['served_by_name']?.toString(),
+      clientChannel: json['client_channel']?.toString(),
     );
   }
 }

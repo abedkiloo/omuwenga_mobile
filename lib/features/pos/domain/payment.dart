@@ -133,6 +133,7 @@ Map<String, dynamic> posSaleRequestBody({
   final underpaid = isUnderpaid(total: cart.total, paid: draft.amountPaid);
   return <String, dynamic>{
     'sale_type': 'pos',
+    'client_channel': 'mobile',
     'items': cart.toSaleItemsJson(),
     'payment_method': draft.method.apiValue,
     'amount_paid': draft.amountPaid,

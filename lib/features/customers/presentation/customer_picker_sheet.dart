@@ -6,7 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../design_system/states/async_states.dart';
+import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../pos/application/pos_controllers.dart';
 import '../application/customer_list_paging.dart';
@@ -19,6 +20,7 @@ Future<void> showCustomerPickerSheet(BuildContext context, WidgetRef ref) {
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
+    useSafeArea: true,
     builder: (context) => const CustomerPickerSheet(),
   );
 }
@@ -149,6 +151,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final auth = ref.watch(authControllerProvider);
     final settings = ref
         .watch(customersSettingsProvider)
@@ -160,96 +163,164 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
         (auth.session?.permissions.canCreateCustomers ?? false) &&
         settings.enableCustomerCreate &&
         settings.allowQuickAddAtPos;
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final media = MediaQuery.of(context);
+    final keyboard = media.viewInsets.bottom;
+    // Cap sheet to space above the keyboard so the Column never overflows.
+    final available = media.size.height - keyboard;
+    final sheetHeight = (available * 0.72).clamp(240.0, available * 0.92);
     final items = _paging.items;
+    final query = _search.text.trim();
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottom),
+      padding: EdgeInsets.only(bottom: keyboard),
       child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.65,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Select customer',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('pos_customer_search'),
-              controller: _search,
-              decoration: const InputDecoration(
-                labelText: 'Search name, phone, or code',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: _onSearchChanged,
-              onSubmitted: _reload,
-            ),
-            if (_paging.loading) const LinearProgressIndicator(minHeight: 2),
-            if (_paging.error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  _paging.error!,
-                  style: const TextStyle(color: AppColors.destructive),
+        height: sheetHeight,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Select duka', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 4),
+              Text(
+                'Search existing shops or register a new one.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.mutedForeground,
                 ),
               ),
-            Expanded(
-              child: items.isEmpty && !_paging.loading
-                  ? Center(
-                      child: Text(
-                        'No customers found',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.mutedForeground,
+              const SizedBox(height: 12),
+              TextField(
+                key: const Key('pos_customer_search'),
+                controller: _search,
+                textInputAction: TextInputAction.search,
+                decoration: const InputDecoration(
+                  labelText: 'Search name, phone, or code',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.search),
+                  isDense: true,
+                ),
+                onChanged: (v) {
+                  setState(() {});
+                  _onSearchChanged(v);
+                },
+                onSubmitted: _reload,
+              ),
+              if (_paging.loading) const LinearProgressIndicator(minHeight: 2),
+              if (_paging.error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    _paging.error!,
+                    style: const TextStyle(color: AppColors.destructive),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: items.isEmpty && !_paging.loading
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.storefront_outlined,
+                                size: 36,
+                                color: AppColors.mutedForeground.withValues(
+                                  alpha: 0.7,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                query.isEmpty
+                                    ? 'No dukas yet'
+                                    : 'No match for “$query”',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                canCreate
+                                    ? 'Register them below to attach to this sale.'
+                                    : 'Try a different name or phone.',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AppColors.mutedForeground,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    )
-                  : ListView.builder(
-                      controller: _scroll,
-                      itemCount: items.length + (_paging.hasMore ? 1 : 0),
-                      itemBuilder: (context, i) {
-                        if (i >= items.length) {
-                          if (!_paging.loadingMore &&
-                              _paging.hasMore &&
-                              _paging.error == null) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (mounted) _loadMore();
-                            });
+                      )
+                    : ListView.builder(
+                        controller: _scroll,
+                        itemCount: items.length + (_paging.hasMore ? 1 : 0),
+                        itemBuilder: (context, i) {
+                          if (i >= items.length) {
+                            if (!_paging.loadingMore &&
+                                _paging.hasMore &&
+                                _paging.error == null) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted) _loadMore();
+                              });
+                            }
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                            );
                           }
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                          final c = items[i];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: CbSurfaceCard(
+                              padding: EdgeInsets.zero,
+                              onTap: () => _select(c),
+                              child: ListTile(
+                                key: Key('pos_pick_customer_${c.id}'),
+                                leading: const Icon(
+                                  Icons.storefront_outlined,
+                                  color: AppColors.primary,
+                                ),
+                                title: Text(
+                                  c.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: c.phone == null || c.phone!.isEmpty
+                                    ? null
+                                    : Text(c.phone!),
+                                trailing: const Icon(
+                                  Icons.chevron_right,
+                                  color: AppColors.mutedForeground,
+                                ),
                               ),
                             ),
                           );
-                        }
-                        final c = items[i];
-                        return ListTile(
-                          key: Key('pos_pick_customer_${c.id}'),
-                          leading: const Icon(Icons.storefront_outlined),
-                          title: Text(c.name),
-                          subtitle: c.phone == null || c.phone!.isEmpty
-                              ? null
-                              : Text(c.phone!),
-                          onTap: () => _select(c),
-                        );
-                      },
-                    ),
-            ),
-            if (canCreate)
-              CbPrimaryButton(
-                key: const Key('pos_customer_create'),
-                label: _search.text.trim().isEmpty
-                    ? 'Register new customer'
-                    : 'Register “${_search.text.trim()}”',
-                onPressed: _paging.loading ? null : _quickCreate,
+                        },
+                      ),
               ),
-          ],
+              if (canCreate) ...[
+                const SizedBox(height: 8),
+                CbPrimaryButton(
+                  key: const Key('pos_customer_create'),
+                  label: query.isEmpty
+                      ? 'Register new duka'
+                      : (query.length > 22
+                            ? 'Register “${query.substring(0, 20)}…”'
+                            : 'Register “$query”'),
+                  onPressed: _paging.loading ? null : _quickCreate,
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

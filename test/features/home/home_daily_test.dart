@@ -15,7 +15,7 @@ import 'package:http/testing.dart';
 
 void main() {
   group('homeShowsAllSales', () {
-    test('admin and superuser see all', () {
+    test('admin and superuser see all; manager and cashier do not', () {
       final admin = AuthSession(
         user: const AuthUser(id: 1, username: 'a', isSuperuser: false),
         profile: const UserProfileSnapshot(
@@ -53,7 +53,22 @@ void main() {
         permissions: PermissionSet(const []),
         persona: AppPersona.manager,
       );
-      expect(homeShowsAllSales(manager), isTrue);
+      expect(homeShowsAllSales(manager), isFalse);
+
+      final granted = AuthSession(
+        user: const AuthUser(id: 4, username: 'g'),
+        profile: const UserProfileSnapshot(
+          role: 'manager',
+          isSuperAdmin: false,
+          isAdmin: false,
+          isManager: true,
+        ),
+        permissions: PermissionSet([
+          const PermissionGrant(module: 'sales', action: 'view_all'),
+        ]),
+        persona: AppPersona.manager,
+      );
+      expect(homeShowsAllSales(granted), isTrue);
     });
   });
 

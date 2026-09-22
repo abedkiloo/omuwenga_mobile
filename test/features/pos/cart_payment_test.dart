@@ -178,6 +178,7 @@ void main() {
       expect(body['allow_partial_payment'], isTrue);
       expect(body['amount_paid'], 40);
       expect(body['customer_id'], 4);
+      expect(body['client_channel'], 'mobile');
     });
 
     test('partial payment blocked when store setting is off', () {

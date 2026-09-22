@@ -125,6 +125,7 @@ void main() {
       MockClient((request) async {
         call++;
         expect(request.headers['Idempotency-Key'], isNotEmpty);
+        expect(request.headers['X-Client-Channel'], 'mobile');
         if (call == 1) {
           return http.Response(
             jsonEncode({

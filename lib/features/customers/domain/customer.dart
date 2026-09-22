@@ -227,6 +227,7 @@ class CustomerOrderLite {
     this.paymentStatus = 'paid',
     this.notes,
     this.itemCount,
+    this.clientChannel,
   });
 
   final int id;
@@ -238,6 +239,7 @@ class CustomerOrderLite {
   final String paymentStatus;
   final String? notes;
   final int? itemCount;
+  final String? clientChannel;
 
   bool get hasOpenDebt => debtAmount > 0.009;
 
@@ -256,6 +258,7 @@ class CustomerOrderLite {
       paymentStatus: (json['payment_status'] ?? 'paid').toString(),
       notes: json['notes']?.toString(),
       itemCount: (json['item_count'] as num?)?.toInt(),
+      clientChannel: json['client_channel']?.toString(),
     );
   }
 }

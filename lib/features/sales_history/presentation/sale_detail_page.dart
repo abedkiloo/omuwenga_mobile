@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../pos/data/pos_api.dart';
@@ -308,6 +309,10 @@ class _AccountCard extends StatelessWidget {
                 child: _Meta(
                   label: 'SALE / ORDER REF',
                   value: '#${detail.saleNumber}',
+                  leading: detail.clientChannel == 'web' ||
+                          detail.clientChannel == 'mobile'
+                      ? ClientChannelIcon(channel: detail.clientChannel)
+                      : null,
                 ),
               ),
               Expanded(
@@ -333,9 +338,10 @@ class _AccountCard extends StatelessWidget {
 }
 
 class _Meta extends StatelessWidget {
-  const _Meta({required this.label, required this.value});
+  const _Meta({required this.label, required this.value, this.leading});
   final String label;
   final String value;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -349,7 +355,17 @@ class _Meta extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Row(
+          children: [
+            if (leading != null) ...[leading!, const SizedBox(width: 6)],
+            Expanded(
+              child: Text(
+                value,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }

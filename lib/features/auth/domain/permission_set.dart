@@ -56,6 +56,7 @@ class PermissionSet {
   bool get canViewDebtManagement => has('debt_management', 'view');
   bool get canUpdateDebtManagement => has('debt_management', 'update');
   bool get canViewSales => has('sales', 'view');
+  bool get canViewAllSales => has('sales', 'view_all');
   bool get canRefundSales => has('sales', 'refund');
 
   /// Visit / field orders — normal sales users with POS or sales access.

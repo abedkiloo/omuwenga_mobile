@@ -494,7 +494,7 @@ void main() {
     await tester.tap(find.byKey(const Key('open_picker')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('pos_customer_search')), findsOneWidget);
-    expect(find.text('Select customer'), findsOneWidget);
+    expect(find.text('Select duka'), findsOneWidget);
     await tester.tap(find.byKey(const Key('pos_pick_customer_1')));
     await tester.pumpAndSettle();
 
@@ -669,7 +669,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('customer_form_save')));
     await tester.pumpAndSettle();
-    expect(find.text('Name is required.'), findsOneWidget);
+    expect(find.text('Duka name is required.'), findsOneWidget);
     await tester.enterText(find.byKey(const Key('customer_form_name')), 'Fail');
     await tester.tap(find.byKey(const Key('customer_form_save')));
     await tester.pumpAndSettle();
@@ -886,11 +886,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('open_picker3')));
     await tester.pumpAndSettle();
-    expect(find.text('No customers found'), findsOneWidget);
+    expect(find.text('No dukas yet'), findsOneWidget);
     await tester.enterText(
       find.byKey(const Key('pos_customer_search')),
       'Nope',
     );
+    await tester.pump();
+    expect(find.textContaining('No match for'), findsOneWidget);
     await tester.tap(find.byKey(const Key('pos_customer_create')));
     await tester.pumpAndSettle();
     expect(find.textContaining('create failed'), findsOneWidget);
@@ -991,7 +993,7 @@ void main() {
     await tester.tap(find.byKey(const Key('open_picker_pages')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Select customer'), findsOneWidget);
+    expect(find.text('Select duka'), findsOneWidget);
     expect(find.text('Ann Alpha'), findsOneWidget);
     expect(find.text('Zed Zulu'), findsOneWidget);
   });

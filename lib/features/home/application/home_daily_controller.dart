@@ -47,13 +47,29 @@ class HomeDailyState {
   }
 }
 
+/// Store-wide today totals: admin / superuser, or roles with sales.view_all.
 bool homeShowsAllSales(AuthSession session) {
-  return session.persona == AppPersona.admin ||
-      session.persona == AppPersona.manager ||
-      session.user.isSuperuser ||
-      session.profile.isSuperAdmin ||
-      session.profile.isAdmin ||
-      session.profile.isManager;
+  if (session.user.isSuperuser || session.profile.isSuperAdmin) {
+    return true;
+  }
+  if (session.persona == AppPersona.admin) {
+    return true;
+  }
+  // Explicit grant from Roles UI (sales.view_all).
+  if (session.permissions.canViewAllSales) {
+    return true;
+  }
+  final role = session.profile.role;
+  if (role == 'admin' || role == 'super_admin') {
+    return true;
+  }
+  final display = (session.profile.roleDisplay ?? '').trim();
+  if (display == 'Super Admin' ||
+      display == 'Admin' ||
+      display == 'Administrator') {
+    return true;
+  }
+  return false;
 }
 
 class HomeDailyController extends StateNotifier<HomeDailyState> {
@@ -133,9 +149,10 @@ class HomeDailyController extends StateNotifier<HomeDailyState> {
               paymentMethod: s.paymentMethod,
               occurredAt: s.occurredAt,
               debtAmount: s.debtAmount,
+              clientChannel: s.clientChannel,
             ),
         ];
-        // List is server-scoped for sales agents (own cashier/served_by only).
+        // List is server-scoped for non-admin users (own cashier/served_by only).
         state = state.copyWith(
           loading: false,
           summary: HomeDailySummary(
