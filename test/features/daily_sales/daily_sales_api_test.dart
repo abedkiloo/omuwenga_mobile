@@ -47,8 +47,9 @@ void main() {
               'total_debt_incurred': '400',
               'debt_orders_count': 2,
               'partial_orders_count': 1,
-              'total_debt_collected': '0',
-              'total_collected': '100',
+              'total_debt_collected': '80',
+              'debt_settlement_count': 1,
+              'total_collected': '180',
             },
             'orders': [
               {
@@ -60,6 +61,22 @@ void main() {
                 'customer': {'id': 9, 'name': 'Debtor'},
               },
             ],
+            'collections': {
+              'date': '2026-09-14',
+              'count': 1,
+              'total': '80.00',
+              'results': [
+                {
+                  'id': 44,
+                  'customer_id': 9,
+                  'customer_name': 'Ada',
+                  'amount': '80.00',
+                  'balance_after': '-20.00',
+                  'received_by': 'Mo',
+                  'created_at': '2026-09-14T08:00:00Z',
+                },
+              ],
+            },
           }),
           200,
         );
@@ -72,6 +89,12 @@ void main() {
     expect(report.summary.debtOrdersCount, 2);
     expect(report.orders.single.customerName, 'Debtor');
     expect(report.orders.single.paymentStatus, PaymentStatusDisplay.debt);
+    expect(report.collections.count, 1);
+    expect(report.collections.results.single.customerName, 'Ada');
+    expect(report.collections.results.single.stillOwes, isTrue);
+    expect(report.collections.results.single.remainingDebt, 20);
+    expect(report.summary.debtSettlementCount, 1);
+    expect(report.summary.totalDebtCollected, 80);
   });
 
   test('customer day detail', () async {

@@ -17,6 +17,8 @@ import 'package:completebyte_pos_mobile/features/customers/data/debt_management_
 import 'package:completebyte_pos_mobile/features/customers/domain/customer.dart';
 import 'package:completebyte_pos_mobile/features/customers/domain/debt_management.dart';
 import 'package:completebyte_pos_mobile/features/customers/domain/wallet_debt.dart';
+import 'package:completebyte_pos_mobile/features/customers/presentation/customer_detail_page.dart';
+import 'package:completebyte_pos_mobile/features/customers/presentation/debt_collection_list.dart';
 import 'package:completebyte_pos_mobile/features/customers/presentation/debt_management_page.dart';
 import 'package:completebyte_pos_mobile/features/customers/presentation/receive_payment_page.dart';
 import 'package:completebyte_pos_mobile/sync/application/connectivity_monitor.dart';
@@ -61,6 +63,41 @@ Map<String, dynamic> _debtorJson({
   'last_sale_at': '2026-09-10T10:00:00Z',
   'last_payment_at': null,
 };
+
+Map<String, dynamic> _collectionJson({
+  int id = 44,
+  String amount = '40.00',
+  String balanceAfter = '-40.00',
+}) => {
+  'id': id,
+  'customer_id': 7,
+  'customer_name': 'Debtor Shop',
+  'customer_phone': '0700123456',
+  'customer_code': 'D7',
+  'amount': amount,
+  'balance_after': balanceAfter,
+  'reference': 'MPESA',
+  'notes': 'Partial',
+  'sale_number': null,
+  'received_by': 'Col Lect',
+  'created_at': '2026-09-23T10:15:00Z',
+};
+
+Map<String, dynamic> _collectionsJson({
+  String date = '2026-09-23',
+  List<Map<String, dynamic>>? results,
+}) {
+  final rows = results ?? [_collectionJson()];
+  return {
+    'date': date,
+    'count': rows.length,
+    'total': rows.fold<double>(
+      0,
+      (sum, row) => sum + double.parse(row['amount'].toString()),
+    ).toStringAsFixed(2),
+    'results': rows,
+  };
+}
 
 AuthSession _debtSession({bool canUpdate = true, bool canView = true}) {
   return AuthSession(
@@ -139,6 +176,9 @@ MockClient _debtHttpClient({
     if (path.contains('debt-summary')) {
       return http.Response(jsonEncode(summary ?? _summaryJson()), 200);
     }
+    if (path.contains('debt-collections')) {
+      return http.Response(jsonEncode(_collectionsJson()), 200);
+    }
     if (path.contains('debtors')) {
       return http.Response(
         jsonEncode({
@@ -197,6 +237,38 @@ void main() {
       expect(row.agingLabel, '0–7 days');
     });
 
+    test('parses collections remaining vs settled', () {
+      final remaining = DebtCollectionRow.fromJson(_collectionJson());
+      expect(remaining.stillOwes, isTrue);
+      expect(remaining.remainingDebt, 40);
+      expect(remaining.remainingLabel, 'Remains');
+      expect(remaining.subtitle, contains('0700123456'));
+
+      final settled = DebtCollectionRow.fromJson(
+        _collectionJson(balanceAfter: '5.00'),
+      );
+      expect(settled.stillOwes, isFalse);
+      expect(settled.remainingDebt, 0);
+      expect(settled.remainingLabel, 'Settled');
+
+      final payload = DebtCollections.fromJson(_collectionsJson());
+      expect(payload.count, 1);
+      expect(payload.results.single.amount, 40);
+      expect(shiftDateString('2026-09-23', -1), '2026-09-22');
+      expect(localDateString(DateTime(2026, 9, 23, 15, 4)), '2026-09-23');
+      expect(formatCollectionTime(''), '');
+      expect(formatCollectionTime('not-a-date'), 'not-a-date');
+      expect(formatCollectionTime('2026-09-23T10:15:00Z'), contains(':'));
+      expect(formatCollectionDateLabel(localDateString()), 'Today');
+      expect(
+        formatCollectionDateLabel(shiftDateString(localDateString(), -1)),
+        'Yesterday',
+      );
+      expect(formatCollectionDateLabel('2026-01-01'), '2026-01-01');
+      expect(DebtCollections.fromJson(const {}).results, isEmpty);
+      expect(shiftDateString('not-a-date', 1), localDateString());
+    });
+
     test('handles missing aging map', () {
       final summary = DebtSummary.fromJson({
         'customers_with_debt': 0,
@@ -205,6 +277,89 @@ void main() {
       expect(summary.aging, isEmpty);
       expect(DebtAgingBucket.fromJson(null).count, 0);
     });
+  });
+
+  testWidgets('collections panel empty error settled and date nav', (
+    tester,
+  ) async {
+    var retried = false;
+    var jumped = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ListView(
+            children: [
+              DebtCollectionsPanel(
+                date: '2026-01-01',
+                collections: const DebtCollections(),
+                loading: false,
+                error: 'Could not read collections.',
+                onRetry: () => retried = true,
+                onPreviousDay: () {},
+                onNextDay: () {},
+                onJumpToday: () => jumped = true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Could not read collections.'), findsOneWidget);
+    await tester.tap(find.text('Retry'));
+    expect(retried, isTrue);
+    await tester.tap(find.byKey(const Key('debt_collections_today')));
+    expect(jumped, isTrue);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DebtCollectionsPanel(
+            date: localDateString(),
+            collections: const DebtCollections(count: 0, total: 0, results: []),
+            loading: false,
+            showDateNav: false,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('No collections on this day'), findsOneWidget);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DebtCollectionsPanel(
+            date: localDateString(),
+            collections: DebtCollections.fromJson(
+              _collectionsJson(
+                date: localDateString(),
+                results: [_collectionJson(balanceAfter: '0.00')],
+              ),
+            ),
+            loading: false,
+            onOpenCustomer: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Settled'), findsOneWidget);
+    expect(find.textContaining('Received by'), findsOneWidget);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: DebtCollectionsPanel(
+            date: '2026-09-23',
+            collections: null,
+            loading: true,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
   group('DebtManagementApi', () {
@@ -268,6 +423,37 @@ void main() {
       );
       expect((await api.fetchSummary()).isFailure, isTrue);
       expect((await api.listDebtors()).isFailure, isTrue);
+      expect(
+        (await api.listCollections(date: '2026-09-23')).isFailure,
+        isTrue,
+      );
+    });
+
+    test('listCollections maps who paid and remaining', () async {
+      String? queriedDate;
+      final api = apiWith(
+        MockClient((request) async {
+          queriedDate = request.url.queryParameters['date'];
+          expect(request.url.path, contains('debt-collections'));
+          return http.Response(jsonEncode(_collectionsJson()), 200);
+        }),
+      );
+      final payload = (await api.listCollections(date: '2026-09-23'))
+          .getOrThrow();
+      expect(queriedDate, '2026-09-23');
+      expect(payload.results.single.customerName, 'Debtor Shop');
+      expect(payload.results.single.stillOwes, isTrue);
+      expect(payload.results.single.remainingDebt, 40);
+    });
+
+    test('listCollections rejects non-object payloads', () async {
+      final api = apiWith(
+        MockClient((_) async => http.Response('[]', 200)),
+      );
+      expect(
+        (await api.listCollections(date: '2026-09-23')).isFailure,
+        isTrue,
+      );
     });
   });
 
@@ -321,6 +507,87 @@ void main() {
       expect(
         container.read(debtManagementControllerProvider).agingBucket,
         '8_30',
+      );
+    });
+
+    test('openCollections loads who paid and remaining', () async {
+      final client = MockClient((request) async {
+        if (request.url.path.contains('debt-summary')) {
+          return http.Response(jsonEncode(_summaryJson()), 200);
+        }
+        if (request.url.path.contains('debt-collections')) {
+          return http.Response(
+            jsonEncode(
+              _collectionsJson(date: request.url.queryParameters['date'] ?? ''),
+            ),
+            200,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'results': [_debtorJson()],
+          }),
+          200,
+        );
+      });
+      final container = ProviderContainer(
+        overrides: _overrides(session: _debtSession(), httpClient: client),
+      );
+      addTearDown(container.dispose);
+      final notifier = container.read(debtManagementControllerProvider.notifier);
+      await notifier.load();
+      await notifier.openCollections(date: '2026-09-23');
+      var state = container.read(debtManagementControllerProvider);
+      expect(state.showCollections, isTrue);
+      expect(state.collections?.results.single.customerName, 'Debtor Shop');
+      expect(state.collections?.results.single.remainingDebt, 40);
+
+      await notifier.shiftCollectionDate(-1);
+      expect(
+        container.read(debtManagementControllerProvider).collectionDate,
+        '2026-09-22',
+      );
+      await notifier.jumpCollectionDateToToday();
+      expect(
+        container.read(debtManagementControllerProvider).collectionDate,
+        localDateString(),
+      );
+      await notifier.shiftCollectionDate(1);
+      expect(
+        container.read(debtManagementControllerProvider).collectionDate,
+        localDateString(),
+      );
+      notifier.closeCollections();
+      expect(
+        container.read(debtManagementControllerProvider).showCollections,
+        isFalse,
+      );
+    });
+
+    test('loadCollections surfaces API errors', () async {
+      final client = MockClient((request) async {
+        if (request.url.path.contains('debt-summary')) {
+          return http.Response(jsonEncode(_summaryJson()), 200);
+        }
+        if (request.url.path.contains('debt-collections')) {
+          return http.Response(jsonEncode({'error': 'Nope'}), 500);
+        }
+        return http.Response(
+          jsonEncode({
+            'results': [_debtorJson()],
+          }),
+          200,
+        );
+      });
+      final container = ProviderContainer(
+        overrides: _overrides(session: _debtSession(), httpClient: client),
+      );
+      addTearDown(container.dispose);
+      final notifier = container.read(debtManagementControllerProvider.notifier);
+      await notifier.openCollections(date: '2026-09-23');
+      expect(
+        container.read(debtManagementControllerProvider).collectionsError,
+        isNotNull,
       );
     });
 
@@ -436,7 +703,77 @@ void main() {
 
       await tester.tap(find.byKey(const Key('settle_confirm')));
       await tester.pumpAndSettle();
+      expect(find.text('Proceed with this payment?'), findsOneWidget);
+      expect(
+        find.textContaining('Do you really want to continue with this transaction'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('settle_commit_cancel')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ReceivePaymentPage), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('settle_confirm')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('settle_commit_confirm')));
+      await tester.pumpAndSettle();
       expect(find.byType(DebtManagementPage), findsOneWidget);
+    });
+
+    testWidgets('Collected today opens who paid amount and remaining', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _overrides(
+            session: _debtSession(),
+            httpClient: _debtHttpClient(),
+          ),
+          child: MaterialApp.router(
+            routerConfig: GoRouter(
+              initialLocation: '/debtors',
+              routes: [
+                GoRoute(
+                  path: '/debtors',
+                  builder: (_, _) => const DebtManagementPage(),
+                ),
+                GoRoute(
+                  path: '/customers/:id',
+                  builder: (context, state) {
+                    final id =
+                        int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+                    return CustomerDetailPage(
+                      customerId: id,
+                      initialTab: state.uri.queryParameters['tab'],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('debt_stat_collected')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('debt_collections_panel')), findsOneWidget);
+      expect(find.byKey(const Key('collection_row_44')), findsOneWidget);
+      expect(find.byKey(const Key('collection_amount_44')), findsOneWidget);
+      expect(find.text('KES 40.00'), findsWidgets);
+      expect(find.textContaining('Remains'), findsOneWidget);
+      expect(find.text('Debtor Shop'), findsWidgets);
+
+      await tester.tap(find.byKey(const Key('collection_customer_44')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('customer_tab_ledger')), findsOneWidget);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('debt_collections_close')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('debt_collections_panel')), findsNothing);
     });
 
     testWidgets('hides Collect without update permission', (tester) async {

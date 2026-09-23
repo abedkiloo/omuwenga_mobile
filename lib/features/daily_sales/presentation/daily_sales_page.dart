@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
+import '../../customers/presentation/debt_collection_list.dart';
 import '../../sales_history/domain/payment_status.dart';
 import '../application/daily_sales_controllers.dart';
 import '../domain/daily_navigation.dart';
@@ -113,7 +115,8 @@ class DailySalesPage extends ConsumerWidget {
                   _StatusChip(
                     key: const Key('daily_tab_all'),
                     label: 'All',
-                    selected: state.statusFilter == null,
+                    selected:
+                        state.statusFilter == null && !state.showingCollections,
                     onSelected: () => ref
                         .read(dailySalesProvider.notifier)
                         .setStatusFilter(null),
@@ -121,7 +124,9 @@ class DailySalesPage extends ConsumerWidget {
                   _StatusChip(
                     key: const Key('daily_tab_paid'),
                     label: 'Paid',
-                    selected: state.statusFilter == PaymentStatusDisplay.paid,
+                    selected:
+                        state.statusFilter == PaymentStatusDisplay.paid &&
+                        !state.showingCollections,
                     onSelected: () => ref
                         .read(dailySalesProvider.notifier)
                         .setStatusFilter(PaymentStatusDisplay.paid),
@@ -129,7 +134,9 @@ class DailySalesPage extends ConsumerWidget {
                   _StatusChip(
                     key: const Key('daily_tab_debt'),
                     label: 'Debt',
-                    selected: state.statusFilter == PaymentStatusDisplay.debt,
+                    selected:
+                        state.statusFilter == PaymentStatusDisplay.debt &&
+                        !state.showingCollections,
                     onSelected: () => ref
                         .read(dailySalesProvider.notifier)
                         .setStatusFilter(PaymentStatusDisplay.debt),
@@ -138,10 +145,19 @@ class DailySalesPage extends ConsumerWidget {
                     key: const Key('daily_tab_partial'),
                     label: 'Partial',
                     selected:
-                        state.statusFilter == PaymentStatusDisplay.partial,
+                        state.statusFilter == PaymentStatusDisplay.partial &&
+                        !state.showingCollections,
                     onSelected: () => ref
                         .read(dailySalesProvider.notifier)
                         .setStatusFilter(PaymentStatusDisplay.partial),
+                  ),
+                  _StatusChip(
+                    key: const Key('daily_tab_collected'),
+                    label: 'Debt collected',
+                    selected: state.showingCollections,
+                    onSelected: () => ref
+                        .read(dailySalesProvider.notifier)
+                        .showCollectionsTab(),
                   ),
                 ],
               ),
@@ -150,7 +166,19 @@ class DailySalesPage extends ConsumerWidget {
             if (report != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                child: _SummaryStrip(summary: report.summary),
+                child: _SummaryStrip(
+                  summary: report.summary,
+                  collectedSelected: state.showingCollections,
+                  onCollectedTap: () => ref
+                      .read(dailySalesProvider.notifier)
+                      .showCollectionsTab(),
+                  onDebtTap: () => ref
+                      .read(dailySalesProvider.notifier)
+                      .setStatusFilter(PaymentStatusDisplay.debt),
+                  onPaidTap: () => ref
+                      .read(dailySalesProvider.notifier)
+                      .setStatusFilter(PaymentStatusDisplay.paid),
+                ),
               ),
             Expanded(child: _body(context, ref, state)),
           ],
@@ -167,6 +195,23 @@ class DailySalesPage extends ConsumerWidget {
       return ErrorState(
         message: state.error!,
         onRetry: () => ref.read(dailySalesProvider.notifier).load(),
+      );
+    }
+    if (state.showingCollections) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+        children: [
+          DebtCollectionsPanel(
+            date: state.dateApi,
+            collections: state.report?.collections,
+            loading: state.loading,
+            showDateNav: false,
+            onOpenCustomer: (row) => context.push(
+              AppRoutes.customerDetail(row.customerId, tab: 'ledger'),
+            ),
+            onRetry: () => ref.read(dailySalesProvider.notifier).load(),
+          ),
+        ],
       );
     }
     final orders = state.report?.orders ?? const [];
@@ -235,12 +280,25 @@ class _StatusChip extends StatelessWidget {
 }
 
 class _SummaryStrip extends StatelessWidget {
-  const _SummaryStrip({required this.summary});
+  const _SummaryStrip({
+    required this.summary,
+    required this.onCollectedTap,
+    required this.onDebtTap,
+    required this.onPaidTap,
+    this.collectedSelected = false,
+  });
 
   final DailySummary summary;
+  final VoidCallback onCollectedTap;
+  final VoidCallback onDebtTap;
+  final VoidCallback onPaidTap;
+  final bool collectedSelected;
 
   @override
   Widget build(BuildContext context) {
+    final muted = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -249,14 +307,76 @@ class _SummaryStrip extends StatelessWidget {
           'Sales ${summary.totalSales.toStringAsFixed(2)} · ${summary.ordersCount} orders',
           style: Theme.of(context).textTheme.titleSmall,
         ),
-        const SizedBox(height: 4),
-        Text(
-          'Paid ${summary.totalPaid.toStringAsFixed(2)} · Debt ${summary.totalDebtIncurred.toStringAsFixed(2)} · Collected ${summary.totalCollected.toStringAsFixed(2)}',
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: [
+            _SummaryLink(
+              key: const Key('daily_summary_paid'),
+              label:
+                  'Paid ${summary.totalPaid.toStringAsFixed(2)}',
+              onTap: onPaidTap,
+              style: muted,
+            ),
+            _SummaryLink(
+              key: const Key('daily_summary_debt'),
+              label:
+                  'Debt ${summary.totalDebtIncurred.toStringAsFixed(2)}',
+              onTap: onDebtTap,
+              style: muted,
+            ),
+            _SummaryLink(
+              key: const Key('daily_summary_collected'),
+              label:
+                  'Collected ${summary.totalDebtCollected.toStringAsFixed(2)} · ${summary.debtSettlementCount} payment${summary.debtSettlementCount == 1 ? '' : 's'}',
+              onTap: onCollectedTap,
+              selected: collectedSelected,
+              style: muted?.copyWith(
+                color: collectedSelected
+                    ? AppColors.primary
+                    : (summary.totalDebtCollected > 0
+                          ? AppColors.success
+                          : AppColors.mutedForeground),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ],
+    );
+  }
+}
+
+class _SummaryLink extends StatelessWidget {
+  const _SummaryLink({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.style,
+    this.selected = false,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+  final TextStyle? style;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: Text(
+          label,
+          style: style?.copyWith(
+            decoration: TextDecoration.underline,
+            fontWeight: selected ? FontWeight.w700 : style?.fontWeight,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -6,8 +6,8 @@ const kPaymentAmountHelper =
 
 const kMpesaReceiptExample = 'QHX7K2L9M1';
 const kMpesaReceiptHelper =
-    '10 letters and numbers from the M-Pesa SMS, e.g. $kMpesaReceiptExample';
-const kMpesaReceiptLength = 10;
+    'At least 4 letters and numbers from the M-Pesa SMS, e.g. $kMpesaReceiptExample';
+const kMpesaReceiptMinLength = 4;
 
 const kEmailExample = 'name@example.com';
 const kEmailHelper = 'Email address, e.g. $kEmailExample';
@@ -90,13 +90,13 @@ double? parseMoney(
 String? mpesaReceiptValidationMessage(String? raw) {
   final code = normalizeMpesaReceipt(raw ?? '');
   if (code.isEmpty) {
-    return 'Enter the 10-character M-Pesa code from the SMS, e.g. $kMpesaReceiptExample';
+    return 'Enter the M-Pesa code from the SMS (at least 4 letters and numbers), e.g. $kMpesaReceiptExample';
   }
   if (!RegExp(r'^[A-Z0-9]+$').hasMatch(code)) {
     return 'Use letters and numbers only, e.g. $kMpesaReceiptExample';
   }
-  if (code.length != kMpesaReceiptLength) {
-    return 'Expected 10 characters (you entered ${code.length}), e.g. $kMpesaReceiptExample';
+  if (code.length < kMpesaReceiptMinLength) {
+    return 'Must be at least 4 characters (you entered ${code.length}), e.g. $kMpesaReceiptExample';
   }
   return null;
 }

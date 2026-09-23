@@ -121,6 +121,9 @@ void main() {
                 'source_type': 'debt_settlement',
                 'amount': '50.00',
                 'payment_amount': '50.00',
+                'new_debt': '50.00',
+                'balance_after': '-50.00',
+                'sale': 9,
                 'reference': 'MPESA',
                 'created_at': '2026-01-02T00:00:00Z',
               },
@@ -135,7 +138,31 @@ void main() {
     expect(detail.recentOrders.single.saleNumber, 'S-9');
     expect(detail.recentOrders.single.debtAmount, 50);
     expect(detail.ledger.single.isSettlement, isTrue);
+    expect(detail.ledger.single.stillOwes, isTrue);
+    expect(detail.ledger.single.remainingDebt, 50);
+    expect(detail.ledger.single.saleId, 9);
     expect(detail.standingSummary?.totalDebtCollected, 50);
+
+    final byBalance = CustomerLedgerEntry.fromJson({
+      'id': 2,
+      'transaction_type': 'credit',
+      'source_type': 'debt_settlement',
+      'amount': '10',
+      'balance_after': '-15.00',
+    });
+    expect(byBalance.stillOwes, isTrue);
+    expect(byBalance.remainingDebt, 15);
+
+    final cleared = CustomerLedgerEntry.fromJson({
+      'id': 3,
+      'transaction_type': 'credit',
+      'source_type': 'debt_settlement',
+      'amount': '10',
+      'new_debt': '0',
+      'balance_after': '0',
+    });
+    expect(cleared.stillOwes, isFalse);
+    expect(cleared.remainingDebt, 0);
   });
 
   test('receive wallet payment success', () async {

@@ -416,6 +416,8 @@ void main() {
     await tester.enterText(find.byKey(const Key('settle_reference')), 'ABC');
     await tester.tap(find.byKey(const Key('settle_confirm')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settle_commit_confirm')));
+    await tester.pumpAndSettle();
 
     router.go('/customers/new');
     await tester.pumpAndSettle();
@@ -544,7 +546,7 @@ void main() {
     await tester.tap(find.byKey(const Key('settle_method_mpesa')));
     await tester.pumpAndSettle();
     expect(find.text('M-Pesa code *'), findsOneWidget);
-    expect(find.textContaining('10 letters and numbers'), findsOneWidget);
+    expect(find.textContaining('At least 4 letters and numbers'), findsOneWidget);
     expect(find.byKey(const Key('settle_reference')), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('settle_amount')), '0');
@@ -557,13 +559,13 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
     await tester.tap(find.byKey(const Key('settle_confirm')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('10-character'), findsOneWidget);
+    expect(find.textContaining('at least 4 letters and numbers'), findsOneWidget);
 
-    await tester.enterText(find.byKey(const Key('settle_reference')), 'AB12');
+    await tester.enterText(find.byKey(const Key('settle_reference')), 'AB1');
     await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
     await tester.tap(find.byKey(const Key('settle_confirm')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('you entered 4'), findsOneWidget);
+    expect(find.textContaining('you entered 3'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('settle_method_card')));
     await tester.pumpAndSettle();
@@ -817,12 +819,16 @@ void main() {
     await tester.enterText(find.byKey(const Key('settle_amount')), '4');
     await tester.tap(find.byKey(const Key('settle_confirm')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settle_commit_confirm')));
+    await tester.pumpAndSettle();
     expect(find.textContaining('rejected'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('settle_method_mpesa')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('settle_reference')), 'QHX7K2L9M1');
     await tester.tap(find.byKey(const Key('settle_confirm')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('settle_commit_confirm')));
     await tester.pumpAndSettle();
     expect(find.textContaining('rejected'), findsWidgets);
   });

@@ -246,6 +246,8 @@ void main() {
     await daily.goToNextDay();
     await daily.setStatusFilter(PaymentStatusDisplay.paid);
     await daily.setStatusFilter(null);
+    daily.showCollectionsTab();
+    expect(daily.state.showingCollections, isTrue);
     await daily.setSearch('x');
     expect(daily.state.report, isNotNull);
 

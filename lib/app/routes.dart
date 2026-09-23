@@ -17,7 +17,11 @@ abstract final class AppRoutes {
   static const dispatchQueue = '/dispatch';
   static const deliveryRoute = '/delivery';
 
-  static String customerDetail(int id) => '/customers/$id';
+  static String customerDetail(int id, {String? tab}) {
+    final path = '/customers/$id';
+    if (tab == null || tab.isEmpty) return path;
+    return '$path?tab=${Uri.encodeQueryComponent(tab)}';
+  }
   static String customerEdit(int id) => '/customers/$id/edit';
   static String customerSettle(int id) => '/customers/$id/settle';
   static String saleDetail(int id) => '/sales/$id';

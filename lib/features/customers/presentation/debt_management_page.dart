@@ -10,6 +10,7 @@ import '../application/customers_controllers.dart';
 import '../application/debt_management_controller.dart';
 import '../domain/customer.dart';
 import '../domain/debt_management.dart';
+import 'debt_collection_list.dart';
 
 String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
@@ -104,7 +105,21 @@ class _DebtManagementPageState extends ConsumerState<DebtManagementPage> {
                     ),
                     const SizedBox(height: 10),
                     if (state.summary != null)
-                      _SummaryStrip(summary: state.summary!),
+                      _SummaryStrip(
+                        summary: state.summary!,
+                        collectedSelected: state.showCollections,
+                        onCollectedTap: () {
+                          if (state.showCollections) {
+                            ref
+                                .read(debtManagementControllerProvider.notifier)
+                                .closeCollections();
+                          } else {
+                            ref
+                                .read(debtManagementControllerProvider.notifier)
+                                .openCollections(date: localDateString());
+                          }
+                        },
+                      ),
                     if (state.summary != null) ...[
                       const SizedBox(height: 8),
                       _AgingChips(
@@ -180,7 +195,7 @@ class _DebtManagementPageState extends ConsumerState<DebtManagementPage> {
         ],
       );
     }
-    if (state.debtors.isEmpty) {
+    if (state.debtors.isEmpty && !state.showCollections) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
@@ -200,12 +215,44 @@ class _DebtManagementPageState extends ConsumerState<DebtManagementPage> {
       );
     }
 
+    final extra = state.showCollections ? 1 : 0;
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-      itemCount: state.debtors.length,
+      itemCount: extra + state.debtors.length,
       itemBuilder: (context, i) {
-        final row = state.debtors[i];
+        if (state.showCollections && i == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: DebtCollectionsPanel(
+              date: state.collectionDate.isEmpty
+                  ? localDateString()
+                  : state.collectionDate,
+              collections: state.collections,
+              loading: state.collectionsLoading,
+              error: state.collectionsError,
+              onClose: () => ref
+                  .read(debtManagementControllerProvider.notifier)
+                  .closeCollections(),
+              onPreviousDay: () => ref
+                  .read(debtManagementControllerProvider.notifier)
+                  .shiftCollectionDate(-1),
+              onNextDay: () => ref
+                  .read(debtManagementControllerProvider.notifier)
+                  .shiftCollectionDate(1),
+              onJumpToday: () => ref
+                  .read(debtManagementControllerProvider.notifier)
+                  .jumpCollectionDateToToday(),
+              onRetry: () => ref
+                  .read(debtManagementControllerProvider.notifier)
+                  .loadCollections(),
+              onOpenCustomer: (row) => context.push(
+                AppRoutes.customerDetail(row.customerId, tab: 'ledger'),
+              ),
+            ),
+          );
+        }
+        final row = state.debtors[i - extra];
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: _DebtorCard(
@@ -213,7 +260,8 @@ class _DebtManagementPageState extends ConsumerState<DebtManagementPage> {
             row: row,
             canCollect: canCollect,
             onCollect: () => context.push(AppRoutes.customerSettle(row.id)),
-            onOpen: () => context.push(AppRoutes.customerDetail(row.id)),
+            onOpen: () =>
+                context.push(AppRoutes.customerDetail(row.id, tab: 'ledger')),
           ),
         );
       },
@@ -222,9 +270,15 @@ class _DebtManagementPageState extends ConsumerState<DebtManagementPage> {
 }
 
 class _SummaryStrip extends StatelessWidget {
-  const _SummaryStrip({required this.summary});
+  const _SummaryStrip({
+    required this.summary,
+    required this.onCollectedTap,
+    this.collectedSelected = false,
+  });
 
   final DebtSummary summary;
+  final VoidCallback onCollectedTap;
+  final bool collectedSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -253,6 +307,8 @@ class _SummaryStrip extends StatelessWidget {
             label: 'Collected today',
             value: _kes(summary.collectedToday),
             valueColor: summary.collectedToday > 0 ? AppColors.success : null,
+            selected: collectedSelected,
+            onTap: onCollectedTap,
           ),
         ),
       ],
@@ -266,15 +322,20 @@ class _StatTile extends StatelessWidget {
     required this.label,
     required this.value,
     this.valueColor,
+    this.onTap,
+    this.selected = false,
   });
 
   final String label;
   final String value;
   final Color? valueColor;
+  final VoidCallback? onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
     return CbSurfaceCard(
+      onTap: onTap,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,7 +343,8 @@ class _StatTile extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.mutedForeground,
+              color: selected ? AppColors.primary : AppColors.mutedForeground,
+              fontWeight: selected ? FontWeight.w700 : null,
             ),
           ),
           const SizedBox(height: 2),
@@ -372,6 +434,7 @@ class _DebtorCard extends StatelessWidget {
     ].join(' · ');
 
     return CbSurfaceCard(
+      onTap: onOpen,
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

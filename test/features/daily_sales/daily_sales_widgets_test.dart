@@ -89,8 +89,9 @@ Map<String, dynamic> _report({required String date, String status = 'debt'}) {
       'total_debt_incurred': '400',
       'debt_orders_count': 1,
       'partial_orders_count': 0,
-      'total_debt_collected': '0',
-      'total_collected': '0',
+      'total_debt_collected': '40',
+      'debt_settlement_count': 1,
+      'total_collected': '40',
     },
     'orders': [
       {
@@ -109,6 +110,22 @@ Map<String, dynamic> _report({required String date, String status = 'debt'}) {
         'payment_status': 'paid',
       },
     ],
+    'collections': {
+      'date': date,
+      'count': 1,
+      'total': '40.00',
+      'results': [
+        {
+          'id': 44,
+          'customer_id': 9,
+          'customer_name': 'Debtor',
+          'amount': '40.00',
+          'balance_after': '-10.00',
+          'received_by': 'Mo',
+          'created_at': '2026-09-14T08:00:00Z',
+        },
+      ],
+    },
   };
 }
 
@@ -223,6 +240,16 @@ void main() {
     await tester.tap(find.byKey(const Key('daily_tab_all')));
     await tester.pumpAndSettle();
     expect(lastStatus, isNull);
+
+    await tester.tap(find.byKey(const Key('daily_tab_collected')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('debt_collections_panel')), findsOneWidget);
+    expect(find.byKey(const Key('collection_row_44')), findsOneWidget);
+    expect(find.textContaining('Remains'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('daily_summary_collected')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('collection_amount_44')), findsOneWidget);
   });
 
   testWidgets('daily order tap opens customer day', (tester) async {

@@ -187,7 +187,10 @@ GoRouter createAppRouter({
             path: '/customers/:id',
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-              return CustomerDetailPage(customerId: id);
+              return CustomerDetailPage(
+                customerId: id,
+                initialTab: state.uri.queryParameters['tab'],
+              );
             },
           ),
           GoRoute(

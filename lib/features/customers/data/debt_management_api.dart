@@ -88,6 +88,49 @@ class DebtManagementApi {
     }
   }
 
+  Future<Result<DebtCollections>> listCollections({
+    required String date,
+    int pageSize = 200,
+  }) async {
+    final params = <String, String>{
+      'date': date,
+      'page_size': '$pageSize',
+    };
+    final qs = params.entries
+        .map(
+          (e) =>
+              '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}',
+        )
+        .join('&');
+    final response = await _client.get(
+      'sales/customers/debt-collections/?$qs',
+    );
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(DebtManagementApiException(_safeError(res.body)));
+    }
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) {
+        return Failure(
+          DebtManagementApiException('Unexpected collections response.'),
+        );
+      }
+      return Success(
+        DebtCollections.fromJson(Map<String, dynamic>.from(decoded)),
+      );
+    } on Object catch (_, st) {
+      return Failure(
+        DebtManagementApiException('Could not read collections.'),
+        st,
+      );
+    }
+  }
+
   static String _safeError(String body) {
     try {
       final decoded = jsonDecode(body);
