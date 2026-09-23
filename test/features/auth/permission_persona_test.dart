@@ -95,6 +95,18 @@ void main() {
       ]);
       expect(neither.canPlaceVisitOrders, isFalse);
 
+      final notes = PermissionSet.fromJsonList([
+        {'module': 'daily_notes', 'action': 'view'},
+        {'module': 'daily_notes', 'action': 'create'},
+        {'module': 'daily_notes', 'action': 'update'},
+        {'module': 'daily_notes', 'action': 'view_all'},
+      ]);
+      expect(notes.canViewDailyNotes, isTrue);
+      expect(notes.canCreateDailyNotes, isTrue);
+      expect(notes.canUpdateDailyNotes, isTrue);
+      expect(notes.canViewAllDailyNotes, isTrue);
+      expect(PermissionSet(const []).canViewDailyNotes, isFalse);
+
       final byName = PermissionSet.fromJsonList([
         {'module': '', 'action': '', 'name': 'dispatch.view'},
       ]);

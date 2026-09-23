@@ -74,6 +74,11 @@ class PermissionSet {
       has('delivery', 'view') || has('delivery', 'update');
   bool get canUpdateDelivery => has('delivery', 'update');
 
+  bool get canViewDailyNotes => has('daily_notes', 'view');
+  bool get canCreateDailyNotes => has('daily_notes', 'create');
+  bool get canUpdateDailyNotes => has('daily_notes', 'update');
+  bool get canViewAllDailyNotes => has('daily_notes', 'view_all');
+
   bool get isEmpty => _keys.isEmpty;
   int get length => _keys.length;
 }

@@ -12,6 +12,8 @@ import '../../pos/presentation/receipt_document.dart';
 import '../application/sales_history_controllers.dart';
 import '../domain/payment_status.dart';
 import '../domain/sale.dart';
+import '../domain/sale_action_help.dart';
+import 'sale_action_help_icon.dart';
 
 class SaleDetailPage extends ConsumerStatefulWidget {
   const SaleDetailPage({super.key, required this.saleId});
@@ -210,13 +212,28 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Refund sale'),
-          content: TextField(
-            key: const Key('refund_reason'),
-            onChanged: (value) => reason = value,
-            decoration: const InputDecoration(
-              labelText: 'Reason',
-              border: OutlineInputBorder(),
+          title: const Text('Void or refund sale'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(SaleActionHelp.refund.body),
+                const SizedBox(height: 8),
+                Text(
+                  SaleActionHelp.refund.contrast,
+                  style: const TextStyle(color: AppColors.warning),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const Key('refund_reason'),
+                  onChanged: (value) => reason = value,
+                  decoration: const InputDecoration(
+                    labelText: 'Reason',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ),
           ),
           actions: [
@@ -230,7 +247,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
                 if (reason.trim().isEmpty) return;
                 Navigator.pop(context, true);
               },
-              child: const Text('Confirm'),
+              child: const Text('Confirm void / refund'),
             ),
           ],
         );
@@ -250,15 +267,32 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Roll back sale'),
-          content: TextField(
-            key: const Key('rollback_reason'),
-            onChanged: (value) => reason = value,
-            decoration: const InputDecoration(
-              labelText: 'Reason (required)',
-              helperText: 'Goes to Pending approvals. Stock and books change only after an admin approves.',
-              helperMaxLines: 2,
-              border: OutlineInputBorder(),
+          title: const Text('Roll back a mistaken sale'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(SaleActionHelp.rollback.body),
+                const SizedBox(height: 8),
+                Text(
+                  SaleActionHelp.rollback.contrast,
+                  style: const TextStyle(color: AppColors.warning),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const Key('rollback_reason'),
+                  onChanged: (value) => reason = value,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Reason (required)',
+                    helperText:
+                        'Goes to Pending approvals. Stock and books change only after an admin approves.',
+                    helperMaxLines: 2,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ),
           ),
           actions: [
@@ -713,9 +747,10 @@ class _SaleActions extends StatelessWidget {
                           foregroundColor: AppColors.destructive,
                         ),
                         icon: const Icon(Icons.block_outlined),
-                        label: const Text('Void / Refund'),
+                        label: const Text('Void / refund'),
                       ),
                     ),
+                    SaleActionHelpIcon(help: SaleActionHelp.refund),
                   ],
                 ],
               ),
@@ -723,14 +758,21 @@ class _SaleActions extends StatelessWidget {
                 const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
-                    key: const Key('sale_rollback'),
-                    onPressed: onRollback,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.destructive,
-                    ),
-                    icon: const Icon(Icons.undo_outlined),
-                    label: const Text('Roll back sale'),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          key: const Key('sale_rollback'),
+                          onPressed: onRollback,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.destructive,
+                          ),
+                          icon: const Icon(Icons.undo_outlined),
+                          label: const Text('Roll back sale'),
+                        ),
+                      ),
+                      SaleActionHelpIcon(help: SaleActionHelp.rollback),
+                    ],
                   ),
                 ),
               ],

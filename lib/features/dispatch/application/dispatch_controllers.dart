@@ -19,6 +19,8 @@ class DispatchQueueState {
     this.error,
     this.selectedDeliveryDriverId,
     this.acting = false,
+    this.creatingDriver = false,
+    this.lastCreatedTempPassword,
   });
 
   final List<FieldOrderSummary> orders;
@@ -27,6 +29,8 @@ class DispatchQueueState {
   final String? error;
   final int? selectedDeliveryDriverId;
   final bool acting;
+  final bool creatingDriver;
+  final String? lastCreatedTempPassword;
 
   bool get canAssign => selectedDeliveryDriverId != null && !acting;
 
@@ -37,8 +41,11 @@ class DispatchQueueState {
     String? error,
     int? selectedDeliveryDriverId,
     bool? acting,
+    bool? creatingDriver,
+    String? lastCreatedTempPassword,
     bool clearError = false,
     bool clearDriver = false,
+    bool clearTempPassword = false,
   }) {
     return DispatchQueueState(
       orders: orders ?? this.orders,
@@ -49,6 +56,10 @@ class DispatchQueueState {
           ? null
           : (selectedDeliveryDriverId ?? this.selectedDeliveryDriverId),
       acting: acting ?? this.acting,
+      creatingDriver: creatingDriver ?? this.creatingDriver,
+      lastCreatedTempPassword: clearTempPassword
+          ? null
+          : (lastCreatedTempPassword ?? this.lastCreatedTempPassword),
     );
   }
 }
@@ -140,6 +151,41 @@ class DispatchQueueController extends StateNotifier<DispatchQueueState> {
     state = state.copyWith(acting: false);
     await load();
     return true;
+  }
+
+  Future<CreatedDeliveryDriver?> createDriver({
+    required String displayName,
+    required String phone,
+  }) async {
+    if (displayName.trim().isEmpty) {
+      state = state.copyWith(error: "Enter the driver's name");
+      return null;
+    }
+    if (phone.trim().isEmpty) {
+      state = state.copyWith(error: 'Enter a phone number');
+      return null;
+    }
+    state = state.copyWith(creatingDriver: true, clearError: true);
+    final result = await _api.createDriver(
+      displayName: displayName,
+      phone: phone,
+    );
+    if (result.isFailure) {
+      final f = result as Failure;
+      state = state.copyWith(
+        creatingDriver: false,
+        error: f.error.toString(),
+      );
+      return null;
+    }
+    final driver = result.getOrThrow();
+    state = state.copyWith(
+      creatingDriver: false,
+      drivers: [...state.drivers, driver],
+      selectedDeliveryDriverId: driver.id,
+      lastCreatedTempPassword: driver.temporaryPassword,
+    );
+    return driver;
   }
 }
 

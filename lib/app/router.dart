@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/daily_notes/presentation/daily_notes_page.dart';
 import '../features/dispatch/presentation/dispatch_queue_page.dart';
 import '../features/delivery/presentation/delivery_route_page.dart';
 import '../features/field_orders/presentation/google_map_pin_picker.dart';
@@ -138,6 +139,10 @@ GoRouter createAppRouter({
           !(permissions?.canAccessDelivery ?? false)) {
         return AppRoutes.home;
       }
+      if (loc.startsWith(AppRoutes.dailyNotes) &&
+          !(permissions?.canViewDailyNotes ?? false)) {
+        return AppRoutes.home;
+      }
       return null;
     },
     routes: [
@@ -272,6 +277,10 @@ GoRouter createAppRouter({
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return DeliveryStopPage(stopId: id);
             },
+          ),
+          GoRoute(
+            path: AppRoutes.dailyNotes,
+            builder: (context, state) => const DailyNotesPage(),
           ),
         ],
       ),

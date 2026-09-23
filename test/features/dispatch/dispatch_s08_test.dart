@@ -87,6 +87,19 @@ void main() {
     test('queue pack assign drivers and error paths', () async {
       final api = _api(
         MockClient((request) async {
+          if (request.url.path.contains('/drivers/') &&
+              request.method == 'POST') {
+            return http.Response(
+              jsonEncode({
+                'id': 201,
+                'username': 'drvken',
+                'display_name': 'Ken Mutua',
+                'phone_number': '254712345678',
+                'temporary_password': 'tmpPass99',
+              }),
+              201,
+            );
+          }
           if (request.url.path.contains('/drivers/')) {
             return http.Response(
               jsonEncode([
@@ -126,6 +139,11 @@ void main() {
       );
       expect((await api.queue()).getOrThrow().single.id, 11);
       expect((await api.drivers()).getOrThrow().first.displayName, 'Driver A');
+      final created = await api.createDriver(
+        displayName: 'Ken Mutua',
+        phone: '0712345678',
+      );
+      expect(created.getOrThrow().temporaryPassword, 'tmpPass99');
       expect((await api.pack(11)).getOrThrow().stockAllocated, isTrue);
       expect(
         (await api.assign(
@@ -138,6 +156,10 @@ void main() {
       final bad = _api(MockClient((_) async => http.Response('x', 500)));
       expect((await bad.queue()).isFailure, isTrue);
       expect((await bad.drivers()).isFailure, isTrue);
+      expect(
+        (await bad.createDriver(displayName: 'A', phone: '0712')).isFailure,
+        isTrue,
+      );
       expect((await bad.pack(1)).isFailure, isTrue);
       expect(
         (await bad.assign(orderId: 1, deliveryDriverId: 1)).isFailure,
@@ -206,6 +228,41 @@ void main() {
       expect(push.sent.length, greaterThanOrEqualTo(2));
       c.selectDeliveryDriver(null);
       expect(c.state.selectedDeliveryDriverId, isNull);
+    });
+
+    test('createDriver validates and appends', () async {
+      final c = DispatchQueueController(
+        _api(
+          MockClient((request) async {
+            if (request.method == 'POST' &&
+                request.url.path.contains('/drivers/')) {
+              return http.Response(
+                jsonEncode({
+                  'id': 201,
+                  'username': 'drvken',
+                  'display_name': 'Ken Mutua',
+                  'temporary_password': 'tmpPass99',
+                }),
+                201,
+              );
+            }
+            if (request.url.path.contains('/drivers/')) {
+              return http.Response(jsonEncode([]), 200);
+            }
+            return http.Response(jsonEncode([]), 200);
+          }),
+        ),
+        FakePushNotifier(),
+      );
+      expect(await c.createDriver(displayName: '', phone: '0712'), isNull);
+      expect(await c.createDriver(displayName: 'Ken', phone: ''), isNull);
+      final driver = await c.createDriver(
+        displayName: 'Ken Mutua',
+        phone: '0712345678',
+      );
+      expect(driver?.id, 201);
+      expect(c.state.selectedDeliveryDriverId, 201);
+      expect(c.state.lastCreatedTempPassword, 'tmpPass99');
     });
 
     test('load and action failures', () async {
@@ -284,6 +341,7 @@ void main() {
         ),
       );
       expect(assignEnabled.onPressed, isNotNull);
+      expect(find.byKey(const Key('dispatch_add_driver')), findsOneWidget);
     });
 
     testWidgets('view-only hides mark-ready actions', (tester) async {

@@ -31,6 +31,29 @@ class DeliveryDriverOption {
   }
 }
 
+class CreatedDeliveryDriver extends DeliveryDriverOption {
+  const CreatedDeliveryDriver({
+    required super.id,
+    required super.displayName,
+    super.username = '',
+    this.phoneNumber = '',
+    this.temporaryPassword = '',
+  });
+
+  final String phoneNumber;
+  final String temporaryPassword;
+
+  factory CreatedDeliveryDriver.fromJson(Map<String, dynamic> json) {
+    return CreatedDeliveryDriver(
+      id: (json['id'] as num).toInt(),
+      displayName: (json['display_name'] ?? json['username'] ?? '').toString(),
+      username: (json['username'] ?? '').toString(),
+      phoneNumber: (json['phone_number'] ?? '').toString(),
+      temporaryPassword: (json['temporary_password'] ?? '').toString(),
+    );
+  }
+}
+
 class DispatchApi {
   DispatchApi(this._client);
   final ApiClient _client;
@@ -81,6 +104,56 @@ class DispatchApi {
     } on Object catch (e, st) {
       return Failure(e, st);
     }
+  }
+
+  Future<Result<CreatedDeliveryDriver>> createDriver({
+    required String displayName,
+    required String phone,
+  }) async {
+    final res = await _client.post(
+      'dispatch/drivers/',
+      body: {
+        'display_name': displayName.trim(),
+        'phone': phone.trim(),
+      },
+    );
+    if (res.isFailure) return Failure((res as Failure).error);
+    final response = res.getOrThrow();
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return Failure(
+        DispatchApiException(_driverError(response.body, response.statusCode)),
+      );
+    }
+    try {
+      final data = jsonDecode(response.body);
+      if (data is! Map) {
+        return Failure(DispatchApiException('Invalid driver payload'));
+      }
+      return Success(
+        CreatedDeliveryDriver.fromJson(Map<String, dynamic>.from(data)),
+      );
+    } on Object catch (e, st) {
+      return Failure(e, st);
+    }
+  }
+
+  String _driverError(String body, int statusCode) {
+    try {
+      final data = jsonDecode(body);
+      if (data is Map) {
+        if (data['display_name'] is List && data['display_name'].isNotEmpty) {
+          return data['display_name'].first.toString();
+        }
+        if (data['phone'] is List && data['phone'].isNotEmpty) {
+          return data['phone'].first.toString();
+        }
+        if (data['detail'] != null) return data['detail'].toString();
+        if (data['error'] != null) return data['error'].toString();
+      }
+    } on Object {
+      /* ignore */
+    }
+    return 'Could not add driver ($statusCode)';
   }
 
   Future<Result<FieldOrderSummary>> pack(int orderId) async {

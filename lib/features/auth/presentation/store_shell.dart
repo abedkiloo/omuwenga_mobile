@@ -10,6 +10,7 @@ import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../sync/presentation/sync_failures_sheet.dart';
 import '../../../sync/presentation/sync_status_chip.dart';
 import '../../../sync/providers.dart';
+import '../../daily_notes/presentation/sticky_notes_gate.dart';
 import '../../delivery/application/delivery_controllers.dart';
 import '../../delivery/domain/delivery_stop.dart';
 import '../../field_orders/domain/field_order.dart';
@@ -62,7 +63,9 @@ class StoreShellPage extends ConsumerWidget {
 
     final sync = ref.watch(syncStatusProvider);
 
-    return Scaffold(
+    return Stack(
+      children: [
+        Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         bottom: false,
@@ -115,6 +118,9 @@ class StoreShellPage extends ConsumerWidget {
             NavigationDestination(icon: Icon(d.icon), label: d.label),
         ],
       ),
+        ),
+        const StickyNotesGate(),
+      ],
     );
   }
 
@@ -462,6 +468,7 @@ class MorePage extends ConsumerWidget {
     final canDispatch = session?.permissions.canDispatch ?? false;
     final canDelivery = session?.permissions.canAccessDelivery ?? false;
     final canDebtors = session?.permissions.canViewDebtManagement ?? false;
+    final canNotes = session?.permissions.canViewDailyNotes ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -512,6 +519,13 @@ class MorePage extends ConsumerWidget {
                 title: 'Debtors',
                 icon: Icons.account_balance_wallet_outlined,
                 onTap: () => context.go(AppRoutes.debtors),
+              ),
+            if (canNotes)
+              _MoreTile(
+                key: const Key('more_daily_notes'),
+                title: 'Daily notes',
+                icon: Icons.sticky_note_2_outlined,
+                onTap: () => context.go(AppRoutes.dailyNotes),
               ),
             _MoreTile(
               title: 'API health',

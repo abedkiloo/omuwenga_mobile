@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../design_system/buttons/cb_primary_button.dart';
 import '../../../design_system/chrome/cb_commit_confirm.dart';
 import '../../../design_system/chrome/cb_status_pill.dart';
 import '../../../design_system/chrome/cb_sticky_action_bar.dart';
@@ -13,6 +14,7 @@ import '../../auth/application/auth_controller.dart';
 import '../../field_orders/domain/field_order.dart';
 import '../../field_orders/domain/field_order_commit.dart';
 import '../application/dispatch_controllers.dart';
+import '../data/dispatch_api.dart';
 
 CbStatusPillVariant _dispatchStatusVariant(FieldOrderStatus status) {
   switch (status) {
@@ -181,6 +183,78 @@ class _DispatchOrderDetailPageState
     await ref.read(dispatchQueueProvider.notifier).assign(order.id);
   }
 
+  Future<void> _addDriver() async {
+    final name = TextEditingController();
+    final phone = TextEditingController();
+    final created = await showDialog<CreatedDeliveryDriver>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          key: const Key('dispatch_add_driver_dialog'),
+          title: const Text('Add delivery driver'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                key: const Key('dispatch_add_driver_name'),
+                controller: name,
+                decoration: const InputDecoration(labelText: 'Full name'),
+              ),
+              TextField(
+                key: const Key('dispatch_add_driver_phone'),
+                controller: phone,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'Phone'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              key: const Key('dispatch_add_driver_save'),
+              onPressed: () async {
+                final driver = await ref
+                    .read(dispatchQueueProvider.notifier)
+                    .createDriver(
+                      displayName: name.text,
+                      phone: phone.text,
+                    );
+                if (driver != null && ctx.mounted) {
+                  Navigator.pop(ctx, driver);
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+    name.dispose();
+    phone.dispose();
+    if (created == null || !mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        key: const Key('dispatch_driver_credentials'),
+        title: const Text('Driver added'),
+        content: Text(
+          'Username: ${created.username}\n'
+          'Temporary password: ${created.temporaryPassword}\n\n'
+          'They must change this password on first login.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(dispatchQueueProvider);
@@ -276,11 +350,21 @@ class _DispatchOrderDetailPageState
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'No delivery drivers available. Add a Delivery Driver role user.',
+                'No delivery drivers yet. Add one to assign this order.',
                 key: const Key('dispatch_no_drivers'),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppColors.mutedForeground,
                 ),
+              ),
+            ),
+          if (canPack)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: OutlinedButton.icon(
+                key: const Key('dispatch_add_driver'),
+                onPressed: state.creatingDriver ? null : _addDriver,
+                icon: const Icon(Icons.person_add_alt_1_outlined),
+                label: const Text('Add driver'),
               ),
             ),
           if (state.error != null)
