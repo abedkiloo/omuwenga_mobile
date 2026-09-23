@@ -11,6 +11,8 @@ class DailyNote {
     this.authorName = '',
     this.assignedToId,
     this.assignedToName = '',
+    this.assignedRoleId,
+    this.assignedRoleName = '',
   });
 
   final int id;
@@ -24,6 +26,8 @@ class DailyNote {
   final String authorName;
   final int? assignedToId;
   final String assignedToName;
+  final int? assignedRoleId;
+  final String assignedRoleName;
 
   bool get isGeneral => !isSticky;
   String get kindLabel => isSticky ? 'Sticky' : 'General';
@@ -44,6 +48,8 @@ class DailyNote {
       assignedToName:
           (json['assigned_to_name'] ?? json['assigned_to_username'] ?? '')
               .toString(),
+      assignedRoleId: (json['assigned_role'] as num?)?.toInt(),
+      assignedRoleName: (json['assigned_role_name'] ?? '').toString(),
     );
   }
 }
@@ -102,6 +108,41 @@ class DailyStaffOption {
   }
 }
 
+class DailyRoleOption {
+  const DailyRoleOption({
+    required this.id,
+    required this.name,
+  });
+
+  final int id;
+  final String name;
+
+  factory DailyRoleOption.fromJson(Map<String, dynamic> json) {
+    return DailyRoleOption(
+      id: (json['id'] as num).toInt(),
+      name: (json['name'] ?? '').toString(),
+    );
+  }
+}
+
+bool sessionCanAssignDailyNotes({
+  required bool viewAll,
+  bool isAdmin = false,
+  bool isSuperAdmin = false,
+  bool isSuperuser = false,
+}) {
+  return viewAll || isAdmin || isSuperAdmin || isSuperuser;
+}
+
+String noteAudienceLabel(DailyNote note) {
+  final role = note.assignedRoleName.trim();
+  final person = note.assignedToName.trim();
+  if (role.isNotEmpty && person.isNotEmpty) return '$role · $person';
+  if (role.isNotEmpty) return role;
+  if (person.isNotEmpty) return person;
+  return '';
+}
+
 List<DailyNote> unresolvedStickyNotes(Iterable<DailyNote> notes) {
   return [for (final n in notes) if (n.isSticky && !n.isDone) n];
 }
@@ -130,12 +171,14 @@ Map<String, dynamic> createNotePayload({
   String title = '',
   bool isSticky = false,
   int? assignedTo,
+  int? assignedRole,
 }) {
   return {
     'note_date': noteDate,
     'title': title.trim(),
     'content': content.trim(),
     'is_sticky': isSticky,
-    if (isSticky && assignedTo != null) 'assigned_to': assignedTo,
+    if (assignedTo != null) 'assigned_to': assignedTo,
+    if (assignedRole != null) 'assigned_role': assignedRole,
   };
 }

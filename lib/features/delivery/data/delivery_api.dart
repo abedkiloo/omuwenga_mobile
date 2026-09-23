@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../../core/network/api_client.dart';
 import '../../../core/result/result.dart';
 import '../../field_orders/domain/field_order.dart';
+import '../domain/delivery_route_geometry.dart';
 import '../domain/delivery_stop.dart';
 
 class DeliveryApiException implements Exception {
@@ -109,6 +110,14 @@ class DeliveryApi {
 
   Future<Result<DeliveryStop>> complete(int id) =>
       _postStop('delivery/stops/$id/complete/');
+
+  Future<Result<DeliveryRouteGeometry>> todayGeometry() async {
+    final res = await _client.get('delivery/routes/today/geometry/');
+    return _parse(res, (data) {
+      if (data is! Map) throw DeliveryApiException('Invalid geometry');
+      return DeliveryRouteGeometry.fromJson(Map<String, dynamic>.from(data));
+    }, 'Geometry failed');
+  }
 
   Future<Result<List<FieldOrderSummary>>> available() async {
     final res = await _client.get('delivery/available/');

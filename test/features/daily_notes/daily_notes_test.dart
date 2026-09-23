@@ -113,10 +113,54 @@ void main() {
         )['assigned_to'],
         4,
       );
+      expect(
+        createNotePayload(
+          noteDate: '2026-09-24',
+          content: 'All drivers',
+          assignedRole: 9,
+        )['assigned_role'],
+        9,
+      );
+      expect(
+        sessionCanAssignDailyNotes(viewAll: false, isAdmin: true),
+        isTrue,
+      );
+      expect(sessionCanAssignDailyNotes(viewAll: false), isFalse);
+      expect(
+        noteAudienceLabel(
+          DailyNote.fromJson({
+            ..._noteJson(),
+            'assigned_role': 3,
+            'assigned_role_name': 'Sales Personnel',
+          }),
+        ),
+        'Sales Personnel · Ann',
+      );
+      expect(
+        noteAudienceLabel(
+          const DailyNote(id: 8, noteDate: '2026-09-24', content: 'x'),
+        ),
+        '',
+      );
+      expect(
+        noteAudienceLabel(
+          const DailyNote(
+            id: 9,
+            noteDate: '2026-09-24',
+            content: 'x',
+            assignedRoleName: 'Delivery Driver',
+          ),
+        ),
+        'Delivery Driver',
+      );
       expect(DailyTaskItem.fromJson(_taskJson()).title, 'Restock');
       expect(
         DailyStaffOption.fromJson({'id': 1, 'username': 'a'}).displayName,
         'a',
+      );
+      expect(
+        DailyRoleOption.fromJson({'id': 2, 'name': 'Delivery Driver'}).name,
+        'Delivery Driver',
       );
       expect(DailyNotesApiException('e').toString(), 'e');
     });
@@ -133,6 +177,14 @@ void main() {
             return http.Response(
               jsonEncode([
                 {'id': 4, 'username': 'ken', 'display_name': 'Ken'},
+              ]),
+              200,
+            );
+          }
+          if (request.url.path.contains('/roles/')) {
+            return http.Response(
+              jsonEncode([
+                {'id': 3, 'name': 'Sales Personnel'},
               ]),
               200,
             );
@@ -170,6 +222,7 @@ void main() {
       );
       expect((await api.blocking()).getOrThrow().single.isSticky, isTrue);
       expect((await api.staff()).getOrThrow().single.displayName, 'Ken');
+      expect((await api.roles()).getOrThrow().single.name, 'Sales Personnel');
       expect(
         (await api.listNotes(noteDate: '2026-09-24')).getOrThrow().single.id,
         1,
@@ -202,6 +255,9 @@ void main() {
           if (request.url.path.contains('/staff/')) {
             return http.Response(jsonEncode([]), 200);
           }
+          if (request.url.path.contains('/roles/')) {
+            return http.Response(jsonEncode([]), 200);
+          }
           if (request.url.path.contains('/toggle-done/') &&
               request.url.path.contains('/notes/')) {
             return http.Response(jsonEncode(_noteJson(done: true)), 200);
@@ -222,8 +278,12 @@ void main() {
       await notes.load(date: '2026-09-24', loadStaff: true);
       expect(notes.state.notes, isNotEmpty);
       expect(notes.state.tasks, isNotEmpty);
+      await notes.loadAssignees();
       expect(await notes.createNote(content: ''), isFalse);
-      expect(await notes.createNote(content: 'Hi', isSticky: true), isTrue);
+      expect(
+        await notes.createNote(content: 'Hi', isSticky: true, assignedRole: 3),
+        isTrue,
+      );
       expect(await notes.toggleNote(1), isTrue);
       expect(await notes.toggleTask(3), isTrue);
 
@@ -328,6 +388,9 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('daily_notes_add')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('daily_note_assign_person')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('daily_note_assign_role')));
       await tester.pumpAndSettle();
       await tester.enterText(find.byKey(const Key('daily_note_content')), 'Quiet shift');
       await tester.tap(find.byKey(const Key('daily_note_save')));

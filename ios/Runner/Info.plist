@@ -27,6 +27,10 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<!-- Allow http:// to local Django during development -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Omuwenga uses your location to drop a delivery pin and show today’s route.</string>
+	<key>GMSApiKey</key>
+	<string>REPLACE_WITH_MAPS_API_KEY</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

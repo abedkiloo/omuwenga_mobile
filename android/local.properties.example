@@ -1,0 +1,3 @@
+## Android Maps key (do not commit the real key)
+## Copy the sdk.dir line from your existing local.properties, then add:
+MAPS_API_KEY=REPLACE_WITH_MAPS_API_KEY

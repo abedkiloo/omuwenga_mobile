@@ -31,17 +31,19 @@ class _StickyNotesGateState extends ConsumerState<StickyNotesGate> {
     final state = ref.watch(stickyNotesGateProvider);
     if (state.loading || !state.isBlocking) return const SizedBox.shrink();
 
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.8;
+
     return Positioned.fill(
       child: Material(
         color: Colors.black.withValues(alpha: 0.72),
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: BoxConstraints(maxWidth: 420, maxHeight: maxHeight),
               child: Card(
                 key: const Key('sticky_notes_gate'),
                 margin: const EdgeInsets.all(16),
-                child: Padding(
+                child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -59,11 +61,18 @@ class _StickyNotesGateState extends ConsumerState<StickyNotesGate> {
                       for (final note in state.notes)
                         CheckboxListTile(
                           key: Key('sticky_gate_tick_${note.id}'),
+                          contentPadding: EdgeInsets.zero,
                           value: note.isDone,
                           title: Text(
                             note.title.isEmpty ? 'Sticky note' : note.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          subtitle: Text(note.content),
+                          subtitle: Text(
+                            note.content,
+                            maxLines: 6,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           onChanged: state.acting
                               ? null
                               : (_) => ref
@@ -71,10 +80,14 @@ class _StickyNotesGateState extends ConsumerState<StickyNotesGate> {
                                     .tick(note.id),
                         ),
                       if (state.error != null)
-                        Text(
-                          state.error!,
-                          style: const TextStyle(color: AppColors.destructive),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            state.error!,
+                            style: const TextStyle(color: AppColors.destructive),
+                          ),
                         ),
+                      const SizedBox(height: 8),
                       CbPrimaryButton(
                         key: const Key('sticky_gate_refresh'),
                         label: 'Refresh',

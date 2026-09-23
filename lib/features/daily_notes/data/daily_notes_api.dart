@@ -37,6 +37,10 @@ class DailyNotesApi {
     return _getList('daily-notes/notes/staff/', DailyStaffOption.fromJson);
   }
 
+  Future<Result<List<DailyRoleOption>>> roles() {
+    return _getList('daily-notes/notes/roles/', DailyRoleOption.fromJson);
+  }
+
   Future<Result<DailyNote>> createNote(Map<String, dynamic> body) {
     return _postMap('daily-notes/notes/', body, DailyNote.fromJson, 'Save note failed');
   }

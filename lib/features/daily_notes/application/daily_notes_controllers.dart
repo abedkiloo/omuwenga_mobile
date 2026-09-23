@@ -15,6 +15,7 @@ class DailyNotesState {
     this.notes = const [],
     this.tasks = const [],
     this.staff = const [],
+    this.roles = const [],
     this.loading = false,
     this.acting = false,
     this.error,
@@ -24,6 +25,7 @@ class DailyNotesState {
   final List<DailyNote> notes;
   final List<DailyTaskItem> tasks;
   final List<DailyStaffOption> staff;
+  final List<DailyRoleOption> roles;
   final bool loading;
   final bool acting;
   final String? error;
@@ -33,6 +35,7 @@ class DailyNotesState {
     List<DailyNote>? notes,
     List<DailyTaskItem>? tasks,
     List<DailyStaffOption>? staff,
+    List<DailyRoleOption>? roles,
     bool? loading,
     bool? acting,
     String? error,
@@ -43,6 +46,7 @@ class DailyNotesState {
       notes: notes ?? this.notes,
       tasks: tasks ?? this.tasks,
       staff: staff ?? this.staff,
+      roles: roles ?? this.roles,
       loading: loading ?? this.loading,
       acting: acting ?? this.acting,
       error: clearError ? null : (error ?? this.error),
@@ -68,17 +72,30 @@ class DailyNotesController extends StateNotifier<DailyNotesState> {
       return;
     }
     var staff = state.staff;
+    var roles = state.roles;
     if (loadStaff) {
       final staffResult = await _api.staff();
       if (staffResult.isSuccess) staff = staffResult.getOrThrow();
+      final rolesResult = await _api.roles();
+      if (rolesResult.isSuccess) roles = rolesResult.getOrThrow();
     }
     state = state.copyWith(
       notes: notes.getOrThrow(),
       tasks: tasks.isSuccess ? tasks.getOrThrow() : const [],
       staff: staff,
+      roles: roles,
       loading: false,
       error: tasks.isFailure ? (tasks as Failure).error.toString() : null,
       clearError: tasks.isSuccess,
+    );
+  }
+
+  Future<void> loadAssignees() async {
+    final staffResult = await _api.staff();
+    final rolesResult = await _api.roles();
+    state = state.copyWith(
+      staff: staffResult.isSuccess ? staffResult.getOrThrow() : state.staff,
+      roles: rolesResult.isSuccess ? rolesResult.getOrThrow() : state.roles,
     );
   }
 
@@ -87,6 +104,7 @@ class DailyNotesController extends StateNotifier<DailyNotesState> {
     String title = '',
     bool isSticky = false,
     int? assignedTo,
+    int? assignedRole,
   }) async {
     if (content.trim().isEmpty) {
       state = state.copyWith(error: 'Write the note before saving');
@@ -100,6 +118,7 @@ class DailyNotesController extends StateNotifier<DailyNotesState> {
         title: title,
         isSticky: isSticky,
         assignedTo: assignedTo,
+        assignedRole: assignedRole,
       ),
     );
     if (result.isFailure) {

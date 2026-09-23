@@ -10,7 +10,9 @@ import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../design_system/states/async_states.dart';
 import '../../payments/presentation/stk_wait_page.dart';
 import '../application/delivery_controllers.dart';
+import '../domain/delivery_route_geometry.dart';
 import '../domain/delivery_stop.dart';
+import 'delivery_route_map.dart';
 
 /// Optional hook for Open in Maps / call (tests inject no-ops).
 typedef ExternalUriHandler = Future<void> Function(Uri uri);
@@ -66,6 +68,11 @@ class _DeliveryRoutePageState extends ConsumerState<DeliveryRoutePage> {
                     onPressed: () =>
                         context.push(AppRoutes.deliveryStop(next.id)),
                   ),
+                const SizedBox(height: 16),
+                _TodayRouteMap(
+                  route: state.route!,
+                  onStopTap: (id) => context.push(AppRoutes.deliveryStop(id)),
+                ),
                 const SizedBox(height: 16),
                 for (final stop in state.route!.stops)
                   Padding(
@@ -461,6 +468,46 @@ class _DeliveryStopPageState extends ConsumerState<DeliveryStopPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TodayRouteMap extends ConsumerStatefulWidget {
+  const _TodayRouteMap({required this.route, required this.onStopTap});
+
+  final DeliveryRoute route;
+  final ValueChanged<int> onStopTap;
+
+  @override
+  ConsumerState<_TodayRouteMap> createState() => _TodayRouteMapState();
+}
+
+class _TodayRouteMapState extends ConsumerState<_TodayRouteMap> {
+  DeliveryRouteGeometry? _server;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!const bool.fromEnvironment('FLUTTER_TEST')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
+  }
+
+  Future<void> _load() async {
+    final res = await ref.read(deliveryApiProvider).todayGeometry();
+    if (!mounted) return;
+    if (res.isSuccess) {
+      setState(() => _server = res.getOrThrow());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DeliveryRouteMapCard(
+      key: const Key('delivery_route_map'),
+      usePlatformMap: !const bool.fromEnvironment('FLUTTER_TEST'),
+      geometry: _server ?? DeliveryRouteGeometry.fromStops(widget.route.stops),
+      onStopTap: widget.onStopTap,
     );
   }
 }
