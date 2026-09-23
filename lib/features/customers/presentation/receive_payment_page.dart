@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../design_system/states/async_states.dart';
+import '../../../design_system/design_system.dart';
 import '../../pos/domain/payment.dart';
 import '../application/customers_controllers.dart';
 import '../domain/mpesa_receipt.dart';
+
+String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 class ReceivePaymentPage extends ConsumerStatefulWidget {
   const ReceivePaymentPage({super.key, required this.customerId});
@@ -76,6 +78,39 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     } else if (_method.requiresReference && reference.trim().isEmpty) {
       return;
     }
+
+    final detail = ref.read(customerDetailProvider(widget.customerId)).detail;
+    if (detail == null) return;
+
+    final confirmed = await showCommitConfirm(
+      context: context,
+      title: 'Proceed with this payment?',
+      description:
+          'Do you really want to continue with this transaction? '
+          'This records the payment on the customer account.',
+      rows: [
+        CommitSummaryRow(label: 'Customer', value: detail.name),
+        CommitSummaryRow(label: 'Amount', value: _kes(amount), emphasis: true),
+        CommitSummaryRow(label: 'Method', value: _method.label),
+        if (reference.trim().isNotEmpty)
+          CommitSummaryRow(
+            label: _method == PosPaymentMethod.mpesa
+                ? 'M-Pesa code'
+                : 'Reference',
+            value: reference.trim(),
+          ),
+        if (detail.debtAmount > 0)
+          CommitSummaryRow(
+            label: 'Current debt',
+            value: _kes(detail.debtAmount),
+          ),
+      ],
+      confirmLabel: 'Yes, record payment',
+      cancelLabel: 'Back',
+      confirmKey: const Key('settle_commit_confirm'),
+      cancelKey: const Key('settle_commit_cancel'),
+    );
+    if (!confirmed || !mounted) return;
 
     final ok = await ref
         .read(customerDetailProvider(widget.customerId).notifier)
@@ -215,7 +250,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                 const SizedBox(height: 16),
                 CbPrimaryButton(
                   key: const Key('settle_confirm'),
-                  label: state.settling ? 'Processing…' : 'Confirm payment',
+                  label: state.settling ? 'Processing…' : 'Record payment',
                   onPressed: state.settling ? null : _confirm,
                 ),
               ],

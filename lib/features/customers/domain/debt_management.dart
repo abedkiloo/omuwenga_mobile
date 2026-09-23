@@ -58,6 +58,130 @@ class DebtSummary {
   }
 }
 
+class DebtCollectionRow {
+  const DebtCollectionRow({
+    required this.id,
+    required this.customerId,
+    required this.customerName,
+    required this.amount,
+    this.customerPhone = '',
+    this.customerCode = '',
+    this.balanceAfter = 0,
+    this.reference = '',
+    this.notes = '',
+    this.saleNumber,
+    this.receivedBy = '',
+    this.createdAt,
+  });
+
+  final int id;
+  final int customerId;
+  final String customerName;
+  final String customerPhone;
+  final String customerCode;
+  final double amount;
+  final double balanceAfter;
+  final String reference;
+  final String notes;
+  final String? saleNumber;
+  final String receivedBy;
+  final String? createdAt;
+
+  bool get stillOwes => balanceAfter < -0.005;
+
+  double get remainingDebt => stillOwes ? -balanceAfter : 0;
+
+  String get remainingLabel => stillOwes ? 'Remains' : 'Settled';
+
+  String get subtitle {
+    final parts = [
+      if (customerPhone.isNotEmpty) customerPhone,
+      if (customerCode.isNotEmpty) customerCode,
+    ];
+    return parts.join(' · ');
+  }
+
+  factory DebtCollectionRow.fromJson(Map<String, dynamic> json) {
+    return DebtCollectionRow(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      customerId: (json['customer_id'] as num?)?.toInt() ?? 0,
+      customerName: (json['customer_name'] ?? 'Customer').toString(),
+      customerPhone: (json['customer_phone'] ?? '').toString(),
+      customerCode: (json['customer_code'] ?? '').toString(),
+      amount: _asDouble(json['amount']),
+      balanceAfter: _asDouble(json['balance_after']),
+      reference: (json['reference'] ?? '').toString(),
+      notes: (json['notes'] ?? '').toString(),
+      saleNumber: json['sale_number']?.toString(),
+      receivedBy: (json['received_by'] ?? '').toString(),
+      createdAt: json['created_at']?.toString(),
+    );
+  }
+}
+
+class DebtCollections {
+  const DebtCollections({
+    this.date = '',
+    this.count = 0,
+    this.total = 0,
+    this.results = const [],
+  });
+
+  final String date;
+  final int count;
+  final double total;
+  final List<DebtCollectionRow> results;
+
+  factory DebtCollections.fromJson(Map<String, dynamic> json) {
+    final raw = json['results'];
+    final results = <DebtCollectionRow>[];
+    if (raw is List) {
+      for (final item in raw) {
+        if (item is Map) {
+          results.add(
+            DebtCollectionRow.fromJson(Map<String, dynamic>.from(item)),
+          );
+        }
+      }
+    }
+    return DebtCollections(
+      date: (json['date'] ?? '').toString(),
+      count: (json['count'] as num?)?.toInt() ?? results.length,
+      total: _asDouble(json['total']),
+      results: results,
+    );
+  }
+}
+
+String localDateString([DateTime? value]) {
+  final d = (value ?? DateTime.now()).toLocal();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${d.year}-${two(d.month)}-${two(d.day)}';
+}
+
+String shiftDateString(String dateStr, int offsetDays) {
+  final parsed = DateTime.tryParse(dateStr);
+  if (parsed == null) return localDateString();
+  return localDateString(parsed.add(Duration(days: offsetDays)));
+}
+
+String formatCollectionDateLabel(String dateStr) {
+  final today = localDateString();
+  final yesterday = shiftDateString(today, -1);
+  if (dateStr == today) return 'Today';
+  if (dateStr == yesterday) return 'Yesterday';
+  return dateStr;
+}
+
+String formatCollectionTime(String? raw) {
+  if (raw == null || raw.isEmpty) return '';
+  final dt = DateTime.tryParse(raw);
+  if (dt == null) return raw;
+  final local = dt.toLocal();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${two(local.hour)}:${two(local.minute)}';
+}
+
 class DebtorRow {
   const DebtorRow({
     required this.id,

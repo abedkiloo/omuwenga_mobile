@@ -46,31 +46,30 @@ void main() {
     test('requires a code and shows the expected format', () {
       expect(
         mpesaReceiptValidationMessage(null),
-        'Enter the 10-character M-Pesa code from the SMS, e.g. QHX7K2L9M1',
+        'Enter the M-Pesa code from the SMS (at least 4 letters and numbers), e.g. QHX7K2L9M1',
       );
       expect(
         mpesaReceiptValidationMessage('   '),
-        'Enter the 10-character M-Pesa code from the SMS, e.g. QHX7K2L9M1',
+        'Enter the M-Pesa code from the SMS (at least 4 letters and numbers), e.g. QHX7K2L9M1',
       );
     });
 
-    test('rejects symbols and the wrong length', () {
+    test('rejects symbols and codes shorter than 4', () {
       expect(
         mpesaReceiptValidationMessage('QHX-7K2'),
         'Use letters and numbers only, e.g. QHX7K2L9M1',
       );
       expect(
-        mpesaReceiptValidationMessage('ABC12'),
-        'Expected 10 characters (you entered 5), e.g. QHX7K2L9M1',
-      );
-      expect(
-        mpesaReceiptValidationMessage('QHX7K2L9M1X'),
-        'Expected 10 characters (you entered 11), e.g. QHX7K2L9M1',
+        mpesaReceiptValidationMessage('AB1'),
+        'Must be at least 4 characters (you entered 3), e.g. QHX7K2L9M1',
       );
     });
 
-    test('accepts a typical receipt code', () {
+    test('accepts codes of 4 or more letters and numbers', () {
+      expect(mpesaReceiptValidationMessage('AB12'), isNull);
+      expect(mpesaReceiptValidationMessage('ABC12'), isNull);
       expect(mpesaReceiptValidationMessage('QHX7K2L9M1'), isNull);
+      expect(mpesaReceiptValidationMessage('QHX7K2L9M1X'), isNull);
       expect(mpesaReceiptValidationMessage(' qhx 7k2 l9m1 '), isNull);
     });
   });

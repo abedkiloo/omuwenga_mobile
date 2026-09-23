@@ -27,13 +27,33 @@ int? _ageDays(String? raw) {
   return DateTime.now().difference(dt).inDays;
 }
 
-class CustomerDetailPage extends ConsumerWidget {
-  const CustomerDetailPage({super.key, required this.customerId});
+class CustomerDetailPage extends ConsumerStatefulWidget {
+  const CustomerDetailPage({
+    super.key,
+    required this.customerId,
+    this.initialTab,
+  });
 
   final int customerId;
+  final String? initialTab;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CustomerDetailPage> createState() => _CustomerDetailPageState();
+}
+
+class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
+  late String _tab;
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = widget.initialTab == 'ledger' ? 'ledger' : 'orders';
+  }
+
+  int get customerId => widget.customerId;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(customerDetailProvider(customerId));
     final auth = ref.watch(authControllerProvider);
     final settings = ref
@@ -123,28 +143,39 @@ class CustomerDetailPage extends ConsumerWidget {
       CustomerStanding.good => AppColors.success,
     };
 
-    return ListView(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-      children: [
-        _ProfileCard(detail: detail),
-        const SizedBox(height: 12),
-        Text(
-          key: const Key('customer_standing_hero'),
-          detail.standingHeadline,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: standingColor,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _StandingGaugeCard(detail: detail),
-        if (aging.total > 0) ...[
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _ProfileCard(detail: detail),
           const SizedBox(height: 12),
-          _AgingCard(aging: aging),
+          Text(
+            key: const Key('customer_standing_hero'),
+            detail.standingHeadline,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: standingColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _StandingGaugeCard(
+            detail: detail,
+            onOpenLedger: () => setState(() => _tab = 'ledger'),
+            onOpenOrders: () => setState(() => _tab = 'orders'),
+          ),
+          if (aging.total > 0) ...[
+            const SizedBox(height: 12),
+            _AgingCard(aging: aging),
+          ],
+          const SizedBox(height: 12),
+          _LedgerActivitySection(
+            detail: detail,
+            tab: _tab,
+            onTabChanged: (value) => setState(() => _tab = value),
+          ),
         ],
-        const SizedBox(height: 12),
-        _LedgerActivitySection(detail: detail),
-      ],
+      ),
     );
   }
 }
@@ -363,9 +394,15 @@ class _ProfileCard extends StatelessWidget {
 }
 
 class _StandingGaugeCard extends StatelessWidget {
-  const _StandingGaugeCard({required this.detail});
+  const _StandingGaugeCard({
+    required this.detail,
+    required this.onOpenLedger,
+    required this.onOpenOrders,
+  });
 
   final CustomerDetail detail;
+  final VoidCallback onOpenLedger;
+  final VoidCallback onOpenOrders;
 
   @override
   Widget build(BuildContext context) {
@@ -447,29 +484,39 @@ class _StandingGaugeCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _MiniStat(
+                  key: const Key('customer_stat_wallet_debt'),
                   label: 'Wallet debt',
                   value: _kes(debt),
                   tint: const Color(0xFFE8F0FE),
                   valueColor: AppColors.primary,
+                  onTap: onOpenLedger,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _MiniStat(
+                  key: const Key('customer_stat_invoice'),
                   label: credit > 0 ? 'Wallet credit' : 'Invoice outstanding',
                   value: _kes(credit > 0 ? credit : outstanding),
                   tint: const Color(0xFFFFF4E5),
                   valueColor: AppColors.warning,
+                  onTap: onOpenOrders,
                 ),
               ),
             ],
           ),
           if (incurred > 0 || collected > 0) ...[
             const SizedBox(height: 10),
-            Text(
-              'Lifetime debt ${_kes(incurred)} · Collected ${_kes(collected)}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: AppColors.mutedForeground,
+            InkWell(
+              key: const Key('customer_stat_collected'),
+              onTap: onOpenLedger,
+              child: Text(
+                'Lifetime debt ${_kes(incurred)} · Collected ${_kes(collected)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                ),
               ),
             ),
           ],
@@ -499,20 +546,23 @@ class _StandingGaugeCard extends StatelessWidget {
 
 class _MiniStat extends StatelessWidget {
   const _MiniStat({
+    super.key,
     required this.label,
     required this.value,
     required this.tint,
     required this.valueColor,
+    this.onTap,
   });
 
   final String label;
   final String value;
   final Color tint;
   final Color valueColor;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final body = Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: tint,
@@ -536,6 +586,15 @@ class _MiniStat extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+    if (onTap == null) return body;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: body,
       ),
     );
   }
@@ -667,40 +726,68 @@ class _AgeBucket extends StatelessWidget {
 }
 
 class _LedgerActivitySection extends StatelessWidget {
-  const _LedgerActivitySection({required this.detail});
+  const _LedgerActivitySection({
+    required this.detail,
+    required this.tab,
+    required this.onTabChanged,
+  });
 
   final CustomerDetail detail;
+  final String tab;
+  final ValueChanged<String> onTabChanged;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasLedger = detail.ledger.isNotEmpty;
     final hasOrders = detail.recentOrders.isNotEmpty;
+    final showingLedger = tab == 'ledger';
 
     return CbSurfaceCard(
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Ledger Activity',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            children: [
+              CbFilterChip(
+                key: const Key('customer_tab_orders'),
+                label: 'Orders',
+                selected: !showingLedger,
+                compact: true,
+                onTap: () => onTabChanged('orders'),
+              ),
+              const SizedBox(width: 8),
+              CbFilterChip(
+                key: const Key('customer_tab_ledger'),
+                label: 'Debt & payments',
+                selected: showingLedger,
+                compact: true,
+                onTap: () => onTabChanged('ledger'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          if (!hasLedger && !hasOrders)
+          if (showingLedger)
+            if (!hasLedger)
+              Text(
+                'No wallet transactions yet',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: AppColors.mutedForeground,
+                ),
+              )
+            else
+              for (final entry in detail.ledger.take(20)) ...[
+                _LedgerRow(entry: entry),
+                const SizedBox(height: 10),
+              ]
+          else if (!hasOrders)
             Text(
-              'No ledger activity yet',
+              'No orders yet',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: AppColors.mutedForeground,
               ),
             )
-          else if (hasLedger)
-            for (final entry in detail.ledger.take(20)) ...[
-              _LedgerRow(entry: entry),
-              const SizedBox(height: 10),
-            ]
           else
             for (final order in detail.recentOrders.take(12)) ...[
               _OrderDebtRow(order: order),
@@ -753,79 +840,116 @@ class _LedgerRow extends StatelessWidget {
         : days != null && days > 14
         ? (const Color(0xFFFEF3C7), AppColors.warning)
         : (AppColors.accentSoft, AppColors.primary);
+    final remainingLabel = entry.stillOwes
+        ? 'Remains ${_kes(entry.remainingDebt)}'
+        : 'Settled';
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+    return InkWell(
+      key: Key('customer_ledger_${entry.id}'),
+      onTap: entry.saleId == null
+          ? null
+          : () => context.push(AppRoutes.saleDetail(entry.saleId!)),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: statusBg,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  statusLabel,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: statusFg,
-                    fontWeight: FontWeight.w700,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: statusFg,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          if (_shortDate(entry.createdAt).isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                _shortDate(entry.createdAt),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.mutedForeground,
-                ),
-              ),
+              ],
             ),
-          const SizedBox(height: 6),
-          Text(
-            subtitle,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Text(
-                settlement ? 'Settled' : 'Amount',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.mutedForeground,
+            if (_shortDate(entry.createdAt).isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  _shortDate(entry.createdAt),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
                 ),
               ),
-              const Spacer(),
-              Text(
-                amount < 0 ? '-${_kes(-amount)}' : _kes(amount),
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: settlement ? AppColors.success : AppColors.destructive,
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  settlement ? 'Amount paid' : 'Amount',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const Spacer(),
+                Text(
+                  amount < 0 ? '-${_kes(-amount)}' : _kes(amount),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: settlement
+                        ? AppColors.success
+                        : AppColors.destructive,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  'Balance after',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  key: Key('customer_ledger_remaining_${entry.id}'),
+                  remainingLabel,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: entry.stillOwes
+                        ? AppColors.destructive
+                        : AppColors.mutedForeground,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -858,77 +982,86 @@ class _OrderDebtRow extends StatelessWidget {
         ? (const Color(0xFFFEF3C7), AppColors.warning)
         : (AppColors.accentSoft, AppColors.primary);
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: SaleNumberLabel(
-                  saleNumber: order.saleNumber,
-                  channel: order.clientChannel,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+    return InkWell(
+      key: Key('customer_order_${order.id}'),
+      onTap: () => context.push(AppRoutes.saleDetail(order.id)),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: SaleNumberLabel(
+                    saleNumber: order.saleNumber,
+                    channel: order.clientChannel,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: statusBg,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  statusLabel,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: statusFg,
-                    fontWeight: FontWeight.w700,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: statusFg,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          if (_shortDate(order.createdAt).isNotEmpty)
-            Text(
-              _shortDate(order.createdAt),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: AppColors.mutedForeground,
-              ),
+              ],
             ),
-          if (order.notes != null && order.notes!.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(order.notes!, maxLines: 1, overflow: TextOverflow.ellipsis),
-          ] else if (order.itemCount != null) ...[
-            const SizedBox(height: 4),
-            Text('${order.itemCount} items'),
-          ],
-          const SizedBox(height: 8),
-          Row(
-            children: [
+            if (_shortDate(order.createdAt).isNotEmpty)
               Text(
-                unpaid ? 'Unpaid Balance' : 'Total',
+                _shortDate(order.createdAt),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: AppColors.mutedForeground,
                 ),
               ),
-              const Spacer(),
-              Text(
-                _kes(unpaid ? order.debtAmount : order.total),
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: unpaid ? AppColors.destructive : null,
-                ),
-              ),
+            if (order.notes != null && order.notes!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(order.notes!, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ] else if (order.itemCount != null) ...[
+              const SizedBox(height: 4),
+              Text('${order.itemCount} items'),
             ],
-          ),
-        ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  unpaid ? 'Unpaid Balance' : 'Total',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  _kes(unpaid ? order.debtAmount : order.total),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: unpaid ? AppColors.destructive : null,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+

@@ -1,3 +1,4 @@
+import '../../customers/domain/debt_management.dart';
 import '../../sales_history/domain/payment_status.dart';
 
 double? _asDouble(Object? v) {
@@ -17,6 +18,7 @@ class DailySummary {
     required this.partialOrdersCount,
     required this.totalDebtCollected,
     required this.totalCollected,
+    this.debtSettlementCount = 0,
   });
 
   final double totalSales;
@@ -27,6 +29,7 @@ class DailySummary {
   final int debtOrdersCount;
   final int partialOrdersCount;
   final double totalDebtCollected;
+  final int debtSettlementCount;
   final double totalCollected;
 
   factory DailySummary.fromJson(Map<String, dynamic> json) {
@@ -39,6 +42,7 @@ class DailySummary {
       debtOrdersCount: (json['debt_orders_count'] as num?)?.toInt() ?? 0,
       partialOrdersCount: (json['partial_orders_count'] as num?)?.toInt() ?? 0,
       totalDebtCollected: _asDouble(json['total_debt_collected']) ?? 0,
+      debtSettlementCount: (json['debt_settlement_count'] as num?)?.toInt() ?? 0,
       totalCollected: _asDouble(json['total_collected']) ?? 0,
     );
   }
@@ -112,11 +116,13 @@ class DailySalesReport {
     required this.date,
     required this.summary,
     required this.orders,
+    this.collections = const DebtCollections(),
   });
 
   final String date;
   final DailySummary summary;
   final List<DailyOrder> orders;
+  final DebtCollections collections;
 
   factory DailySalesReport.fromJson(Map<String, dynamic> json) {
     final orders = <DailyOrder>[];
@@ -129,6 +135,7 @@ class DailySalesReport {
       }
     }
     final summaryRaw = json['summary'];
+    final collectionsRaw = json['collections'];
     return DailySalesReport(
       date: (json['date'] ?? '').toString(),
       summary: DailySummary.fromJson(
@@ -137,6 +144,9 @@ class DailySalesReport {
             : const <String, dynamic>{},
       ),
       orders: orders,
+      collections: collectionsRaw is Map
+          ? DebtCollections.fromJson(Map<String, dynamic>.from(collectionsRaw))
+          : const DebtCollections(),
     );
   }
 }

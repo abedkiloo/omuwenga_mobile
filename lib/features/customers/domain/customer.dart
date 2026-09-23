@@ -271,12 +271,14 @@ class CustomerLedgerEntry {
     required this.amount,
     this.reference = '',
     this.notes = '',
+    this.saleId,
     this.saleNumber,
     this.createdAt,
     this.previousDebt,
     this.newDebt,
     this.paymentAmount,
     this.debtAdded,
+    this.balanceAfter,
   });
 
   final int id;
@@ -285,16 +287,32 @@ class CustomerLedgerEntry {
   final double amount;
   final String reference;
   final String notes;
+  final int? saleId;
   final String? saleNumber;
   final String? createdAt;
   final double? previousDebt;
   final double? newDebt;
   final double? paymentAmount;
   final double? debtAdded;
+  final double? balanceAfter;
 
   bool get isSettlement =>
       sourceType == 'debt_settlement' ||
       (transactionType == 'credit' && sourceType != 'debt');
+
+  bool get stillOwes {
+    if (newDebt != null) return newDebt! > 0.005;
+    if (balanceAfter != null) return balanceAfter! < -0.005;
+    return false;
+  }
+
+  double get remainingDebt {
+    if (newDebt != null && newDebt! > 0.005) return newDebt!;
+    if (balanceAfter != null && balanceAfter! < -0.005) {
+      return -balanceAfter!;
+    }
+    return 0;
+  }
 
   factory CustomerLedgerEntry.fromJson(Map<String, dynamic> json) {
     return CustomerLedgerEntry(
@@ -304,12 +322,14 @@ class CustomerLedgerEntry {
       amount: _asDouble(json['amount']) ?? 0,
       reference: (json['reference'] ?? '').toString(),
       notes: (json['notes'] ?? '').toString(),
+      saleId: (json['sale'] as num?)?.toInt(),
       saleNumber: json['sale_number']?.toString(),
       createdAt: json['created_at']?.toString(),
       previousDebt: _asDouble(json['previous_debt']),
       newDebt: _asDouble(json['new_debt']),
       paymentAmount: _asDouble(json['payment_amount']),
       debtAdded: _asDouble(json['debt_added']),
+      balanceAfter: _asDouble(json['balance_after']),
     );
   }
 }

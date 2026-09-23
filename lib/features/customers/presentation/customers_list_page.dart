@@ -413,7 +413,8 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                 _expandedId = expanded ? null : c.id;
               });
             },
-            onOpenLedger: () => context.push(AppRoutes.customerDetail(c.id)),
+            onOpenLedger: () =>
+                context.push(AppRoutes.customerDetail(c.id, tab: 'ledger')),
             onSettle: () => context.push(AppRoutes.customerSettle(c.id)),
             onStartPos: () {
               ref

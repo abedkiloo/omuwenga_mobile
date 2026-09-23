@@ -19,6 +19,7 @@ class DailySalesState {
     this.report,
     this.loading = false,
     this.error,
+    this.showingCollections = false,
   }) : day = day ?? DateTime.now();
 
   final DateTime day;
@@ -27,6 +28,7 @@ class DailySalesState {
   final DailySalesReport? report;
   final bool loading;
   final String? error;
+  final bool showingCollections;
 
   String get dateApi => formatApiDate(day);
 
@@ -40,6 +42,7 @@ class DailySalesState {
     String? error,
     bool clearError = false,
     bool clearReport = false,
+    bool? showingCollections,
   }) {
     return DailySalesState(
       day: day ?? this.day,
@@ -50,6 +53,7 @@ class DailySalesState {
       report: clearReport ? null : (report ?? this.report),
       loading: loading ?? this.loading,
       error: clearError ? null : (error ?? this.error),
+      showingCollections: showingCollections ?? this.showingCollections,
     );
   }
 }
@@ -97,8 +101,13 @@ class DailySalesController extends StateNotifier<DailySalesState> {
     state = state.copyWith(
       statusFilter: status,
       clearStatusFilter: status == null,
+      showingCollections: false,
     );
     await load();
+  }
+
+  void showCollectionsTab() {
+    state = state.copyWith(showingCollections: true);
   }
 
   Future<void> setSearch(String search) async {

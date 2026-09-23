@@ -127,6 +127,10 @@ void main() {
     await daily.load();
     await daily.setStatusFilter(PaymentStatusDisplay.debt);
     await daily.setStatusFilter(null);
+    daily.showCollectionsTab();
+    expect(daily.state.showingCollections, isTrue);
+    await daily.setStatusFilter(null);
+    expect(daily.state.showingCollections, isFalse);
     expect(daily.state.statusFilter, isNull);
 
     final day = CustomerDayController(api);

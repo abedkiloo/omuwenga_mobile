@@ -72,15 +72,27 @@ List<Override> _overrides({
   ];
 }
 
-Map<String, dynamic> _detailJson({required String wallet}) => {
+Map<String, dynamic> _detailJson({
+  required String wallet,
+  List<Map<String, dynamic>>? orders,
+  List<Map<String, dynamic>>? ledger,
+}) => {
   'customer': {
     'id': 7,
     'name': 'Debtor',
     'wallet_balance': wallet,
     'phone': '0700',
   },
-  'standing_summary': {'standing': double.parse(wallet) < 0 ? 'debt' : 'good'},
-  'orders': <dynamic>[],
+  'standing_summary': {
+    'standing': double.parse(wallet) < 0 ? 'debt' : 'good',
+    'wallet_debt': double.parse(wallet) < 0
+        ? (-double.parse(wallet)).toStringAsFixed(2)
+        : '0.00',
+    'total_debt_incurred': double.parse(wallet) < 0 ? '120.00' : '0.00',
+    'total_debt_collected': double.parse(wallet) < 0 ? '40.00' : '0.00',
+  },
+  'orders': orders ?? <dynamic>[],
+  'ledger': ledger ?? <dynamic>[],
 };
 
 void main() {
@@ -185,5 +197,83 @@ void main() {
       ),
       isFalse,
     );
+  });
+
+  testWidgets('customer tabs switch orders and remaining debt', (tester) async {
+    final client = MockClient((request) async {
+      if (request.url.path.contains('/detail/')) {
+        return http.Response(
+          jsonEncode({
+            'customer': {
+              'id': 7,
+              'name': 'Debtor',
+              'wallet_balance': '-80.00',
+              'phone': '0700',
+            },
+            'standing_summary': {
+              'standing': 'debt',
+              'wallet_debt': '80.00',
+              'total_debt_incurred': '120.00',
+              'total_debt_collected': '40.00',
+            },
+            'orders': [
+              {
+                'id': 9,
+                'sale_number': 'S-9',
+                'total': '80.00',
+                'debt_amount': '80.00',
+                'payment_status': 'debt',
+                'created_at': '2026-09-01T00:00:00Z',
+              },
+            ],
+            'ledger': [
+              {
+                'id': 1,
+                'transaction_type': 'credit',
+                'source_type': 'debt_settlement',
+                'amount': '40.00',
+                'payment_amount': '40.00',
+                'new_debt': '40.00',
+                'balance_after': '-40.00',
+                'created_at': '2026-09-02T00:00:00Z',
+              },
+            ],
+          }),
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _overrides(
+          session: _session(canUpdate: true),
+          httpClient: client,
+        ),
+        child: const MaterialApp(
+          home: CustomerDetailPage(customerId: 7, initialTab: 'orders'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Customer Ledger'), findsOneWidget);
+    expect(find.text('Debtor'), findsOneWidget);
+    expect(find.text('Orders'), findsOneWidget);
+    expect(find.byKey(const Key('customer_tab_orders')), findsOneWidget);
+    expect(find.byKey(const Key('customer_order_9')), findsOneWidget);
+
+    await tester.ensureVisible(
+      find.byKey(const Key('customer_stat_collected')),
+    );
+    await tester.tap(find.byKey(const Key('customer_stat_collected')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('customer_ledger_1')), findsOneWidget);
+    expect(find.byKey(const Key('customer_ledger_remaining_1')), findsOneWidget);
+    expect(find.textContaining('Remains'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('customer_tab_orders')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('customer_order_9')), findsOneWidget);
   });
 }
