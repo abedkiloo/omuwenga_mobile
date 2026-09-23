@@ -180,10 +180,10 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Select duka', style: theme.textTheme.titleMedium),
+              Text('Select customer', style: theme.textTheme.titleMedium),
               const SizedBox(height: 4),
               Text(
-                'Search existing shops or register a new one.',
+                'Search existing customers or register a new one.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: AppColors.mutedForeground,
                 ),
@@ -233,7 +233,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
                               const SizedBox(height: 8),
                               Text(
                                 query.isEmpty
-                                    ? 'No dukas yet'
+                                    ? 'No customers yet'
                                     : 'No match for “$query”',
                                 textAlign: TextAlign.center,
                                 style: theme.textTheme.titleSmall,
@@ -312,7 +312,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
                 CbPrimaryButton(
                   key: const Key('pos_customer_create'),
                   label: query.isEmpty
-                      ? 'Register new duka'
+                      ? 'Register new customer'
                       : (query.length > 22
                             ? 'Register “${query.substring(0, 20)}…”'
                             : 'Register “$query”'),

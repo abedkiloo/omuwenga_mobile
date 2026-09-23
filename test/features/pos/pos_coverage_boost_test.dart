@@ -743,6 +743,54 @@ void main() {
     final settings = await container.read(posSettingsProvider.future);
     expect(settings.enabledPaymentMethods, isNotEmpty);
   });
+
+  testWidgets('mpesa checkout offers prompt payment or an SMS code', (
+    tester,
+  ) async {
+    final client = MockClient((request) async {
+      if (request.url.path.contains('/products/') &&
+          !request.url.path.contains('/search/') &&
+          !request.url.path.contains('/variants/')) {
+        return http.Response(
+          jsonEncode({
+            'count': 1,
+            'next': null,
+            'previous': null,
+            'results': [
+              {
+                'id': 5,
+                'name': 'Nail',
+                'selling_price': 20,
+                'stock_quantity': 5,
+              },
+            ],
+          }),
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: overrides(client: client),
+        child: const MaterialApp(home: PosPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('pos_product_5')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pos_pay')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pos_method_mpesa')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('pos_mpesa_capture_prompt')), findsOneWidget);
+    expect(find.byKey(const Key('pos_mpesa_capture_code')), findsOneWidget);
+    expect(find.byKey(const Key('pos_mpesa_phone')), findsOneWidget);
+    expect(find.textContaining('Send M-Pesa prompt'), findsOneWidget);
+  });
 }
 
 class _FailingSettingsApi extends PosApi {

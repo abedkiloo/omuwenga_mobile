@@ -6,6 +6,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
 import '../../pos/domain/payment.dart';
+import '../../payments/domain/mpesa_capture.dart';
+import '../../payments/presentation/mpesa_capture.dart';
+import '../../payments/presentation/stk_wait_page.dart';
 import '../application/customers_controllers.dart';
 import '../domain/mpesa_receipt.dart';
 
@@ -23,7 +26,9 @@ class ReceivePaymentPage extends ConsumerStatefulWidget {
 class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
   late final TextEditingController _amount;
   late final TextEditingController _reference;
+  late final TextEditingController _phone;
   PosPaymentMethod _method = PosPaymentMethod.cash;
+  MpesaCaptureMode _mpesaCapture = MpesaCaptureMode.prompt;
   bool _initialized = false;
   bool _attempted = false;
 
@@ -32,20 +37,25 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     super.initState();
     _amount = TextEditingController();
     _reference = TextEditingController();
+    _phone = TextEditingController();
   }
 
   @override
   void dispose() {
     _amount.dispose();
     _reference.dispose();
+    _phone.dispose();
     super.dispose();
   }
 
-  void _seedAmount(double debt) {
+  void _seedAmount(double debt, {String? phone}) {
     if (_initialized) return;
     _initialized = true;
     if (debt > 0) {
       _amount.text = debt.toStringAsFixed(2);
+    }
+    if (phone != null && phone.trim().isNotEmpty) {
+      _phone.text = phone;
     }
   }
 
@@ -56,6 +66,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
 
   String? get _referenceError {
     if (_method == PosPaymentMethod.mpesa) {
+      if (_mpesaCapture == MpesaCaptureMode.prompt) return null;
       if (!_attempted && _reference.text.trim().isEmpty) return null;
       return mpesaReceiptValidationMessage(_reference.text);
     }
@@ -73,8 +84,13 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
 
     var reference = _reference.text;
     if (_method == PosPaymentMethod.mpesa) {
-      if (mpesaReceiptValidationMessage(reference) != null) return;
-      reference = normalizeMpesaReceipt(reference);
+      if (_mpesaCapture == MpesaCaptureMode.prompt) {
+        final phoneErr = phoneValidationMessage(_phone.text, required: true);
+        if (phoneErr != null) return;
+      } else {
+        if (mpesaReceiptValidationMessage(reference) != null) return;
+        reference = normalizeMpesaReceipt(reference);
+      }
     } else if (_method.requiresReference && reference.trim().isEmpty) {
       return;
     }
@@ -92,7 +108,10 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
         CommitSummaryRow(label: 'Customer', value: detail.name),
         CommitSummaryRow(label: 'Amount', value: _kes(amount), emphasis: true),
         CommitSummaryRow(label: 'Method', value: _method.label),
-        if (reference.trim().isNotEmpty)
+        if (_method == PosPaymentMethod.mpesa &&
+            _mpesaCapture == MpesaCaptureMode.prompt)
+          CommitSummaryRow(label: 'Phone', value: _phone.text.trim())
+        else if (reference.trim().isNotEmpty)
           CommitSummaryRow(
             label: _method == PosPaymentMethod.mpesa
                 ? 'M-Pesa code'
@@ -111,6 +130,22 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
       cancelKey: const Key('settle_commit_cancel'),
     );
     if (!confirmed || !mounted) return;
+
+    if (_method == PosPaymentMethod.mpesa &&
+        _mpesaCapture == MpesaCaptureMode.prompt) {
+      final paid = await showStkWaitSheet(
+        context,
+        amount: amount,
+        phone: _phone.text.trim(),
+        purpose: 'debt',
+        customerId: widget.customerId,
+        customerName: detail.name,
+      );
+      if (!mounted) return;
+      if (paid == null) return;
+      reference = paid.mpesaReceipt ?? paid.invoiceNumber;
+      if (reference.trim().isEmpty) return;
+    }
 
     final ok = await ref
         .read(customerDetailProvider(widget.customerId).notifier)
@@ -135,7 +170,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     final state = ref.watch(customerDetailProvider(widget.customerId));
     final detail = state.detail;
     if (detail != null) {
-      _seedAmount(detail.debtAmount);
+      _seedAmount(detail.debtAmount, phone: detail.phone);
     }
 
     return Scaffold(
@@ -211,34 +246,42 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                         key: Key('settle_method_${m.name}'),
                         label: Text(m.label),
                         selected: _method == m,
-                        onSelected: (_) => setState(() => _method = m),
+                        onSelected: (_) => setState(() {
+                          _method = m;
+                          if (m != PosPaymentMethod.mpesa) {
+                            _mpesaCapture = MpesaCaptureMode.prompt;
+                          }
+                        }),
                       ),
                   ],
                 ),
-                if (_method == PosPaymentMethod.mpesa ||
-                    _method.requiresReference) ...[
+                if (_method == PosPaymentMethod.mpesa) ...[
+                  const SizedBox(height: 16),
+                  MpesaCapture(
+                    mode: _mpesaCapture,
+                    onModeChanged: (next) => setState(() {
+                      _mpesaCapture = next;
+                      _attempted = false;
+                    }),
+                    phoneController: _phone,
+                    codeController: _reference,
+                    phoneFieldKey: const Key('settle_mpesa_phone'),
+                    codeFieldKey: const Key('settle_reference'),
+                    promptKey: const Key('settle_mpesa_capture_prompt'),
+                    codeModeKey: const Key('settle_mpesa_capture_code'),
+                    showErrors: _attempted,
+                    onChanged: () => setState(() {}),
+                  ),
+                ] else if (_method.requiresReference) ...[
                   const SizedBox(height: 16),
                   TextField(
                     key: const Key('settle_reference'),
                     controller: _reference,
                     textCapitalization: TextCapitalization.characters,
-                    inputFormatters: _method == PosPaymentMethod.mpesa
-                        ? [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'[A-Za-z0-9 ]'),
-                            ),
-                          ]
-                        : const [],
                     decoration: InputDecoration(
-                      labelText: _method == PosPaymentMethod.mpesa
-                          ? 'M-Pesa code *'
-                          : 'Payment reference',
-                      hintText: _method == PosPaymentMethod.mpesa
-                          ? kMpesaReceiptExample
-                          : 'Receipt or last 4 digits',
-                      helperText: _method == PosPaymentMethod.mpesa
-                          ? kMpesaReceiptHelper
-                          : 'Optional for cash; required for card.',
+                      labelText: 'Payment reference',
+                      hintText: 'Receipt or last 4 digits',
+                      helperText: 'Optional for cash; required for card.',
                       helperMaxLines: 3,
                       errorText: _referenceError,
                       errorMaxLines: 3,

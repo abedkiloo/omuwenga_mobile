@@ -8,6 +8,8 @@ import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../customers/presentation/customer_picker_sheet.dart';
 import '../../payments/presentation/stk_wait_page.dart';
+import '../../payments/domain/mpesa_capture.dart';
+import '../../payments/presentation/mpesa_capture.dart';
 import '../application/pos_controllers.dart';
 import '../application/product_catalog_paging.dart';
 import '../data/pos_api.dart';
@@ -1147,6 +1149,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
   late final TextEditingController _amount;
   late final TextEditingController _reference;
   late final TextEditingController _phone;
+  MpesaCaptureMode _mpesaCapture = MpesaCaptureMode.prompt;
+  bool _showMpesaErrors = false;
 
   @override
   void initState() {
@@ -1269,7 +1273,10 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
         (draft.method == PosPaymentMethod.cash ||
             draft.method == PosPaymentMethod.mpesa);
     final collectNow = kind != CheckoutKind.payLater;
-    final needsStk = isMpesa && collectNow;
+    final needsStk =
+        isMpesa && collectNow && _mpesaCapture == MpesaCaptureMode.prompt;
+    final needsMpesaCode =
+        isMpesa && collectNow && _mpesaCapture == MpesaCaptureMode.code;
 
     String confirmLabel;
     if (checkout.phase == CheckoutPhase.submitting) {
@@ -1280,7 +1287,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
       confirmLabel =
           'Pay ${_kes(amountPaid)} · debt ${_kes(balanceDue)}';
     } else if (needsStk) {
-      confirmLabel = 'Send STK Push';
+      confirmLabel =
+          'Send M-Pesa prompt · ${_kes(amountPaid > 0 ? amountPaid : cart.total)}';
     } else {
       confirmLabel = 'Confirm Payment - ${_kes(cart.total)}';
     }
@@ -1382,6 +1390,12 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                         !draft.paymentOnAccount) {
                       _setPaid(cart.total);
                       _pushDraft(method: m);
+                    }
+                    if (m != PosPaymentMethod.mpesa) {
+                      setState(() {
+                        _mpesaCapture = MpesaCaptureMode.prompt;
+                        _showMpesaErrors = false;
+                      });
                     }
                   },
                 ),
@@ -1510,30 +1524,35 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                 ),
               ),
             ],
-            if (needsStk) ...[
+            if (isMpesa) ...[
               const SizedBox(height: 8),
-              TextField(
-                key: const Key('pos_mpesa_phone'),
-                controller: _phone,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Target Safaricom line',
-                  hintText: kPhoneExample,
-                  helperText: kPhoneHelper,
-                  border: OutlineInputBorder(),
-                ),
+              MpesaCapture(
+                mode: _mpesaCapture,
+                onModeChanged: (next) => setState(() {
+                  _mpesaCapture = next;
+                  _showMpesaErrors = false;
+                }),
+                phoneController: _phone,
+                codeController: _reference,
+                phoneFieldKey: const Key('pos_mpesa_phone'),
+                codeFieldKey: const Key('pos_payment_ref'),
+                promptKey: const Key('pos_mpesa_capture_prompt'),
+                codeModeKey: const Key('pos_mpesa_capture_code'),
+                showErrors: _showMpesaErrors,
+                onChanged: () {
+                  _pushDraft();
+                  setState(() {});
+                },
               ),
-            ],
-            if (draft.method.requiresReference && collectNow) ...[
+            ] else if (draft.method.requiresReference && collectNow) ...[
               const SizedBox(height: 12),
               TextField(
                 key: const Key('pos_payment_ref'),
                 controller: _reference,
-                decoration: InputDecoration(
-                  labelText: isMpesa ? 'M-Pesa code' : 'Payment reference',
-                  hintText: isMpesa ? kMpesaReceiptExample : 'Card slip / receipt',
-                  helperText: isMpesa ? kMpesaReceiptHelper : null,
-                  border: const OutlineInputBorder(),
+                decoration: const InputDecoration(
+                  labelText: 'Payment reference',
+                  hintText: 'Card slip / receipt',
+                  border: OutlineInputBorder(),
                 ),
                 onChanged: (_) => _pushDraft(),
               ),
@@ -1561,6 +1580,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                         return;
                       }
                       if (needsStk) {
+                        setState(() => _showMpesaErrors = true);
                         final phoneErr = phoneValidationMessage(
                           phone,
                           required: true,
@@ -1572,12 +1592,24 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                           return;
                         }
                       }
+                      if (needsMpesaCode) {
+                        setState(() => _showMpesaErrors = true);
+                        final refErr = mpesaReceiptValidationMessage(
+                          _reference.text,
+                        );
+                        if (refErr != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(refErr)),
+                          );
+                          return;
+                        }
+                        _reference.text = normalizeMpesaReceipt(_reference.text);
+                        _pushDraft();
+                      }
                       if (draft.method.requiresReference && collectNow) {
-                        final refErr = isMpesa
-                            ? mpesaReceiptValidationMessage(_reference.text)
-                            : (_reference.text.trim().isEmpty
-                                ? 'Enter the payment reference, e.g. card slip number.'
-                                : null);
+                        final refErr = _reference.text.trim().isEmpty
+                            ? 'Enter the payment reference, e.g. card slip number.'
+                            : null;
                         if (refErr != null) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text(refErr)),
@@ -1607,6 +1639,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                           amount: stkAmount,
                           phone: phone,
                           purpose: 'pos',
+                          customerId: cart.customerId,
+                          customerName: cart.customerName ?? '',
                         );
                         if (paid == null || !context.mounted) return;
                         _reference.text =
@@ -1647,7 +1681,7 @@ class _TenderOptionCard extends StatelessWidget {
       PosPaymentMethod.other => Icons.account_balance_wallet_outlined,
     };
     final subtitle = switch (method) {
-      PosPaymentMethod.mpesa => 'Prompts PIN on customer handset',
+      PosPaymentMethod.mpesa => 'Prompt PIN or add the SMS code',
       PosPaymentMethod.cash => 'Direct till physical note collection',
       PosPaymentMethod.card => 'Card or bank transfer reference',
       PosPaymentMethod.other => 'Other recorded tender',
@@ -1677,20 +1711,11 @@ class _TenderOptionCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        method == PosPaymentMethod.mpesa
-                            ? 'M-PESA Express STK'
-                            : method.label,
+                        method.label,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      if (method == PosPaymentMethod.mpesa) ...[
-                        const SizedBox(width: 8),
-                        const CbStatusPill(
-                          label: 'Instant',
-                          variant: CbStatusPillVariant.success,
-                        ),
-                      ],
                     ],
                   ),
                   const SizedBox(height: 2),

@@ -496,7 +496,7 @@ void main() {
     await tester.tap(find.byKey(const Key('open_picker')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('pos_customer_search')), findsOneWidget);
-    expect(find.text('Select duka'), findsOneWidget);
+    expect(find.text('Select customer'), findsOneWidget);
     await tester.tap(find.byKey(const Key('pos_pick_customer_1')));
     await tester.pumpAndSettle();
 
@@ -544,6 +544,10 @@ void main() {
     expect(find.textContaining('up to 2 decimal places'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('settle_method_mpesa')));
+    await tester.pumpAndSettle();
+    expect(find.text('Prompt payment'), findsOneWidget);
+    expect(find.text('Add M-Pesa code'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('settle_mpesa_capture_code')));
     await tester.pumpAndSettle();
     expect(find.text('M-Pesa code *'), findsOneWidget);
     expect(find.textContaining('At least 4 letters and numbers'), findsOneWidget);
@@ -694,7 +698,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('customer_form_save')));
     await tester.pumpAndSettle();
-    expect(find.text('Duka name is required.'), findsOneWidget);
+    expect(find.text('Customer name is required.'), findsOneWidget);
     await tester.enterText(find.byKey(const Key('customer_form_name')), 'Fail');
     await tester.tap(find.byKey(const Key('customer_form_save')));
     await tester.pumpAndSettle();
@@ -825,12 +829,8 @@ void main() {
 
     await tester.tap(find.byKey(const Key('settle_method_mpesa')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('settle_reference')), 'QHX7K2L9M1');
-    await tester.tap(find.byKey(const Key('settle_confirm')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('settle_commit_confirm')));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('rejected'), findsWidgets);
+    expect(find.byKey(const Key('settle_mpesa_capture_prompt')), findsOneWidget);
+    expect(find.byKey(const Key('settle_mpesa_capture_code')), findsOneWidget);
   });
 
   testWidgets('picker failure empty create and create error', (tester) async {
@@ -924,7 +924,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('open_picker3')));
     await tester.pumpAndSettle();
-    expect(find.text('No dukas yet'), findsOneWidget);
+    expect(find.text('No customers yet'), findsOneWidget);
     await tester.enterText(
       find.byKey(const Key('pos_customer_search')),
       'Nope',
@@ -1031,7 +1031,7 @@ void main() {
     await tester.tap(find.byKey(const Key('open_picker_pages')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Select duka'), findsOneWidget);
+    expect(find.text('Select customer'), findsOneWidget);
     expect(find.text('Ann Alpha'), findsOneWidget);
     expect(find.text('Zed Zulu'), findsOneWidget);
   });

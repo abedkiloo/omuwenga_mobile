@@ -75,14 +75,14 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   Future<void> _save() async {
     final name = _name.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Duka name is required.');
+      setState(() => _error = 'Customer name is required.');
       _nameFocus.requestFocus();
       return;
     }
     if (name.length < 2) {
       setState(
         () => _error =
-            'Duka name must be at least 2 characters, e.g. Wambua Hardware',
+            'Customer name must be at least 2 characters, e.g. Wambua Hardware',
       );
       _nameFocus.requestFocus();
       return;
@@ -140,7 +140,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final title = _isEdit ? 'Edit duka' : 'New duka';
+    final title = _isEdit ? 'Edit customer' : 'New customer';
 
     if (_isEdit) {
       final state = ref.watch(customerDetailProvider(widget.customerId!));
@@ -188,7 +188,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isEdit ? 'Update shop details' : 'Register a shop',
+                        _isEdit ? 'Update customer details' : 'Register a customer',
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -222,7 +222,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
             decoration: const InputDecoration(
-              labelText: 'Duka name',
+              labelText: 'Customer name',
               hintText: 'e.g. Wambua Hardware',
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.storefront_outlined),
@@ -297,7 +297,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
         primaryKey: const Key('customer_form_save'),
         primaryLabel: _saving
             ? 'Saving…'
-            : (_isEdit ? 'Save changes' : 'Save duka'),
+            : (_isEdit ? 'Save changes' : 'Save customer'),
         onPrimary: _saving ? null : _save,
       ),
     );

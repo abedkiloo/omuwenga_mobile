@@ -508,7 +508,7 @@ class _CustomerStepState extends ConsumerState<_CustomerStep> {
           key: const Key('visit_add_customer'),
           onPressed: _addCustomer,
           icon: const Icon(Icons.person_add_outlined),
-          label: const Text('Add new duka'),
+          label: const Text('Add new customer'),
         ),
         if (_paging.loading) const LinearProgressIndicator(minHeight: 2),
         if (_paging.error != null)
