@@ -663,8 +663,8 @@ void main() {
       ),
     );
     expect(find.textContaining('waiting to sync'), findsOneWidget);
-    expect(find.text('1x A'), findsOneWidget);
-    expect(find.text('1x B'), findsOneWidget);
+    expect(find.text('A'), findsOneWidget);
+    expect(find.text('B'), findsOneWidget);
   });
 
   testWidgets('leave via GoRouter', (tester) async {

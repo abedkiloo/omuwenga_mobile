@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_bounded_sheet.dart';
 import '../../../design_system/states/async_states.dart';
 import '../domain/cart.dart';
 import '../domain/product_variant.dart';
@@ -113,13 +115,10 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottom),
-      child: SafeArea(
-        child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * 0.7,
-          child: Column(
+    return SafeArea(
+      child: CbSheetFrame(
+        heightFactor: 0.7,
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
@@ -193,7 +192,6 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
                 ),
               ),
             ],
-          ),
         ),
       ),
     );

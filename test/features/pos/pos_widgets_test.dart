@@ -238,7 +238,10 @@ void main() {
       ),
     );
     expect(find.textContaining('Payment Confirmed'), findsOneWidget);
-    expect(find.textContaining('Served by: Amina'), findsOneWidget);
+    expect(find.text('Served by'), findsOneWidget);
+    expect(find.text('Amina'), findsOneWidget);
+    expect(find.text('TOTAL'), findsOneWidget);
+    expect(find.text('COMPLETEBYTE POS'), findsOneWidget);
     expect(find.textContaining('You can reach us via'), findsOneWidget);
     expect(find.textContaining('0718515142'), findsOneWidget);
     expect(find.byKey(const Key('receipt_total')), findsOneWidget);

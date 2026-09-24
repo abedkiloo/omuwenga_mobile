@@ -42,11 +42,31 @@ class DailyNotesApi {
   }
 
   Future<Result<DailyNote>> createNote(Map<String, dynamic> body) {
-    return _postMap('daily-notes/notes/', body, DailyNote.fromJson, 'Save note failed');
+    return _sendMap('daily-notes/notes/', body, DailyNote.fromJson, 'Save note failed');
+  }
+
+  Future<Result<DailyNote>> updateNote(int id, Map<String, dynamic> body) {
+    return _sendMap(
+      'daily-notes/notes/$id/',
+      body,
+      DailyNote.fromJson,
+      'Update note failed',
+      put: true,
+    );
+  }
+
+  Future<Result<DailyNote>> moveNote(int id, String column) {
+    return _sendMap(
+      'daily-notes/notes/$id/',
+      {'board_column': column},
+      DailyNote.fromJson,
+      'Move note failed',
+      patch: true,
+    );
   }
 
   Future<Result<DailyNote>> toggleNote(int id) {
-    return _postMap(
+    return _sendMap(
       'daily-notes/notes/$id/toggle-done/',
       const {},
       DailyNote.fromJson,
@@ -55,7 +75,7 @@ class DailyNotesApi {
   }
 
   Future<Result<DailyTaskItem>> toggleTask(int id) {
-    return _postMap(
+    return _sendMap(
       'daily-notes/tasks/$id/toggle-done/',
       const {},
       DailyTaskItem.fromJson,
@@ -88,13 +108,19 @@ class DailyNotesApi {
     }
   }
 
-  Future<Result<T>> _postMap<T>(
+  Future<Result<T>> _sendMap<T>(
     String path,
     Map<String, dynamic> body,
     T Function(Map<String, dynamic>) parse,
-    String label,
-  ) async {
-    final res = await _client.post(path, body: body);
+    String label, {
+    bool put = false,
+    bool patch = false,
+  }) async {
+    final res = patch
+        ? await _client.patch(path, body: body)
+        : put
+            ? await _client.put(path, body: body)
+            : await _client.post(path, body: body);
     if (res.isFailure) return Failure((res as Failure).error);
     final response = res.getOrThrow();
     if (response.statusCode < 200 || response.statusCode >= 300) {

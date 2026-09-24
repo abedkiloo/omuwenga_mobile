@@ -250,7 +250,7 @@ class DeliveryRoute {
       }
     }
     return DeliveryRoute(
-      id: (json['id'] as num).toInt(),
+      id: (json['id'] as num?)?.toInt() ?? 0,
       routeDate: (json['route_date'] ?? '').toString(),
       stops: stops,
       nextStopId: (json['next_stop_id'] as num?)?.toInt(),
@@ -274,15 +274,25 @@ class DeliveryConfig {
   const DeliveryConfig({
     this.requirePodToComplete = true,
     this.allowOfflinePodQueue = true,
+    this.canViewHistory = false,
   });
 
   final bool requirePodToComplete;
   final bool allowOfflinePodQueue;
+  final bool canViewHistory;
 
   factory DeliveryConfig.fromJson(Map<String, dynamic> json) {
+    final maps = json['maps'];
     return DeliveryConfig(
       requirePodToComplete: json['require_pod_to_complete'] != false,
       allowOfflinePodQueue: json['allow_offline_pod_queue'] != false,
+      canViewHistory: maps is Map && maps['can_view_history'] == true,
     );
   }
+}
+
+String localIsoDate([DateTime? now]) {
+  final d = now ?? DateTime.now();
+  String pad(int n) => n.toString().padLeft(2, '0');
+  return '${d.year}-${pad(d.month)}-${pad(d.day)}';
 }

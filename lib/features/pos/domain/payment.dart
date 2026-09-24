@@ -43,6 +43,14 @@ class PosSettings {
       PosPaymentMethod.card,
     ],
     this.allowPartialPayment = true,
+    this.storeName = 'CompleteByte POS',
+    this.branchName = '',
+    this.address = '',
+    this.phone = '',
+    this.taxId = '',
+    this.receiptHeader = '',
+    this.receiptFooter = 'Thank you for your business!',
+    this.showSku = false,
   });
 
   final bool requireCustomer;
@@ -50,6 +58,14 @@ class PosSettings {
   final bool showDiscount;
   final List<PosPaymentMethod> enabledPaymentMethods;
   final bool allowPartialPayment;
+  final String storeName;
+  final String branchName;
+  final String address;
+  final String phone;
+  final String taxId;
+  final String receiptHeader;
+  final String receiptFooter;
+  final bool showSku;
 
   factory PosSettings.fromApis({
     Map<String, dynamic>? sales,
@@ -69,6 +85,11 @@ class PosSettings {
         if (parsed != null) methods.add(parsed);
       }
     }
+    String text(Object? value) => (value ?? '').toString().trim();
+    final storeName = text(
+      store?['store_name'] ?? store?['tenant_name'] ?? store?['name'],
+    );
+    final footer = text(store?['receipt_footer_text']);
     return PosSettings(
       requireCustomer: requireCustomer,
       showTax: showTax,
@@ -77,6 +98,14 @@ class PosSettings {
       enabledPaymentMethods: methods.isEmpty
           ? const PosSettings().enabledPaymentMethods
           : methods,
+      storeName: storeName.isEmpty ? 'CompleteByte POS' : storeName,
+      branchName: text(store?['branch_name']),
+      address: text(store?['address']),
+      phone: text(store?['phone']),
+      taxId: text(store?['tax_id'] ?? store?['kra_pin']),
+      receiptHeader: text(store?['receipt_header_text']),
+      receiptFooter: footer.isEmpty ? 'Thank you for your business!' : footer,
+      showSku: store?['receipt_show_sku'] == true,
     );
   }
 }

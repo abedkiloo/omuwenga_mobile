@@ -17,6 +17,7 @@ import '../domain/cart.dart';
 import '../domain/payment.dart';
 import '../../../core/validation/field_types.dart';
 import '../domain/pos_commit.dart';
+import 'receipt_layout.dart';
 import 'receipt_page.dart';
 import 'pos_cart_sheet.dart';
 import 'variant_picker_sheet.dart';
@@ -231,9 +232,18 @@ class _PosPageState extends ConsumerState<PosPage> {
         checkout.phase == CheckoutPhase.queued) {
       final receipt = checkout.receipt;
       if (receipt != null) {
+        final settings = ref
+            .read(posSettingsProvider)
+            .maybeWhen(
+              data: (value) => value,
+              orElse: () => const PosSettings(),
+            );
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => ReceiptPage(receipt: receipt),
+            builder: (_) => ReceiptPage(
+              receipt: receipt,
+              store: ReceiptStoreInfo.fromPosSettings(settings),
+            ),
           ),
         );
         ref.read(checkoutControllerProvider.notifier).resetPhase();
@@ -1173,7 +1183,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
 
   void _pushDraft({PosPaymentMethod? method, bool? paymentOnAccount}) {
     final checkout = ref.read(checkoutControllerProvider);
-    final amount = parseMoney(_amount.text, allowZero: true, required: false) ?? 0;
+    final amount =
+        parseMoney(_amount.text, allowZero: true, required: false) ?? 0;
     ref
         .read(checkoutControllerProvider.notifier)
         .setDraft(
@@ -1215,9 +1226,9 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     };
     final body = switch (kind) {
       CheckoutKind.payLater =>
-        'No payment is collected now. The full ${ _kes(cart.total) } will be added to ${cart.customerName ?? 'the customer'}\'s account.',
+        'No payment is collected now. The full ${_kes(cart.total)} will be added to ${cart.customerName ?? 'the customer'}\'s account.',
       CheckoutKind.partial =>
-        'Collected ${ _kes(paid) } now. Balance ${ _kes(balance) } will be added to ${cart.customerName ?? 'the customer'}\'s account.',
+        'Collected ${_kes(paid)} now. Balance ${_kes(balance)} will be added to ${cart.customerName ?? 'the customer'}\'s account.',
       CheckoutKind.full =>
         'Confirm payment of ${_kes(cart.total)} and record this sale. '
             'Choose Back to sale if you need to change any item first.',
@@ -1253,7 +1264,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
         parseMoney(_amount.text, allowZero: true, required: false) ?? 0;
     final amountFormatError = () {
       final text = _amount.text.trim();
-      final accountMode = draft.paymentOnAccount &&
+      final accountMode =
+          draft.paymentOnAccount &&
           settings.allowPartialPayment &&
           cart.customerId != null;
       if (text.isEmpty) {
@@ -1284,8 +1296,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     } else if (kind == CheckoutKind.payLater) {
       confirmLabel = 'Pay later — ${_kes(cart.total)}';
     } else if (kind == CheckoutKind.partial) {
-      confirmLabel =
-          'Pay ${_kes(amountPaid)} · debt ${_kes(balanceDue)}';
+      confirmLabel = 'Pay ${_kes(amountPaid)} · debt ${_kes(balanceDue)}';
     } else if (needsStk) {
       confirmLabel =
           'Send M-Pesa prompt · ${_kes(amountPaid > 0 ? amountPaid : cart.total)}';
@@ -1586,9 +1597,9 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                           required: true,
                         );
                         if (phoneErr != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(phoneErr)),
-                          );
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(phoneErr)));
                           return;
                         }
                       }
@@ -1598,12 +1609,14 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                           _reference.text,
                         );
                         if (refErr != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(refErr)),
-                          );
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(refErr)));
                           return;
                         }
-                        _reference.text = normalizeMpesaReceipt(_reference.text);
+                        _reference.text = normalizeMpesaReceipt(
+                          _reference.text,
+                        );
                         _pushDraft();
                       }
                       if (draft.method.requiresReference && collectNow) {
@@ -1611,9 +1624,9 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                             ? 'Enter the payment reference, e.g. card slip number.'
                             : null;
                         if (refErr != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(refErr)),
-                          );
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text(refErr)));
                           return;
                         }
                       }

@@ -110,6 +110,21 @@ void main() {
         }).requirePodToComplete,
         isFalse,
       );
+      expect(
+        DeliveryConfig.fromJson({
+          'maps': {'can_view_history': true},
+        }).canViewHistory,
+        isTrue,
+      );
+      expect(localIsoDate(DateTime(2026, 9, 24)), '2026-09-24');
+      expect(
+        DeliveryRoute.fromJson({
+          'id': null,
+          'route_date': '2026-09-20',
+          'stops': [],
+        }).id,
+        0,
+      );
       final line = DeliveryLine.fromJson({
         'product_id': 1,
         'product_name': 'A',
@@ -133,6 +148,9 @@ void main() {
             );
           }
           if (request.url.path.contains('/routes/today')) {
+            return http.Response(jsonEncode(_routeJson([_stopJson()])), 200);
+          }
+          if (request.url.path.contains('/lookup')) {
             return http.Response(jsonEncode(_routeJson([_stopJson()])), 200);
           }
           if (request.url.path.contains('/arrive')) {
@@ -178,6 +196,10 @@ void main() {
       expect((await api.config()).getOrThrow().requirePodToComplete, isTrue);
       expect((await api.todayRoute()).getOrThrow().stops.single.id, 1);
       expect(
+        (await api.lookupRoute(agentId: 3, date: '2026-09-20')).getOrThrow().id,
+        1,
+      );
+      expect(
         (await api.arrive(1)).getOrThrow().status,
         DeliveryStopStatus.arrived,
       );
@@ -217,6 +239,7 @@ void main() {
       final bad = _api(MockClient((_) async => http.Response('x', 500)));
       expect((await bad.config()).isFailure, isTrue);
       expect((await bad.todayRoute()).isFailure, isTrue);
+      expect((await bad.lookupRoute(agentId: 3)).isFailure, isTrue);
       expect((await bad.arrive(1)).isFailure, isTrue);
       expect(DeliveryApiException('e').toString(), 'e');
     });

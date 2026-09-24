@@ -75,13 +75,19 @@ class DeliveryRouteController extends StateNotifier<DeliveryRouteState> {
   final OutboxStore _outbox;
   final ClientUuid _ids;
 
-  Future<void> load() async {
+  Future<void> load({int? agentId, String? date}) async {
     state = state.copyWith(loading: true, clearError: true);
     final cfg = await _api.config();
     final config = cfg.getOrNull() ?? const DeliveryConfig();
-    final result = await _api.todayRoute(
-      requirePod: config.requirePodToComplete,
-    );
+    final result = agentId != null
+        ? await _api.lookupRoute(
+            agentId: agentId,
+            date: date,
+            requirePod: config.requirePodToComplete,
+          )
+        : await _api.todayRoute(
+            requirePod: config.requirePodToComplete,
+          );
     result.when(
       success: (route) =>
           state = state.copyWith(route: route, config: config, loading: false),

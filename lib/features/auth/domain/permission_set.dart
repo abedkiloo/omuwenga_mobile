@@ -73,6 +73,7 @@ class PermissionSet {
   bool get canAccessDelivery =>
       has('delivery', 'view') || has('delivery', 'update');
   bool get canUpdateDelivery => has('delivery', 'update');
+  bool get canViewDeliveryHistory => has('delivery', 'history');
 
   bool get canViewDailyNotes => has('daily_notes', 'view');
   bool get canCreateDailyNotes => has('daily_notes', 'create');

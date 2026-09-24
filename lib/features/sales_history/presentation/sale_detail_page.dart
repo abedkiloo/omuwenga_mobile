@@ -8,7 +8,11 @@ import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../pos/data/pos_api.dart';
 import '../../pos/domain/cart.dart';
+import '../../pos/application/pos_controllers.dart';
 import '../../pos/presentation/receipt_document.dart';
+import '../../pos/presentation/receipt_layout.dart';
+import '../../pos/presentation/receipt_share.dart';
+import '../../pos/domain/payment.dart';
 import '../application/sales_history_controllers.dart';
 import '../domain/payment_status.dart';
 import '../domain/sale.dart';
@@ -34,7 +38,11 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
         ref.watch(authControllerProvider).session?.permissions.canRefundSales ??
         false;
     final canRollbackPerm =
-        ref.watch(authControllerProvider).session?.permissions.canRollbackSales ??
+        ref
+            .watch(authControllerProvider)
+            .session
+            ?.permissions
+            .canRollbackSales ??
         false;
     final detail = state.detail;
     final showRefund =
@@ -72,9 +80,15 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
               exporting: _exporting,
               showRefund: showRefund,
               showRollback: showRollback,
-              onPrint: () =>
-                  _export(() => downloadOrPrintReceipt(_receipt(detail))),
-              onShare: () => _export(() => shareReceipt(_receipt(detail))),
+              onPrint: () => _export(
+                () => downloadOrPrintReceipt(
+                  _receipt(detail),
+                  store: _storeInfo(),
+                ),
+              ),
+              onShare: () => _export(
+                () => shareReceipt(_receipt(detail), store: _storeInfo()),
+              ),
               onRefund: () => _openRefund(context, ref),
               onRollback: () => _openRollback(context, ref),
             ),
@@ -178,6 +192,13 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
     }
   }
 
+  ReceiptStoreInfo _storeInfo() {
+    final settings = ref
+        .read(posSettingsProvider)
+        .maybeWhen(data: (value) => value, orElse: () => const PosSettings());
+    return ReceiptStoreInfo.fromPosSettings(settings);
+  }
+
   SaleReceipt _receipt(SaleDetail detail) {
     return SaleReceipt(
       id: detail.id,
@@ -194,6 +215,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
             sku: line.sku,
             unitPrice: line.unitPrice,
             quantity: line.quantity,
+            variantLabel: line.variantName,
           ),
       ],
       customerName: detail.customerName,
@@ -320,7 +342,8 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
         .rollback(reason: reason);
     if (!context.mounted) return;
     final stillOpen =
-        ref.read(saleDetailProvider(widget.saleId)).detail?.canRollback ?? false;
+        ref.read(saleDetailProvider(widget.saleId)).detail?.canRollback ??
+        false;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -410,7 +433,8 @@ class _AccountCard extends StatelessWidget {
                 child: _Meta(
                   label: 'SALE / ORDER REF',
                   value: '#${detail.saleNumber}',
-                  leading: detail.clientChannel == 'web' ||
+                  leading:
+                      detail.clientChannel == 'web' ||
                           detail.clientChannel == 'mobile'
                       ? ClientChannelIcon(channel: detail.clientChannel)
                       : null,

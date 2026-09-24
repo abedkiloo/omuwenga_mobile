@@ -105,6 +105,7 @@ class DailyNotesController extends StateNotifier<DailyNotesState> {
     bool isSticky = false,
     int? assignedTo,
     int? assignedRole,
+    bool assignToAll = false,
   }) async {
     if (content.trim().isEmpty) {
       state = state.copyWith(error: 'Write the note before saving');
@@ -112,6 +113,43 @@ class DailyNotesController extends StateNotifier<DailyNotesState> {
     }
     state = state.copyWith(acting: true, clearError: true);
     final result = await _api.createNote(
+      createNotePayload(
+        noteDate: state.date,
+        content: content,
+        title: title,
+        isSticky: isSticky,
+        assignedTo: assignedTo,
+        assignedRole: assignedRole,
+        assignToAll: assignToAll,
+      ),
+    );
+    if (result.isFailure) {
+      state = state.copyWith(
+        acting: false,
+        error: (result as Failure).error.toString(),
+      );
+      return false;
+    }
+    state = state.copyWith(acting: false);
+    await load();
+    return true;
+  }
+
+  Future<bool> updateNote({
+    required int id,
+    required String content,
+    String title = '',
+    bool isSticky = false,
+    int? assignedTo,
+    int? assignedRole,
+  }) async {
+    if (content.trim().isEmpty) {
+      state = state.copyWith(error: 'Write the note before saving');
+      return false;
+    }
+    state = state.copyWith(acting: true, clearError: true);
+    final result = await _api.updateNote(
+      id,
       createNotePayload(
         noteDate: state.date,
         content: content,
@@ -128,8 +166,35 @@ class DailyNotesController extends StateNotifier<DailyNotesState> {
       );
       return false;
     }
-    state = state.copyWith(acting: false);
-    await load();
+    final updated = result.getOrThrow();
+    state = state.copyWith(
+      acting: false,
+      notes: [
+        for (final n in state.notes)
+          if (n.id == id) updated else n,
+      ],
+    );
+    return true;
+  }
+
+  Future<bool> moveNote(int id, String column) async {
+    state = state.copyWith(acting: true, clearError: true);
+    final result = await _api.moveNote(id, column);
+    if (result.isFailure) {
+      state = state.copyWith(
+        acting: false,
+        error: (result as Failure).error.toString(),
+      );
+      return false;
+    }
+    final updated = result.getOrThrow();
+    state = state.copyWith(
+      acting: false,
+      notes: [
+        for (final n in state.notes)
+          if (n.id == id) updated else n,
+      ],
+    );
     return true;
   }
 
@@ -186,20 +251,31 @@ class StickyNotesGateState {
     this.notes = const [],
     this.loading = false,
     this.acting = false,
+    this.dismissedGeneral = false,
     this.error,
   });
 
   final List<DailyNote> notes;
   final bool loading;
   final bool acting;
+  final bool dismissedGeneral;
   final String? error;
 
-  bool get isBlocking => hasBlockingStickyNotes(notes);
+  List<DailyNote> get openNotes => unresolvedInboxNotes(notes);
+
+  bool get isBlocking => hasBlockingStickyNotes(openNotes);
+
+  bool get shouldShow {
+    if (openNotes.isEmpty) return false;
+    if (isBlocking) return true;
+    return !dismissedGeneral;
+  }
 
   StickyNotesGateState copyWith({
     List<DailyNote>? notes,
     bool? loading,
     bool? acting,
+    bool? dismissedGeneral,
     String? error,
     bool clearError = false,
   }) {
@@ -207,6 +283,7 @@ class StickyNotesGateState {
       notes: notes ?? this.notes,
       loading: loading ?? this.loading,
       acting: acting ?? this.acting,
+      dismissedGeneral: dismissedGeneral ?? this.dismissedGeneral,
       error: clearError ? null : (error ?? this.error),
     );
   }
@@ -231,6 +308,7 @@ class StickyNotesGateController extends StateNotifier<StickyNotesGateState> {
     state = state.copyWith(
       loading: false,
       notes: result.getOrThrow(),
+      dismissedGeneral: false,
       clearError: true,
     );
   }
@@ -251,9 +329,17 @@ class StickyNotesGateController extends StateNotifier<StickyNotesGateState> {
       notes: [
         for (final n in state.notes)
           if (n.id == id) updated else n,
-      ].where((n) => n.isSticky && !n.isDone).toList(),
+      ].where((n) => !n.isDone).toList(),
     );
     return true;
+  }
+
+  void dismissGeneral() {
+    state = state.copyWith(dismissedGeneral: true);
+  }
+
+  void reset() {
+    state = const StickyNotesGateState();
   }
 }
 

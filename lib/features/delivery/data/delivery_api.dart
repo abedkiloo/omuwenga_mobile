@@ -36,6 +36,28 @@ class DeliveryApi {
     }, 'Route failed');
   }
 
+  Future<Result<DeliveryRoute>> lookupRoute({
+    required int agentId,
+    String? date,
+    bool requirePod = true,
+  }) async {
+    final params = <String, String>{
+      'agent_id': '$agentId',
+      if (date != null && date.isNotEmpty) 'date': date,
+    };
+    final qs = params.entries
+        .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
+        .join('&');
+    final res = await _client.get('delivery/routes/lookup/?$qs');
+    return _parse(res, (data) {
+      if (data is! Map) throw DeliveryApiException('Invalid route');
+      return DeliveryRoute.fromJson(
+        Map<String, dynamic>.from(data),
+        requirePod: requirePod,
+      );
+    }, 'Route failed');
+  }
+
   Future<Result<DeliveryStop>> retrieve(
     int id, {
     bool requirePod = true,

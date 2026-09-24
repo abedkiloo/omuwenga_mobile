@@ -42,7 +42,7 @@ class UserProfileSnapshot {
       isSuperAdmin: json['is_super_admin'] == true,
       isAdmin: json['is_admin'] == true,
       isManager: json['is_manager'] == true,
-      roleDisplay: json['role_display']?.toString(),
+      roleDisplay: _roleDisplay(json),
       mustChangePassword:
           json['must_change_password'] == true ||
           json['mustChangePassword'] == true,
@@ -102,4 +102,36 @@ AppPersona resolvePersona({
     return AppPersona.deliveryDriver;
   }
   return AppPersona.cashier;
+}
+
+String? _roleDisplay(Map<String, dynamic> json) {
+  final display = json['role_display']?.toString();
+  if (display != null && display.trim().isNotEmpty) return display;
+  final custom = json['custom_role'];
+  if (custom is Map) {
+    final name = custom['name']?.toString();
+    if (name != null && name.trim().isNotEmpty) return name;
+  }
+  return display;
+}
+
+const _deliveryHistoryRoles = {
+  'Super Admin',
+  'Manager',
+  'Admin',
+  'Administrator',
+};
+
+/// Past routes: Super Admin / Manager / Admin, or `delivery.history`.
+bool sessionCanViewDeliveryHistory({
+  required PermissionSet permissions,
+  required UserProfileSnapshot profile,
+  bool isSuperuser = false,
+}) {
+  if (isSuperuser || profile.isSuperAdmin) return true;
+  if (permissions.canViewDeliveryHistory) return true;
+  final name = (profile.roleDisplay ?? '').trim();
+  if (_deliveryHistoryRoles.contains(name)) return true;
+  if (profile.role == 'super_admin' || profile.role == 'admin') return true;
+  return false;
 }

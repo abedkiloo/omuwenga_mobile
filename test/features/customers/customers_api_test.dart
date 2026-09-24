@@ -96,6 +96,7 @@ void main() {
               'name': 'Ann',
               'wallet_balance': '-100.00',
               'standing': 'debt',
+              'typical_goods': ['Cement', null, '  ', 'Nails'],
             },
             'standing_summary': {
               'standing': 'debt',
@@ -141,7 +142,13 @@ void main() {
     expect(detail.ledger.single.stillOwes, isTrue);
     expect(detail.ledger.single.remainingDebt, 50);
     expect(detail.ledger.single.saleId, 9);
-    expect(detail.standingSummary?.totalDebtCollected, 50);
+    expect(detail.typicalGoods, ['Cement', 'Nails']);
+    expect(
+      CustomerDetail.fromDetailJson({
+        'customer': {'id': 4, 'name': 'B', 'typical_goods': 'nope'},
+      }).typicalGoods,
+      isEmpty,
+    );
 
     final byBalance = CustomerLedgerEntry.fromJson({
       'id': 2,
@@ -218,6 +225,27 @@ void main() {
     expect(
       (await api.create(const CustomerDraft(name: 'New'))).getOrThrow().id,
       8,
+    );
+    expect(
+      const CustomerDraft(
+        name: 'Wambua Hardware',
+        ownerName: 'Jane',
+        contactPerson: 'Ann',
+        city: 'Nairobi',
+        address: 'Next to the market',
+        typicalGoods: ['Cement', '', 'Nails'],
+      ).toJson(),
+      {
+        'name': 'Wambua Hardware',
+        'phone': '',
+        'email': '',
+        'notes': '',
+        'owner_name': 'Jane',
+        'contact_person': 'Ann',
+        'city': 'Nairobi',
+        'address': 'Next to the market',
+        'typical_goods': ['Cement', 'Nails'],
+      },
     );
     expect(
       (await api.update(

@@ -8,6 +8,10 @@ import '../../../design_system/chrome/cb_status_pill.dart';
 import '../../../design_system/chrome/cb_sticky_action_bar.dart';
 import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../design_system/states/async_states.dart';
+import '../../auth/application/auth_controller.dart';
+import '../../auth/domain/persona.dart';
+import '../../dispatch/application/dispatch_controllers.dart';
+import '../../dispatch/data/dispatch_api.dart';
 import '../../payments/presentation/stk_wait_page.dart';
 import '../application/delivery_controllers.dart';
 import '../domain/delivery_route_geometry.dart';
@@ -29,46 +33,160 @@ class DeliveryRoutePage extends ConsumerStatefulWidget {
 }
 
 class _DeliveryRoutePageState extends ConsumerState<DeliveryRoutePage> {
+  String _date = localIsoDate();
+  int? _agentId;
+  List<DeliveryDriverOption> _drivers = const [];
+
+  bool get _canViewHistory {
+    final session = ref.read(authControllerProvider).session;
+    if (session == null) return false;
+    return sessionCanViewDeliveryHistory(
+      permissions: session.permissions,
+      profile: session.profile,
+      isSuperuser: session.user.isSuperuser,
+    );
+  }
+
+  bool get _isLiveOwnRoute {
+    if (_date != localIsoDate()) return false;
+    final session = ref.read(authControllerProvider).session;
+    if (_agentId != null && session != null && _agentId != session.user.id) {
+      return false;
+    }
+    return true;
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(deliveryRouteProvider.notifier).load();
+      _bootstrap();
     });
+  }
+
+  Future<void> _bootstrap() async {
+    if (!_canViewHistory) {
+      await ref.read(deliveryRouteProvider.notifier).load();
+      return;
+    }
+    final driversRes = await ref.read(dispatchApiProvider).drivers();
+    final drivers = driversRes.getOrNull() ?? const <DeliveryDriverOption>[];
+    final session = ref.read(authControllerProvider).session;
+    final agentId = drivers.isNotEmpty
+        ? drivers.first.id
+        : session?.user.id;
+    setState(() {
+      _drivers = drivers;
+      _agentId = agentId;
+      _date = localIsoDate();
+    });
+    await ref.read(deliveryRouteProvider.notifier).load(
+      agentId: agentId,
+      date: _date,
+    );
+  }
+
+  Future<void> _reload() {
+    return ref.read(deliveryRouteProvider.notifier).load(
+      agentId: _canViewHistory ? _agentId : null,
+      date: _canViewHistory ? _date : null,
+    );
+  }
+
+  Future<void> _pickDate() async {
+    final parsed = DateTime.tryParse(_date) ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: parsed,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _date = localIsoDate(picked));
+    await _reload();
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(deliveryRouteProvider);
     final next = state.nextStop;
+    final history = _canViewHistory;
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Today’s route')),
+      appBar: AppBar(
+        title: Text(history && _date != localIsoDate() ? 'Route · $_date' : 'Today’s route'),
+        bottom: history
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(56),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: Row(
+                    children: [
+                      TextButton(
+                        key: const Key('delivery_history_date'),
+                        onPressed: _pickDate,
+                        child: Text(_date),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: DropdownButton<int>(
+                          key: const Key('delivery_history_driver'),
+                          isExpanded: true,
+                          value: _drivers.any((d) => d.id == _agentId)
+                              ? _agentId
+                              : null,
+                          hint: const Text('Driver'),
+                          items: [
+                            for (final driver in _drivers)
+                              DropdownMenuItem(
+                                value: driver.id,
+                                child: Text(
+                                  driver.displayName.isEmpty
+                                      ? driver.username
+                                      : driver.displayName,
+                                ),
+                              ),
+                          ],
+                          onChanged: (id) async {
+                            if (id == null) return;
+                            setState(() => _agentId = id);
+                            await _reload();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : null,
+      ),
       body: state.loading && state.route == null
           ? const LoadingState(label: 'Loading route…')
           : state.error != null && state.route == null
           ? ErrorState(
               message: state.error!,
-              onRetry: () => ref.read(deliveryRouteProvider.notifier).load(),
+              onRetry: _reload,
             )
           : (state.route?.stops.isEmpty ?? true)
           ? EmptyState(
-              title: 'No stops today',
-              message: 'Assigned deliveries will appear here.',
+              title: history ? 'No deliveries' : 'No stops today',
+              message: history
+                  ? 'No stops for this driver on this date.'
+                  : 'Assigned deliveries will appear here.',
               primaryLabel: 'Refresh',
-              onPrimary: () => ref.read(deliveryRouteProvider.notifier).load(),
+              onPrimary: _reload,
             )
           : ListView(
               padding: const EdgeInsets.all(12),
               children: [
-                if (next != null)
+                if (next != null && _isLiveOwnRoute)
                   CbPrimaryButton(
                     key: const Key('delivery_next_stop'),
                     label: 'Next stop #${next.sequence}',
                     onPressed: () =>
                         context.push(AppRoutes.deliveryStop(next.id)),
                   ),
-                const SizedBox(height: 16),
+                if (next != null && _isLiveOwnRoute) const SizedBox(height: 16),
                 _TodayRouteMap(
                   route: state.route!,
                   onStopTap: (id) => context.push(AppRoutes.deliveryStop(id)),
@@ -89,9 +207,11 @@ class _DeliveryRoutePageState extends ConsumerState<DeliveryRoutePage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  stop.site.label.isEmpty
-                                      ? 'Stop ${stop.sequence}'
-                                      : stop.site.label,
+                                  (stop.customerName ?? '').isNotEmpty
+                                      ? stop.customerName!
+                                      : (stop.site.label.isEmpty
+                                          ? 'Stop ${stop.sequence}'
+                                          : stop.site.label),
                                   style: Theme.of(context).textTheme.titleSmall
                                       ?.copyWith(fontWeight: FontWeight.w600),
                                 ),

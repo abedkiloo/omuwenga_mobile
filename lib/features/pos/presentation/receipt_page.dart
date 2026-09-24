@@ -1,15 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
 import '../data/pos_api.dart';
-import 'receipt_document.dart';
+import 'receipt_layout.dart';
+import 'receipt_share.dart';
+import 'thermal_receipt.dart';
+
+typedef ReceiptExport =
+    Future<void> Function(SaleReceipt receipt, {ReceiptStoreInfo store});
 
 class ReceiptPage extends StatefulWidget {
-  const ReceiptPage({super.key, required this.receipt});
+  const ReceiptPage({
+    super.key,
+    required this.receipt,
+    this.store = const ReceiptStoreInfo(),
+    this.onPrint = downloadOrPrintReceipt,
+    this.onShare = shareReceipt,
+  });
 
   final SaleReceipt receipt;
+  final ReceiptStoreInfo store;
+  final ReceiptExport onPrint;
+  final ReceiptExport onShare;
 
   @override
   State<ReceiptPage> createState() => _ReceiptPageState();
@@ -19,6 +32,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
   bool _exporting = false;
 
   SaleReceipt get receipt => widget.receipt;
+  ReceiptStoreInfo get store => widget.store;
 
   Future<void> _runExport(Future<void> Function() action) async {
     if (_exporting || receipt.queuedOffline) return;
@@ -45,6 +59,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
     final bannerLabel = synced
         ? 'Synced to central ledger'
         : 'Pending sync — saved locally';
+    final customer = receipt.customerName?.trim() ?? '';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -130,13 +145,22 @@ class _ReceiptPageState extends State<ReceiptPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${_paymentLabel(receipt.paymentMethod)}'
+                              '${receiptPaymentLabel(receipt.paymentMethod)}'
                               '${receipt.paymentReference?.trim().isNotEmpty == true ? ' Ref: ${receipt.paymentReference}' : ''}'
                               '${receipt.queuedOffline ? ' · Queued offline' : ' · Recorded to sales ledger'}',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: AppColors.mutedForeground,
                               ),
                             ),
+                            if (customer.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                customer,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -146,209 +170,12 @@ class _ReceiptPageState extends State<ReceiptPage> {
                 const SizedBox(height: 8),
                 Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 248),
-                    child: CbSurfaceCard(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Icon(
-                        Icons.receipt_long_outlined,
-                        color: AppColors.primary,
-                        size: 16,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'COMPLETEBYTE POS',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: .4,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Sale ${receipt.saleNumber}'
-                        '${receipt.createdAt == null ? '' : ' · ${_dateTime(receipt.createdAt!)}'}',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.mutedForeground,
-                          fontSize: 11,
-                        ),
-                      ),
-                      if (receipt.customerName != null) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          'Customer: ${receipt.customerName!}',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.mutedForeground,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                      if (receipt.servedByName?.trim().isNotEmpty == true) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          'Served by: ${receipt.servedByName!.trim()}',
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.mutedForeground,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 8),
-                      const Divider(height: 1),
-                      const SizedBox(height: 4),
-                      for (final line in receipt.items) ...[
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 3),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${_quantity(line.quantity)}x ${line.displayName}',
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 12,
-                                          ),
-                                    ),
-                                    Text(
-                                      '@ ${_kes(line.unitPrice)} each',
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: AppColors.mutedForeground,
-                                            fontSize: 10,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                _kes(line.lineTotal),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      const Divider(height: 1, thickness: 1),
-                      const SizedBox(height: 4),
-                      _ReceiptAmountRow(
-                        label: 'Subtotal',
-                        amount:
-                            receipt.subtotal ??
-                            receipt.items.fold<double>(
-                              0,
-                              (sum, line) => sum + line.lineTotal,
-                            ),
-                      ),
-                      if (receipt.taxAmount > 0)
-                        _ReceiptAmountRow(
-                          label: 'Tax',
-                          amount: receipt.taxAmount,
-                        ),
-                      if (receipt.discountAmount > 0)
-                        _ReceiptAmountRow(
-                          label: 'Discount',
-                          amount: -receipt.discountAmount,
-                          color: AppColors.success,
-                        ),
-                      const SizedBox(height: 3),
-                      _ReceiptAmountRow(
-                        label: 'TOTAL NET',
-                        amount: receipt.total,
-                        total: true,
-                        amountKey: const Key('receipt_total'),
-                      ),
-                      const SizedBox(height: 6),
-                      const Divider(height: 1),
-                      const SizedBox(height: 4),
-                      _ReceiptDetailRow(
-                        label: 'Payment Method',
-                        value: _paymentLabel(receipt.paymentMethod),
-                      ),
-                      _ReceiptDetailRow(
-                        label: 'Amount Paid',
-                        value: _kes(receipt.amountPaid),
-                      ),
-                      if (receipt.change > 0)
-                        _ReceiptDetailRow(
-                          label: 'Change',
-                          value: _kes(receipt.change),
-                        ),
-                      if (receipt.paymentReference?.trim().isNotEmpty == true)
-                        _ReceiptDetailRow(
-                          label: 'Transaction ID',
-                          value: receipt.paymentReference!.trim(),
-                        ),
-                      const SizedBox(height: 8),
-                      const Divider(height: 1),
-                      const SizedBox(height: 8),
-                      _BarcodeBars(seed: receipt.saleNumber),
-                      const SizedBox(height: 3),
-                      Text(
-                        receipt.saleNumber,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          letterSpacing: 1.2,
-                          color: AppColors.mutedForeground,
-                          fontSize: 10,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        key: const Key('receipt_reach_us'),
-                        onPressed: () async {
-                          await Clipboard.setData(
-                            const ClipboardData(text: kReceiptReachUsPhone),
-                          );
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Copied $kReceiptReachUsPhone'),
-                            ),
-                          );
-                        },
-                        style: OutlinedButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
-                          ),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        icon: const Icon(Icons.phone_outlined, size: 14),
-                        label: const Text(
-                          kReceiptReachUsLabel,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Asante kwa biashara yako. Karibu tena.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontStyle: FontStyle.italic,
-                          color: AppColors.mutedForeground,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                    constraints: const BoxConstraints(maxWidth: 280),
+                    child: Material(
+                      color: Colors.white,
+                      elevation: 1,
+                      child: ThermalReceiptView(receipt: receipt, store: store),
+                    ),
                   ),
                 ),
                 if (receipt.queuedOffline) ...[
@@ -382,7 +209,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
                         onPressed: !synced || _exporting
                             ? null
                             : () => _runExport(
-                                () => downloadOrPrintReceipt(receipt),
+                                () => widget.onPrint(receipt, store: store),
                               ),
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primary,
@@ -408,7 +235,9 @@ class _ReceiptPageState extends State<ReceiptPage> {
                         key: const Key('receipt_share'),
                         onPressed: !synced || _exporting
                             ? null
-                            : () => _runExport(() => shareReceipt(receipt)),
+                            : () => _runExport(
+                                () => widget.onShare(receipt, store: store),
+                              ),
                         icon: const Icon(Icons.share_outlined, size: 18),
                         label: const Text('Share via WhatsApp / SMS'),
                       ),
@@ -427,132 +256,4 @@ class _ReceiptPageState extends State<ReceiptPage> {
       ),
     );
   }
-}
-
-class _ReceiptAmountRow extends StatelessWidget {
-  const _ReceiptAmountRow({
-    required this.label,
-    required this.amount,
-    this.total = false,
-    this.color,
-    this.amountKey,
-  });
-
-  final String label;
-  final double amount;
-  final bool total;
-  final Color? color;
-  final Key? amountKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = total
-        ? theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            color: color ?? AppColors.primary,
-          )
-        : theme.textTheme.bodySmall?.copyWith(
-            color: color ?? AppColors.mutedForeground,
-            fontWeight: FontWeight.w600,
-          );
-    final formatted = amount < 0 ? '-${_kes(-amount)}' : _kes(amount);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: style)),
-          Text(key: amountKey, formatted, style: style),
-        ],
-      ),
-    );
-  }
-}
-
-class _ReceiptDetailRow extends StatelessWidget {
-  const _ReceiptDetailRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodySmall;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: style?.copyWith(color: AppColors.mutedForeground),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: style?.copyWith(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BarcodeBars extends StatelessWidget {
-  const _BarcodeBars({required this.seed});
-
-  final String seed;
-
-  @override
-  Widget build(BuildContext context) {
-    final codes = seed.codeUnits.isEmpty ? const [1] : seed.codeUnits;
-    return SizedBox(
-      height: 22,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < 42; i++) ...[
-            Container(
-              width: 1 + (codes[i % codes.length] + i) % 3,
-              color: i.isEven ? AppColors.primary : Colors.transparent,
-            ),
-            const SizedBox(width: 1),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
-
-String _quantity(double value) {
-  if (value == value.roundToDouble()) return value.toInt().toString();
-  return value.toStringAsFixed(2);
-}
-
-String _paymentLabel(String raw) {
-  switch (raw.trim().toLowerCase()) {
-    case 'mpesa':
-      return 'M-PESA';
-    case 'cash':
-      return 'Cash';
-    case 'card':
-      return 'Card';
-    default:
-      return raw.isEmpty ? 'Payment' : raw;
-  }
-}
-
-String _dateTime(DateTime value) {
-  final local = value.toLocal();
-  String two(int n) => n.toString().padLeft(2, '0');
-  return '${local.year}-${two(local.month)}-${two(local.day)} '
-      '${two(local.hour)}:${two(local.minute)}';
 }

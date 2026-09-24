@@ -23,6 +23,7 @@ class StoreHomeDashboard extends ConsumerWidget {
     this.canDispatch = false,
     this.canPlaceVisitOrders = false,
     this.canAccessDelivery = false,
+    this.canViewDeliveryHistory = false,
   });
 
   final String title;
@@ -34,6 +35,7 @@ class StoreHomeDashboard extends ConsumerWidget {
   final bool canDispatch;
   final bool canPlaceVisitOrders;
   final bool canAccessDelivery;
+  final bool canViewDeliveryHistory;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -211,13 +213,15 @@ class StoreHomeDashboard extends ConsumerWidget {
         ),
       );
     }
-    if (canAccessDelivery) {
+    if (canAccessDelivery || canViewDeliveryHistory) {
       tools.add(
         _HomeTool(
           key: const Key('home_delivery'),
           icon: Icons.map_outlined,
-          label: 'Today’s route',
-          description: 'Deliver & collect',
+          label: canViewDeliveryHistory ? 'Routes' : 'Today’s route',
+          description: canViewDeliveryHistory
+              ? 'Today and past deliveries'
+              : 'Deliver & collect',
           onTap: () => context.go(AppRoutes.deliveryRoute),
         ),
       );

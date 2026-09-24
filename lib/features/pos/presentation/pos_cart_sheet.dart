@@ -40,15 +40,10 @@ class PosCartSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartControllerProvider);
     final theme = Theme.of(context);
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.88;
-
     return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(bottom: bottom),
-        child: SizedBox(
-          height: maxHeight,
-          child: Column(
+      child: CbSheetFrame(
+        heightFactor: 0.88,
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
@@ -203,7 +198,6 @@ class PosCartSheet extends ConsumerWidget {
                 ),
               ),
             ],
-          ),
         ),
       ),
     );

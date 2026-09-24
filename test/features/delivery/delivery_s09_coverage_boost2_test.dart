@@ -4,10 +4,16 @@ import 'package:completebyte_pos_mobile/app/routes.dart';
 import 'package:completebyte_pos_mobile/core/env/app_env.dart';
 import 'package:completebyte_pos_mobile/core/network/api_client.dart';
 import 'package:completebyte_pos_mobile/core/secure/token_store.dart';
+import 'package:completebyte_pos_mobile/features/auth/application/auth_controller.dart';
+import 'package:completebyte_pos_mobile/features/auth/domain/auth_session.dart';
+import 'package:completebyte_pos_mobile/features/auth/domain/permission_set.dart';
+import 'package:completebyte_pos_mobile/features/auth/domain/persona.dart';
 import 'package:completebyte_pos_mobile/features/delivery/application/delivery_controllers.dart';
 import 'package:completebyte_pos_mobile/features/delivery/data/delivery_api.dart';
 import 'package:completebyte_pos_mobile/features/delivery/domain/delivery_stop.dart';
 import 'package:completebyte_pos_mobile/features/delivery/presentation/delivery_route_page.dart';
+import 'package:completebyte_pos_mobile/features/dispatch/application/dispatch_controllers.dart';
+import 'package:completebyte_pos_mobile/features/dispatch/data/dispatch_api.dart';
 import 'package:completebyte_pos_mobile/sync/application/connectivity_monitor.dart';
 import 'package:completebyte_pos_mobile/sync/data/memory_outbox_store.dart';
 import 'package:completebyte_pos_mobile/sync/providers.dart';
@@ -132,6 +138,42 @@ void main() {
     expect(fail.state.error, isNotNull);
     // _act with null route
     expect(await fail.arrive(9), isFalse);
+  });
+
+  test('controller loads staff lookup for a past date', () async {
+    final client = MockClient((request) async {
+      if (request.url.path.contains('/config')) {
+        return http.Response(
+          jsonEncode({
+            'require_pod_to_complete': true,
+            'allow_offline_pod_queue': true,
+            'maps': {'can_view_history': true},
+          }),
+          200,
+        );
+      }
+      if (request.url.path.contains('/lookup')) {
+        return http.Response(
+          jsonEncode({
+            'id': 2,
+            'route_date': '2026-09-20',
+            'stops': [stop(status: 'completed')],
+            'next_stop_id': null,
+          }),
+          200,
+        );
+      }
+      return http.Response('{}', 404);
+    });
+    final c = DeliveryRouteController(
+      api(client),
+      FakeConnectivityMonitor(online: true),
+      MemoryOutboxStore(),
+    );
+    await c.load(agentId: 3, date: '2026-09-20');
+    expect(c.state.route!.id, 2);
+    expect(c.state.config.canViewHistory, isTrue);
+    expect(c.state.route!.stops.single.status, DeliveryStopStatus.completed);
   });
 
   testWidgets('route error retry and stop flows', (tester) async {
@@ -455,5 +497,88 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('del_complete')));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('manager history picker loads another driver', (tester) async {
+    tester.view.physicalSize = const Size(400, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final session = AuthSession(
+      user: const AuthUser(id: 9, username: 'mgr'),
+      profile: const UserProfileSnapshot(
+        role: 'manager',
+        isSuperAdmin: false,
+        isAdmin: false,
+        isManager: true,
+        roleDisplay: 'Manager',
+      ),
+      permissions: PermissionSet(const [
+        PermissionGrant(module: 'delivery', action: 'view'),
+        PermissionGrant(module: 'delivery', action: 'history'),
+        PermissionGrant(module: 'dispatch', action: 'view'),
+      ]),
+      persona: AppPersona.manager,
+    );
+    final mock = MockClient((request) async {
+      if (request.url.path.contains('/drivers')) {
+        return http.Response(
+          jsonEncode([
+            {'id': 3, 'display_name': 'Jane Driver'},
+            {'id': 4, 'display_name': 'Ken Driver'},
+          ]),
+          200,
+        );
+      }
+      if (request.url.path.contains('/config')) {
+        return http.Response(
+          jsonEncode({
+            'require_pod_to_complete': true,
+            'allow_offline_pod_queue': true,
+            'maps': {'can_view_history': true},
+          }),
+          200,
+        );
+      }
+      if (request.url.path.contains('/lookup')) {
+        return http.Response(
+          jsonEncode({
+            'id': 8,
+            'route_date': '2026-09-24',
+            'stops': [stop(id: 11, status: 'completed', label: 'Yesterday')],
+            'next_stop_id': null,
+          }),
+          200,
+        );
+      }
+      return http.Response('{}', 404);
+    });
+    final client = ApiClient(
+      env: const AppEnv(
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://example.com/api',
+      ),
+      tokenStore: InMemoryTokenStore(),
+      httpClient: mock,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authSessionSeedProvider.overrideWithValue(session),
+          deliveryApiProvider.overrideWithValue(DeliveryApi(client)),
+          dispatchApiProvider.overrideWithValue(DispatchApi(client)),
+          connectivityMonitorProvider.overrideWithValue(
+            FakeConnectivityMonitor(online: true),
+          ),
+          outboxStoreProvider.overrideWithValue(MemoryOutboxStore()),
+        ],
+        child: const MaterialApp(home: DeliveryRoutePage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('delivery_history_date')), findsOneWidget);
+    expect(find.byKey(const Key('delivery_history_driver')), findsOneWidget);
+    expect(find.byKey(const Key('delivery_route_stop_11')), findsOneWidget);
+    expect(find.byKey(const Key('delivery_next_stop')), findsNothing);
   });
 }

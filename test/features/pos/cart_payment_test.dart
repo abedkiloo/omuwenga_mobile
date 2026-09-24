@@ -117,8 +117,30 @@ void main() {
         PosPaymentMethod.cash,
         PosPaymentMethod.mpesa,
       ]);
+      expect(settings.storeName, 'CompleteByte POS');
+      expect(settings.receiptFooter, 'Thank you for your business!');
+      expect(settings.showSku, isFalse);
       expect(PosPaymentMethod.card.label, 'Card');
       expect(PosPaymentMethodX.tryParse('other'), PosPaymentMethod.other);
+
+      final branded = PosSettings.fromApis(
+        store: {
+          'store_name': 'Test Duka',
+          'branch_name': 'Westlands',
+          'address': 'Nairobi',
+          'phone': '0700',
+          'tax_id': 'P051',
+          'receipt_header_text': 'Welcome',
+          'receipt_footer_text': 'Karibu tena',
+          'receipt_show_sku': true,
+          'enabled_payment_methods': ['cash'],
+        },
+      );
+      expect(branded.storeName, 'Test Duka');
+      expect(branded.branchName, 'Westlands');
+      expect(branded.receiptHeader, 'Welcome');
+      expect(branded.receiptFooter, 'Karibu tena');
+      expect(branded.showSku, isTrue);
     });
 
     test('partial and pay-later need customer account', () {
@@ -149,10 +171,7 @@ void main() {
         ),
         isTrue,
       );
-      expect(
-        checkoutKind(total: 150, paid: 50),
-        CheckoutKind.partial,
-      );
+      expect(checkoutKind(total: 150, paid: 50), CheckoutKind.partial);
       expect(
         canSubmitCheckout(
           cart: cart,

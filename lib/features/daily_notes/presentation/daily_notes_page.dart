@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_bounded_sheet.dart';
 import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../design_system/states/async_states.dart';
 import '../../auth/application/auth_controller.dart';
@@ -17,6 +18,13 @@ bool _canAssign(AuthSession? session) {
     isAdmin: session.profile.isAdmin,
     isSuperAdmin: session.profile.isSuperAdmin,
     isSuperuser: session.user.isSuperuser,
+  );
+}
+
+Future<bool?> _showBoundedSheet(BuildContext context, Widget child) {
+  return showCbBoundedSheet<bool>(
+    context: context,
+    builder: (_) => child,
   );
 }
 
@@ -39,13 +47,22 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
     });
   }
 
-  Future<void> _addNote() async {
-    final created = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const _AddNoteSheet(),
+  Future<void> _addNote({bool everyone = false}) async {
+    final created = await _showBoundedSheet(
+      context,
+      _NoteEditorSheet(assignEveryone: everyone),
     );
     if (created == true && mounted) {
+      await ref.read(dailyNotesProvider.notifier).load();
+    }
+  }
+
+  Future<void> _openNote(DailyNote note) async {
+    final changed = await _showBoundedSheet(
+      context,
+      _NoteDetailSheet(note: note),
+    );
+    if (changed == true && mounted) {
       await ref.read(dailyNotesProvider.notifier).load();
     }
   }
@@ -75,7 +92,7 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
       floatingActionButton: (session?.permissions.canCreateDailyNotes ?? true)
           ? FloatingActionButton(
               key: const Key('daily_notes_add'),
-              onPressed: _addNote,
+              onPressed: () => _addNote(),
               child: const Icon(Icons.add),
             )
           : null,
@@ -88,6 +105,19 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
                   state.date,
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
+                if (canAssign)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: OutlinedButton.icon(
+                        key: const Key('daily_notes_everyone'),
+                        onPressed: () => _addNote(everyone: true),
+                        icon: const Icon(Icons.groups_outlined),
+                        label: const Text('Note for everyone'),
+                      ),
+                    ),
+                  ),
                 if (state.error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
@@ -126,64 +156,25 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
                   ),
                 const SizedBox(height: 16),
                 Text('Notes', style: Theme.of(context).textTheme.titleSmall),
-                if (state.notes.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('No notes for this day.'),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 420,
+                  child: ListView(
+                    key: const Key('daily_notes_board'),
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      for (final column in kNoteBoardColumns)
+                        _NoteBoardColumn(
+                          columnId: column.id,
+                          title: column.title,
+                          notes: notesForBoardColumn(state.notes, column.id),
+                          userId: userId,
+                          viewAll: viewAll,
+                          onOpen: _openNote,
+                        ),
+                    ],
                   ),
-                for (final note in state.notes)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: CbSurfaceCard(
-                      key: Key('daily_note_${note.id}'),
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Checkbox(
-                            key: Key('daily_note_tick_${note.id}'),
-                            value: note.isDone,
-                            onChanged:
-                                canToggleDailyNote(note, userId, viewAll: viewAll)
-                                ? (_) => ref
-                                      .read(dailyNotesProvider.notifier)
-                                      .toggleNote(note.id)
-                                : null,
-                          ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  note.title.isEmpty ? note.kindLabel : note.title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    decoration: note.isDone
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                  ),
-                                ),
-                                Text(
-                                  note.content,
-                                  maxLines: 8,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  _noteMeta(note),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(color: AppColors.mutedForeground),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                ),
               ],
             ),
     );
@@ -192,29 +183,255 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
 
 String _noteMeta(DailyNote note) {
   final audience = noteAudienceLabel(note);
-  final kind = note.isSticky ? 'Sticky' : 'General';
-  if (audience.isEmpty) return kind;
-  return '$kind · $audience';
+  if (audience.isEmpty) return note.kindLabel;
+  return '${note.kindLabel} · $audience';
 }
 
-class _AddNoteSheet extends ConsumerStatefulWidget {
-  const _AddNoteSheet();
+class _NoteBoardColumn extends ConsumerWidget {
+  const _NoteBoardColumn({
+    required this.columnId,
+    required this.title,
+    required this.notes,
+    required this.userId,
+    required this.viewAll,
+    required this.onOpen,
+  });
+
+  final String columnId;
+  final String title;
+  final List<DailyNote> notes;
+  final int? userId;
+  final bool viewAll;
+  final ValueChanged<DailyNote> onOpen;
 
   @override
-  ConsumerState<_AddNoteSheet> createState() => _AddNoteSheetState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      key: Key('daily_notes_column_$columnId'),
+      width: 280,
+      margin: const EdgeInsets.only(right: 10),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: AppColors.mutedForeground.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 2, 4, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+                Text(
+                  '${notes.length}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.mutedForeground,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: notes.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No notes here',
+                      style: TextStyle(color: AppColors.mutedForeground),
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: notes.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final note = notes[index];
+                      return CbSurfaceCard(
+                        key: Key('daily_note_${note.id}'),
+                        padding: EdgeInsets.zero,
+                        child: InkWell(
+                          key: Key('daily_note_open_${note.id}'),
+                          onTap: () => onOpen(note),
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Checkbox(
+                                      key: Key('daily_note_tick_${note.id}'),
+                                      value: note.isDone,
+                                      onChanged: canToggleDailyNote(
+                                        note,
+                                        userId,
+                                        viewAll: viewAll,
+                                      )
+                                          ? (_) => ref
+                                              .read(dailyNotesProvider.notifier)
+                                              .toggleNote(note.id)
+                                          : null,
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        note.title.isEmpty
+                                            ? note.kindLabel
+                                            : note.title,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          decoration: note.isDone
+                                              ? TextDecoration.lineThrough
+                                              : null,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  note.content,
+                                  maxLines: 6,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  children: [
+                                    for (final column in kNoteBoardColumns)
+                                      if (column.id != columnId)
+                                        ActionChip(
+                                          key: Key(
+                                            'daily_note_move_${note.id}_${column.id}',
+                                          ),
+                                          label: Text(column.title),
+                                          visualDensity: VisualDensity.compact,
+                                          onPressed: () => ref
+                                              .read(dailyNotesProvider.notifier)
+                                              .moveNote(note.id, column.id),
+                                        ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
-  final _content = TextEditingController();
-  final _title = TextEditingController();
-  bool _sticky = false;
-  bool _assignToRole = false;
+class _NoteDetailSheet extends ConsumerWidget {
+  const _NoteDetailSheet({required this.note});
+
+  final DailyNote note;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(authControllerProvider).session;
+    final userId = session?.user.id;
+    final viewAll = session?.permissions.canViewAllDailyNotes ?? false;
+    final canToggle = canToggleDailyNote(note, userId, viewAll: viewAll);
+    final canEdit = canEditDailyNote(note, userId);
+    final acting = ref.watch(dailyNotesProvider).acting;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      children: [
+        Text(
+          note.title.isEmpty ? note.kindLabel : note.title,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        Text(note.content),
+        const SizedBox(height: 8),
+        Text(
+          _noteMeta(note),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.mutedForeground,
+              ),
+        ),
+        const SizedBox(height: 16),
+        if (canToggle)
+          CbPrimaryButton(
+            key: const Key('daily_note_complete'),
+            label: note.isDone ? 'Mark as open' : 'Complete note',
+            onPressed: acting
+                ? null
+                : () async {
+                    final ok = await ref
+                        .read(dailyNotesProvider.notifier)
+                        .toggleNote(note.id);
+                    if (ok && context.mounted) {
+                      Navigator.pop(context, true);
+                    }
+                  },
+          ),
+        if (canEdit)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: OutlinedButton(
+              key: const Key('daily_note_edit'),
+              onPressed: () async {
+                final updated = await showCbBoundedSheet<bool>(
+                  context: context,
+                  builder: (_) => _NoteEditorSheet(existing: note),
+                );
+                if (updated == true && context.mounted) {
+                  Navigator.pop(context, true);
+                }
+              },
+              child: const Text('Edit note'),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _NoteEditorSheet extends ConsumerStatefulWidget {
+  const _NoteEditorSheet({this.existing, this.assignEveryone = false});
+
+  final DailyNote? existing;
+  final bool assignEveryone;
+
+  @override
+  ConsumerState<_NoteEditorSheet> createState() => _NoteEditorSheetState();
+}
+
+class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
+  late final TextEditingController _content;
+  late final TextEditingController _title;
+  late bool _sticky;
+  late bool _assignToRole;
+  late bool _assignToAll;
   int? _assignedTo;
   int? _assignedRole;
 
   @override
   void initState() {
     super.initState();
+    final existing = widget.existing;
+    _content = TextEditingController(text: existing?.content ?? '');
+    _title = TextEditingController(text: existing?.title ?? '');
+    _sticky = existing?.isSticky ?? false;
+    _assignToAll = widget.assignEveryone && existing == null;
+    _assignToRole = !_assignToAll && (existing?.assignedRoleId != null);
+    _assignedTo = existing?.assignedToId;
+    _assignedRole = existing?.assignedRoleId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_canAssign(ref.read(authControllerProvider).session)) {
         ref.read(dailyNotesProvider.notifier).loadAssignees();
@@ -233,16 +450,19 @@ class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
   Widget build(BuildContext context) {
     final state = ref.watch(dailyNotesProvider);
     final canAssign = _canAssign(ref.watch(authControllerProvider).session);
-    final padding = MediaQuery.viewInsetsOf(context).bottom;
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + padding),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    final editing = widget.existing != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             children: [
-              Text('Add note', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                editing ? 'Edit note' : 'Add note',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               TextField(
                 key: const Key('daily_note_title'),
                 controller: _title,
@@ -251,13 +471,13 @@ class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
               TextField(
                 key: const Key('daily_note_content'),
                 controller: _content,
-                maxLines: 4,
+                maxLines: 6,
                 decoration: const InputDecoration(labelText: 'Note'),
               ),
               SwitchListTile(
                 key: const Key('daily_note_sticky'),
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Sticky note'),
+                title: const Text('Must tick'),
                 subtitle: const Text(
                   'Blocks the person (or everyone in the role) until they tick it.',
                 ),
@@ -275,9 +495,10 @@ class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
                     ChoiceChip(
                       key: const Key('daily_note_assign_person'),
                       label: const Text('Someone'),
-                      selected: !_assignToRole,
+                      selected: !_assignToRole && !_assignToAll,
                       onSelected: (_) => setState(() {
                         _assignToRole = false;
+                        _assignToAll = false;
                         _assignedRole = null;
                       }),
                     ),
@@ -287,12 +508,32 @@ class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
                       selected: _assignToRole,
                       onSelected: (_) => setState(() {
                         _assignToRole = true;
+                        _assignToAll = false;
                         _assignedTo = null;
                       }),
                     ),
+                    if (!editing)
+                      ChoiceChip(
+                        key: const Key('daily_note_assign_everyone'),
+                        label: const Text('Everyone'),
+                        selected: _assignToAll,
+                        onSelected: (_) => setState(() {
+                          _assignToAll = true;
+                          _assignToRole = false;
+                          _assignedTo = null;
+                          _assignedRole = null;
+                        }),
+                      ),
                   ],
                 ),
-                if (!_assignToRole)
+                if (!editing && _assignToAll)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Sends a copy to every active staff member in the system.',
+                    ),
+                  )
+                else if (!editing && !_assignToRole)
                   DropdownButtonFormField<int?>(
                     key: ValueKey('daily_note_assignee_${state.staff.length}'),
                     initialValue: _assignedTo,
@@ -317,7 +558,7 @@ class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
                     ],
                     onChanged: (v) => setState(() => _assignedTo = v),
                   )
-                else
+                else if (!editing)
                   DropdownButtonFormField<int?>(
                     key: ValueKey('daily_note_role_${state.roles.length}'),
                     initialValue: _assignedRole,
@@ -348,14 +589,14 @@ class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: Text(
-                      'Sticky notes need a person or a role so someone can tick them.',
+                      'Must-tick notes need a person, a role, or everyone so someone can tick them.',
                     ),
                   ),
               ] else if (_sticky)
                 const Padding(
                   padding: EdgeInsets.only(top: 4),
                   child: Text(
-                    'This sticky note will block you until you tick it.',
+                    'This note will block you until you tick it.',
                   ),
                 ),
               if (state.error != null)
@@ -366,28 +607,49 @@ class _AddNoteSheetState extends ConsumerState<_AddNoteSheet> {
                     style: const TextStyle(color: AppColors.destructive),
                   ),
                 ),
-              const SizedBox(height: 12),
-              CbPrimaryButton(
-                key: const Key('daily_note_save'),
-                label: 'Save note',
-                onPressed: state.acting
-                    ? null
-                    : () async {
-                        final ok =
-                            await ref.read(dailyNotesProvider.notifier).createNote(
-                                  content: _content.text,
-                                  title: _title.text,
-                                  isSticky: _sticky,
-                                  assignedTo: _assignToRole ? null : _assignedTo,
-                                  assignedRole: _assignToRole ? _assignedRole : null,
-                                );
-                        if (ok && context.mounted) Navigator.pop(context, true);
-                      },
-              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
-      ),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: CbPrimaryButton(
+              key: const Key('daily_note_save'),
+              label: editing ? 'Update note' : 'Save note',
+              onPressed: state.acting
+                  ? null
+                  : () async {
+                      final notifier = ref.read(dailyNotesProvider.notifier);
+                      final ok = editing
+                          ? await notifier.updateNote(
+                              id: widget.existing!.id,
+                              content: _content.text,
+                              title: _title.text,
+                              isSticky: _sticky,
+                              assignedTo: _assignToRole ? null : _assignedTo,
+                              assignedRole:
+                                  _assignToRole ? _assignedRole : null,
+                            )
+                          : await notifier.createNote(
+                              content: _content.text,
+                              title: _title.text,
+                              isSticky: _sticky,
+                              assignedTo: _assignToRole || _assignToAll
+                                  ? null
+                                  : _assignedTo,
+                              assignedRole:
+                                  _assignToRole ? _assignedRole : null,
+                              assignToAll: _assignToAll,
+                            );
+                      if (ok && context.mounted) {
+                        Navigator.pop(context, true);
+                      }
+                    },
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

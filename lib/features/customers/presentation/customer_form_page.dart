@@ -33,10 +33,14 @@ class CustomerFormPage extends ConsumerStatefulWidget {
 
 class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   final _name = TextEditingController();
+  final _ownerName = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
-  final _notes = TextEditingController();
+  final _city = TextEditingController();
+  final _landmark = TextEditingController();
+  final _contactPerson = TextEditingController();
   final _nameFocus = FocusNode();
+  final List<TextEditingController> _goods = [TextEditingController()];
   bool _saving = false;
   String? _error;
   bool _seeded = false;
@@ -56,33 +60,71 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   @override
   void dispose() {
     _name.dispose();
+    _ownerName.dispose();
     _phone.dispose();
     _email.dispose();
-    _notes.dispose();
+    _city.dispose();
+    _landmark.dispose();
+    _contactPerson.dispose();
     _nameFocus.dispose();
+    for (final controller in _goods) {
+      controller.dispose();
+    }
     super.dispose();
+  }
+
+  void _replaceGoods(List<String> values) {
+    for (final controller in _goods) {
+      controller.dispose();
+    }
+    _goods
+      ..clear()
+      ..addAll(
+        values.isEmpty
+            ? [TextEditingController()]
+            : [for (final value in values) TextEditingController(text: value)],
+      );
+  }
+
+  void _addGood() {
+    setState(() => _goods.add(TextEditingController()));
+  }
+
+  void _removeGood(int index) {
+    setState(() {
+      if (_goods.length == 1) {
+        _goods.first.clear();
+        return;
+      }
+      _goods[index].dispose();
+      _goods.removeAt(index);
+    });
   }
 
   void _seedFromDetail(CustomerDetail detail) {
     if (_seeded) return;
     _seeded = true;
     _name.text = detail.name;
+    _ownerName.text = detail.ownerName ?? '';
     _phone.text = detail.phone ?? '';
     _email.text = detail.email ?? '';
-    _notes.text = detail.notes ?? '';
+    _city.text = detail.city ?? '';
+    _landmark.text = detail.address ?? '';
+    _contactPerson.text = detail.contactPerson ?? '';
+    _replaceGoods(detail.typicalGoods);
   }
 
   Future<void> _save() async {
     final name = _name.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = 'Customer name is required.');
+      setState(() => _error = 'Duka name is required.');
       _nameFocus.requestFocus();
       return;
     }
     if (name.length < 2) {
       setState(
         () => _error =
-            'Customer name must be at least 2 characters, e.g. Wambua Hardware',
+            'Duka name must be at least 2 characters, e.g. Wambua Hardware',
       );
       _nameFocus.requestFocus();
       return;
@@ -103,9 +145,13 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     });
     final draft = CustomerDraft(
       name: name,
+      ownerName: _ownerName.text,
       phone: _phone.text,
       email: _email.text,
-      notes: _notes.text,
+      city: _city.text,
+      address: _landmark.text,
+      contactPerson: _contactPerson.text,
+      typicalGoods: [for (final c in _goods) c.text],
     );
     final api = ref.read(customersApiProvider);
     final result = _isEdit
@@ -137,10 +183,35 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     );
   }
 
+  Widget _sectionLabel(ThemeData theme, String label, {String? hint}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text.rich(
+        TextSpan(
+          text: label,
+          style: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.mutedForeground,
+          ),
+          children: [
+            if (hint != null)
+              TextSpan(
+                text: ' $hint',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final title = _isEdit ? 'Edit customer' : 'New customer';
+    final title = _isEdit ? 'Edit duka' : 'Register duka';
 
     if (_isEdit) {
       final state = ref.watch(customerDetailProvider(widget.customerId!));
@@ -155,16 +226,16 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
       }
     }
 
-    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: true,
       appBar: AppBar(title: Text(title)),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(12, 12, 12, 24 + keyboard),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           CbSurfaceCard(
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -188,14 +259,14 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _isEdit ? 'Update customer details' : 'Register a customer',
+                        _isEdit ? 'Update duka details' : 'Register a duka',
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Name is required. Phone helps you find them later on visits and POS.',
+                        'Duka name is required. Phone helps you find them later on visits and POS.',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppColors.mutedForeground,
                         ),
@@ -207,14 +278,15 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            'Basics',
-            style: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: AppColors.mutedForeground,
+          if (_error != null) ...[
+            Text(
+              _error!,
+              key: const Key('customer_form_error'),
+              style: const TextStyle(color: AppColors.destructive),
             ),
-          ),
-          const SizedBox(height: 8),
+            const SizedBox(height: 12),
+          ],
+          _sectionLabel(theme, 'Basics'),
           TextField(
             key: const Key('customer_form_name'),
             controller: _name,
@@ -222,10 +294,23 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
             decoration: const InputDecoration(
-              labelText: 'Customer name',
+              labelText: 'Duka name',
               hintText: 'e.g. Wambua Hardware',
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.storefront_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('customer_form_owner_name'),
+            controller: _ownerName,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: "Owner's name",
+              hintText: 'e.g. Jane Wambua',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.person_outline),
             ),
           ),
           const SizedBox(height: 12),
@@ -245,14 +330,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             ),
           ),
           const SizedBox(height: 20),
-          Text(
-            'Optional',
-            style: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: AppColors.mutedForeground,
-            ),
-          ),
-          const SizedBox(height: 8),
+          _sectionLabel(theme, 'Other details', hint: '(optional)'),
           TextField(
             key: const Key('customer_form_email'),
             controller: _email,
@@ -267,37 +345,88 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
           ),
           const SizedBox(height: 12),
           TextField(
-            key: const Key('customer_form_notes'),
-            controller: _notes,
-            maxLines: 3,
-            minLines: 2,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) {
-              if (!_saving) _save();
-            },
+            key: const Key('customer_form_city'),
+            controller: _city,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
             decoration: const InputDecoration(
-              labelText: 'Notes',
-              hintText: 'Landmark, contact person, credit terms…',
-              alignLabelWithHint: true,
+              labelText: 'City',
+              hintText: 'e.g. Nairobi',
               border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.notes_outlined),
+              prefixIcon: Icon(Icons.location_city_outlined),
             ),
           ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              _error!,
-              key: const Key('customer_form_error'),
-              style: const TextStyle(color: AppColors.destructive),
+          const SizedBox(height: 20),
+          _sectionLabel(theme, 'Notes'),
+          TextField(
+            key: const Key('customer_form_landmark'),
+            controller: _landmark,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'Landmark',
+              hintText: 'Next to the market, opposite the bus stage…',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.place_outlined),
             ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('customer_form_contact_person'),
+            controller: _contactPerson,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(
+              labelText: 'Contact person',
+              hintText: 'Who to ask for, if not the owner',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.badge_outlined),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _sectionLabel(theme, 'Goods they buy most', hint: '(optional)'),
+          for (var i = 0; i < _goods.length; i++) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: Key('customer_form_good_$i'),
+                    controller: _goods[i],
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Good',
+                      hintText: 'e.g. Cement 50kg',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  key: Key('customer_form_remove_good_$i'),
+                  onPressed: () => _removeGood(i),
+                  icon: const Icon(Icons.remove_circle_outline),
+                  tooltip: 'Remove good',
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
           ],
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              key: const Key('customer_form_add_good'),
+              onPressed: _addGood,
+              icon: const Icon(Icons.add),
+              label: const Text('Add another good'),
+            ),
+          ),
         ],
+        ),
       ),
       bottomNavigationBar: CbStickyActionBar(
         primaryKey: const Key('customer_form_save'),
         primaryLabel: _saving
             ? 'Saving…'
-            : (_isEdit ? 'Save changes' : 'Save customer'),
+            : (_isEdit ? 'Save changes' : 'Save duka'),
         onPrimary: _saving ? null : _save,
       ),
     );

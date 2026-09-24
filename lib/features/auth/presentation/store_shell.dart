@@ -185,6 +185,12 @@ class PersonaHomePage extends ConsumerWidget {
       return const Center(child: Text('Signed out'));
     }
 
+    final canHistory = sessionCanViewDeliveryHistory(
+      permissions: session.permissions,
+      profile: session.profile,
+      isSuperuser: session.user.isSuperuser,
+    );
+
     switch (session.persona) {
       case AppPersona.cashier:
         return StoreHomeDashboard(
@@ -197,6 +203,7 @@ class PersonaHomePage extends ConsumerWidget {
           canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
           canDispatch: session.permissions.canDispatch,
           canAccessDelivery: session.permissions.canAccessDelivery,
+          canViewDeliveryHistory: canHistory,
         );
       case AppPersona.dispatcher:
         return _DispatcherHome(name: session.user.displayName);
@@ -216,6 +223,7 @@ class PersonaHomePage extends ConsumerWidget {
           canDispatch: session.permissions.canDispatch,
           canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
           canAccessDelivery: session.permissions.canAccessDelivery,
+          canViewDeliveryHistory: canHistory,
         );
     }
   }
@@ -467,6 +475,12 @@ class MorePage extends ConsumerWidget {
     final canPlaceVisit = session?.permissions.canPlaceVisitOrders ?? false;
     final canDispatch = session?.permissions.canDispatch ?? false;
     final canDelivery = session?.permissions.canAccessDelivery ?? false;
+    final canHistory = session != null &&
+        sessionCanViewDeliveryHistory(
+          permissions: session.permissions,
+          profile: session.profile,
+          isSuperuser: session.user.isSuperuser,
+        );
     final canDebtors = session?.permissions.canViewDebtManagement ?? false;
     final canNotes = session?.permissions.canViewDailyNotes ?? false;
 
@@ -492,10 +506,10 @@ class MorePage extends ConsumerWidget {
                 icon: Icons.inventory_2_outlined,
                 onTap: () => context.go(AppRoutes.dispatchQueue),
               ),
-            if (canDelivery)
+            if (canDelivery || canHistory)
               _MoreTile(
                 key: const Key('more_delivery'),
-                title: 'Today’s route',
+                title: canHistory ? 'Routes' : 'Today’s route',
                 icon: Icons.map_outlined,
                 onTap: () => context.go(AppRoutes.deliveryRoute),
               ),

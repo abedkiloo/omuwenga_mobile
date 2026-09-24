@@ -6,6 +6,8 @@ class DailyNote {
     required this.content,
     this.isSticky = false,
     this.isDone = false,
+    this.inProgress = false,
+    this.boardColumn = 'todo',
     this.completedAt,
     this.authorId,
     this.authorName = '',
@@ -21,6 +23,8 @@ class DailyNote {
   final String content;
   final bool isSticky;
   final bool isDone;
+  final bool inProgress;
+  final String boardColumn;
   final String? completedAt;
   final int? authorId;
   final String authorName;
@@ -30,7 +34,7 @@ class DailyNote {
   final String assignedRoleName;
 
   bool get isGeneral => !isSticky;
-  String get kindLabel => isSticky ? 'Sticky' : 'General';
+  String get kindLabel => isSticky ? 'Must tick' : 'Note';
 
   factory DailyNote.fromJson(Map<String, dynamic> json) {
     return DailyNote(
@@ -40,6 +44,8 @@ class DailyNote {
       content: (json['content'] ?? '').toString(),
       isSticky: json['is_sticky'] == true,
       isDone: json['is_done'] == true,
+      inProgress: json['in_progress'] == true,
+      boardColumn: parseNoteBoardColumn(json),
       completedAt: json['completed_at']?.toString(),
       authorId: (json['author'] as num?)?.toInt(),
       authorName: (json['author_name'] ?? json['author_username'] ?? '')
@@ -125,6 +131,24 @@ class DailyRoleOption {
   }
 }
 
+const kNoteBoardColumns = [
+  (id: 'todo', title: 'To do'),
+  (id: 'doing', title: 'Doing'),
+  (id: 'past', title: 'Past'),
+];
+
+String parseNoteBoardColumn(Map<String, dynamic> json) {
+  final raw = (json['board_column'] ?? '').toString().trim().toLowerCase();
+  if (raw == 'todo' || raw == 'doing' || raw == 'past') return raw;
+  if (json['is_done'] == true) return 'past';
+  if (json['in_progress'] == true) return 'doing';
+  return 'todo';
+}
+
+List<DailyNote> notesForBoardColumn(Iterable<DailyNote> notes, String column) {
+  return [for (final n in notes) if (n.boardColumn == column) n];
+}
+
 bool sessionCanAssignDailyNotes({
   required bool viewAll,
   bool isAdmin = false,
@@ -157,6 +181,19 @@ bool canToggleDailyNote(DailyNote note, int? userId, {bool viewAll = false}) {
   return note.authorId == userId || note.assignedToId == userId;
 }
 
+bool canEditDailyNote(DailyNote note, int? userId) {
+  if (userId == null) return false;
+  return note.authorId == userId;
+}
+
+List<DailyNote> unresolvedInboxNotes(Iterable<DailyNote> notes) {
+  return [for (final n in notes) if (!n.isDone) n];
+}
+
+bool hasInboxNotes(Iterable<DailyNote> notes) {
+  return unresolvedInboxNotes(notes).isNotEmpty;
+}
+
 String todayIsoDate([DateTime? now]) {
   final d = now ?? DateTime.now();
   final y = d.year.toString().padLeft(4, '0');
@@ -172,6 +209,8 @@ Map<String, dynamic> createNotePayload({
   bool isSticky = false,
   int? assignedTo,
   int? assignedRole,
+  bool assignToAll = false,
+  String? boardColumn,
 }) {
   return {
     'note_date': noteDate,
@@ -180,5 +219,8 @@ Map<String, dynamic> createNotePayload({
     'is_sticky': isSticky,
     if (assignedTo != null) 'assigned_to': assignedTo,
     if (assignedRole != null) 'assigned_role': assignedRole,
+    if (assignToAll) 'assign_to_all': true,
+    if (boardColumn != null && boardColumn.isNotEmpty)
+      'board_column': boardColumn,
   };
 }

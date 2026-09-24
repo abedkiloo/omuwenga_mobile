@@ -9,6 +9,7 @@ import '../features/field_orders/presentation/google_map_pin_picker.dart';
 import '../features/field_orders/presentation/map_pin_picker.dart';
 import '../features/field_orders/presentation/visit_order_page.dart';
 import '../features/auth/application/auth_controller.dart';
+import '../features/auth/domain/persona.dart';
 import '../features/auth/presentation/change_password_page.dart';
 import '../features/auth/presentation/login_page.dart';
 import '../features/auth/presentation/store_shell.dart';
@@ -135,9 +136,18 @@ GoRouter createAppRouter({
           !(permissions?.canDispatch ?? false)) {
         return AppRoutes.home;
       }
-      if (loc.startsWith(AppRoutes.deliveryRoute) &&
-          !(permissions?.canAccessDelivery ?? false)) {
-        return AppRoutes.home;
+      if (loc.startsWith(AppRoutes.deliveryRoute)) {
+        final session = auth.session;
+        final canDelivery = permissions?.canAccessDelivery ?? false;
+        final canHistory = session != null &&
+            sessionCanViewDeliveryHistory(
+              permissions: session.permissions,
+              profile: session.profile,
+              isSuperuser: session.user.isSuperuser,
+            );
+        if (!canDelivery && !canHistory) {
+          return AppRoutes.home;
+        }
       }
       if (loc.startsWith(AppRoutes.dailyNotes) &&
           !(permissions?.canViewDailyNotes ?? false)) {

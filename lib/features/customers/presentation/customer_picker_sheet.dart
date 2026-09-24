@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_bounded_sheet.dart';
 import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../pos/application/pos_controllers.dart';
@@ -163,27 +164,20 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
         (auth.session?.permissions.canCreateCustomers ?? false) &&
         settings.enableCustomerCreate &&
         settings.allowQuickAddAtPos;
-    final media = MediaQuery.of(context);
-    final keyboard = media.viewInsets.bottom;
-    // Cap sheet to space above the keyboard so the Column never overflows.
-    final available = media.size.height - keyboard;
-    final sheetHeight = (available * 0.72).clamp(240.0, available * 0.92);
     final items = _paging.items;
     final query = _search.text.trim();
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: keyboard),
-      child: SizedBox(
-        height: sheetHeight,
-        child: Padding(
+    return CbSheetFrame(
+      heightFactor: 0.72,
+      child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Select customer', style: theme.textTheme.titleMedium),
+              Text('Select duka', style: theme.textTheme.titleMedium),
               const SizedBox(height: 4),
               Text(
-                'Search existing customers or register a new one.',
+                'Search existing dukas or register a new one.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: AppColors.mutedForeground,
                 ),
@@ -233,7 +227,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
                               const SizedBox(height: 8),
                               Text(
                                 query.isEmpty
-                                    ? 'No customers yet'
+                                    ? 'No dukas yet'
                                     : 'No match for “$query”',
                                 textAlign: TextAlign.center,
                                 style: theme.textTheme.titleSmall,
@@ -241,7 +235,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
                               const SizedBox(height: 4),
                               Text(
                                 canCreate
-                                    ? 'Register them below to attach to this sale.'
+                                    ? 'Register a duka below to attach to this sale.'
                                     : 'Try a different name or phone.',
                                 textAlign: TextAlign.center,
                                 style: theme.textTheme.bodySmall?.copyWith(
@@ -312,7 +306,7 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
                 CbPrimaryButton(
                   key: const Key('pos_customer_create'),
                   label: query.isEmpty
-                      ? 'Register new customer'
+                      ? 'Register duka'
                       : (query.length > 22
                             ? 'Register “${query.substring(0, 20)}…”'
                             : 'Register “$query”'),
@@ -322,7 +316,6 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
             ],
           ),
         ),
-      ),
     );
   }
 }

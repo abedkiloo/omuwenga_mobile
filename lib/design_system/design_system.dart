@@ -1,4 +1,5 @@
 export 'buttons/cb_primary_button.dart';
+export 'chrome/cb_bounded_sheet.dart';
 export 'chrome/cb_collapsible_chrome.dart';
 export 'chrome/cb_commit_confirm.dart';
 export 'chrome/cb_filter_chip.dart';

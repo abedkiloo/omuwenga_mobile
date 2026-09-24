@@ -6,6 +6,15 @@ double? _asDouble(Object? v) {
   return double.tryParse(v.toString());
 }
 
+List<String> _stringList(Object? raw) {
+  if (raw is! List) return const [];
+  return [
+    for (final item in raw)
+      if (item != null && item.toString().trim().isNotEmpty)
+        item.toString().trim(),
+  ];
+}
+
 class CustomerSummary {
   const CustomerSummary({
     required this.id,
@@ -101,6 +110,9 @@ class CustomerDetail {
     this.address,
     this.city,
     this.notes,
+    this.ownerName,
+    this.contactPerson,
+    this.typicalGoods = const [],
     this.walletBalance,
     this.totalOutstanding,
     this.standing = CustomerStanding.good,
@@ -118,6 +130,9 @@ class CustomerDetail {
   final String? address;
   final String? city;
   final String? notes;
+  final String? ownerName;
+  final String? contactPerson;
+  final List<String> typicalGoods;
   final double? walletBalance;
   final double? totalOutstanding;
   final CustomerStanding standing;
@@ -205,6 +220,9 @@ class CustomerDetail {
       address: customer['address']?.toString(),
       city: customer['city']?.toString(),
       notes: customer['notes']?.toString(),
+      ownerName: customer['owner_name']?.toString(),
+      contactPerson: customer['contact_person']?.toString(),
+      typicalGoods: _stringList(customer['typical_goods']),
       walletBalance: _asDouble(customer['wallet_balance']),
       totalOutstanding: _asDouble(customer['total_outstanding']),
       standing: standing,
@@ -382,18 +400,36 @@ class CustomerDraft {
     this.phone = '',
     this.email = '',
     this.notes = '',
+    this.ownerName = '',
+    this.contactPerson = '',
+    this.city = '',
+    this.address = '',
+    this.typicalGoods = const [],
   });
 
   final String name;
   final String phone;
   final String email;
   final String notes;
+  final String ownerName;
+  final String contactPerson;
+  final String city;
+  final String address;
+  final List<String> typicalGoods;
 
   Map<String, dynamic> toJson() => {
     'name': name.trim(),
-    if (phone.trim().isNotEmpty) 'phone': phone.trim(),
-    if (email.trim().isNotEmpty) 'email': email.trim(),
-    if (notes.trim().isNotEmpty) 'notes': notes.trim(),
+    'phone': phone.trim(),
+    'email': email.trim(),
+    'notes': notes.trim(),
+    'owner_name': ownerName.trim(),
+    'contact_person': contactPerson.trim(),
+    'city': city.trim(),
+    'address': address.trim(),
+    'typical_goods': [
+      for (final item in typicalGoods)
+        if (item.trim().isNotEmpty) item.trim(),
+    ],
   };
 }
 

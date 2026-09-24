@@ -227,5 +227,73 @@ void main() {
         AppPersona.deliveryDriver,
       );
     });
+
+    test('sessionCanViewDeliveryHistory for manager admin and grant', () {
+      expect(
+        PermissionSet([
+          const PermissionGrant(module: 'delivery', action: 'history'),
+        ]).canViewDeliveryHistory,
+        isTrue,
+      );
+      expect(PermissionSet(const []).canViewDeliveryHistory, isFalse);
+      expect(
+        sessionCanViewDeliveryHistory(
+          permissions: PermissionSet(const []),
+          profile: const UserProfileSnapshot(
+            role: 'manager',
+            isSuperAdmin: false,
+            isAdmin: false,
+            isManager: true,
+            roleDisplay: 'Manager',
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        sessionCanViewDeliveryHistory(
+          permissions: PermissionSet(const []),
+          profile: const UserProfileSnapshot(
+            role: 'manager',
+            isSuperAdmin: false,
+            isAdmin: false,
+            isManager: true,
+            roleDisplay: 'Dispatcher',
+          ),
+        ),
+        isFalse,
+      );
+      expect(
+        sessionCanViewDeliveryHistory(
+          permissions: PermissionSet(const []),
+          profile: const UserProfileSnapshot(
+            role: 'admin',
+            isSuperAdmin: false,
+            isAdmin: true,
+            isManager: false,
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        sessionCanViewDeliveryHistory(
+          permissions: PermissionSet(const []),
+          profile: const UserProfileSnapshot(
+            role: 'cashier',
+            isSuperAdmin: false,
+            isAdmin: false,
+            isManager: false,
+          ),
+          isSuperuser: true,
+        ),
+        isTrue,
+      );
+      expect(
+        UserProfileSnapshot.fromJson({
+          'role': 'manager',
+          'custom_role': {'name': 'Manager'},
+        }).roleDisplay,
+        'Manager',
+      );
+    });
   });
 }

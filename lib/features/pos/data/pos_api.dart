@@ -18,7 +18,9 @@ class SaleReceipt {
     this.customerName,
     this.subtotal,
     this.taxAmount = 0,
+    this.taxRate = 0,
     this.discountAmount = 0,
+    this.deliveryCost = 0,
     this.paymentReference,
     this.createdAt,
     this.servedByName,
@@ -35,7 +37,9 @@ class SaleReceipt {
   final String? customerName;
   final double? subtotal;
   final double taxAmount;
+  final double taxRate;
   final double discountAmount;
+  final double deliveryCost;
   final String? paymentReference;
   final DateTime? createdAt;
   final String? servedByName;
@@ -53,13 +57,31 @@ class SaleReceipt {
       for (final item in rawItems) {
         if (item is! Map) continue;
         final map = Map<String, dynamic>.from(item);
+        final variantParts =
+            [
+                  map['size_name'],
+                  map['color_name'],
+                  map['variant_name'],
+                  map['variant_label'],
+                  map['variant_display'],
+                ]
+                .where(
+                  (value) =>
+                      value != null && value.toString().trim().isNotEmpty,
+                )
+                .map((value) => value.toString().trim())
+                .toList();
         items.add(
           CartLine(
             productId: (map['product_id'] as num?)?.toInt() ?? 0,
             name: (map['product_name'] ?? map['name'] ?? 'Item').toString(),
-            sku: map['product_sku']?.toString(),
+            sku: (map['product_sku'] ?? map['variant_sku'] ?? map['sku'])
+                ?.toString(),
             unitPrice: asDouble(map['unit_price']),
             quantity: asDouble(map['quantity']),
+            variantLabel: variantParts.isEmpty
+                ? null
+                : variantParts.join(' · '),
           ),
         );
       }
@@ -78,7 +100,9 @@ class SaleReceipt {
           ? asDouble(json['subtotal'])
           : null,
       taxAmount: asDouble(json['tax_amount']),
+      taxRate: asDouble(json['tax_rate']),
       discountAmount: asDouble(json['discount_amount']),
+      deliveryCost: asDouble(json['delivery_cost']),
       paymentReference: json['payment_reference']?.toString(),
       createdAt: DateTime.tryParse(
         (json['occurred_at'] ?? json['created_at'] ?? '').toString(),
