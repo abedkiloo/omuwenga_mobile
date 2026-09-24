@@ -16,17 +16,26 @@ class DeliveryDriverOption {
     required this.id,
     required this.displayName,
     this.username = '',
+    this.roleName = '',
   });
 
   final int id;
   final String displayName;
   final String username;
+  final String roleName;
+
+  String get listLabel {
+    final role = roleName.trim();
+    if (role.isEmpty) return displayName;
+    return '$displayName · $role';
+  }
 
   factory DeliveryDriverOption.fromJson(Map<String, dynamic> json) {
     return DeliveryDriverOption(
       id: (json['id'] as num).toInt(),
       displayName: (json['display_name'] ?? json['username'] ?? '').toString(),
       username: (json['username'] ?? '').toString(),
+      roleName: (json['role_name'] ?? '').toString(),
     );
   }
 }
@@ -36,6 +45,7 @@ class CreatedDeliveryDriver extends DeliveryDriverOption {
     required super.id,
     required super.displayName,
     super.username = '',
+    super.roleName = '',
     this.phoneNumber = '',
     this.temporaryPassword = '',
   });
@@ -48,6 +58,7 @@ class CreatedDeliveryDriver extends DeliveryDriverOption {
       id: (json['id'] as num).toInt(),
       displayName: (json['display_name'] ?? json['username'] ?? '').toString(),
       username: (json['username'] ?? '').toString(),
+      roleName: (json['role_name'] ?? '').toString(),
       phoneNumber: (json['phone_number'] ?? '').toString(),
       temporaryPassword: (json['temporary_password'] ?? '').toString(),
     );

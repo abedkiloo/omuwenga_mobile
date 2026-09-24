@@ -292,34 +292,32 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
         ),
       ),
       bottomNavigationBar: canCreate
-          ? SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
-                child: SizedBox(
-                  height: 52,
-                  child: FilledButton(
-                    key: const Key('customers_add'),
-                    onPressed: () => context.push(AppRoutes.customerNew),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.primaryForeground,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+          ? CbStickyActionBar(
+              safeArea: false,
+              child: SizedBox(
+                height: 52,
+                child: FilledButton(
+                  key: const Key('customers_add'),
+                  onPressed: () => context.push(AppRoutes.customerNew),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.primaryForeground,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.person_add_alt_1, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Register New Customer',
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.person_add_alt_1, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Register New Customer',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        SizedBox(width: 10),
-                        _FastAddBadge(),
-                      ],
-                    ),
+                      SizedBox(width: 10),
+                      _FastAddBadge(),
+                    ],
                   ),
                 ),
               ),

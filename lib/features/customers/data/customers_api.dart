@@ -10,10 +10,14 @@ class ReceiveWalletPaymentResult {
   const ReceiveWalletPaymentResult({
     required this.walletBalance,
     this.transactionId,
+    this.pendingApproval = false,
+    this.message,
   });
 
   final double walletBalance;
   final int? transactionId;
+  final bool pendingApproval;
+  final String? message;
 
   factory ReceiveWalletPaymentResult.fromJson(Map<String, dynamic> json) {
     double asDouble(Object? v) {
@@ -25,6 +29,8 @@ class ReceiveWalletPaymentResult {
     return ReceiveWalletPaymentResult(
       walletBalance: asDouble(json['wallet_balance']),
       transactionId: tx is Map ? (tx['id'] as num?)?.toInt() : null,
+      pendingApproval: json['pending_change'] != null,
+      message: json['message']?.toString(),
     );
   }
 }

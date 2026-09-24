@@ -230,204 +230,217 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
       backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: true,
       appBar: AppBar(title: Text(title)),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-          CbSurfaceCard(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentSoft,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.storefront_outlined,
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _isEdit ? 'Update duka details' : 'Register a duka',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CbSurfaceCard(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.accentSoft,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.storefront_outlined,
+                            color: AppColors.primary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Duka name is required. Phone helps you find them later on visits and POS.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.mutedForeground,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _isEdit
+                                    ? 'Update duka details'
+                                    : 'Register a duka',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Duka name is required. Phone helps you find them later on visits and POS.',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AppColors.mutedForeground,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (_error != null) ...[
-            Text(
-              _error!,
-              key: const Key('customer_form_error'),
-              style: const TextStyle(color: AppColors.destructive),
-            ),
-            const SizedBox(height: 12),
-          ],
-          _sectionLabel(theme, 'Basics'),
-          TextField(
-            key: const Key('customer_form_name'),
-            controller: _name,
-            focusNode: _nameFocus,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Duka name',
-              hintText: 'e.g. Wambua Hardware',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.storefront_outlined),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            key: const Key('customer_form_owner_name'),
-            controller: _ownerName,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: "Owner's name",
-              hintText: 'e.g. Jane Wambua',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.person_outline),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            key: const Key('customer_form_phone'),
-            controller: _phone,
-            keyboardType: TextInputType.phone,
-            textInputAction: TextInputAction.next,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d+\s-]')),
-            ],
-            decoration: const InputDecoration(
-              labelText: 'Phone',
-              hintText: 'e.g. 0712 345 678',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.phone_outlined),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _sectionLabel(theme, 'Other details', hint: '(optional)'),
-          TextField(
-            key: const Key('customer_form_email'),
-            controller: _email,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              hintText: kEmailExample,
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.email_outlined),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            key: const Key('customer_form_city'),
-            controller: _city,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'City',
-              hintText: 'e.g. Nairobi',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.location_city_outlined),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _sectionLabel(theme, 'Notes'),
-          TextField(
-            key: const Key('customer_form_landmark'),
-            controller: _landmark,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Landmark',
-              hintText: 'Next to the market, opposite the bus stage…',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.place_outlined),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            key: const Key('customer_form_contact_person'),
-            controller: _contactPerson,
-            textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'Contact person',
-              hintText: 'Who to ask for, if not the owner',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.badge_outlined),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _sectionLabel(theme, 'Goods they buy most', hint: '(optional)'),
-          for (var i = 0; i < _goods.length; i++) ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: TextField(
-                    key: Key('customer_form_good_$i'),
-                    controller: _goods[i],
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'Good',
-                      hintText: 'e.g. Cement 50kg',
-                      border: OutlineInputBorder(),
+                      ],
                     ),
                   ),
-                ),
-                IconButton(
-                  key: Key('customer_form_remove_good_$i'),
-                  onPressed: () => _removeGood(i),
-                  icon: const Icon(Icons.remove_circle_outline),
-                  tooltip: 'Remove good',
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
-          Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
-              key: const Key('customer_form_add_good'),
-              onPressed: _addGood,
-              icon: const Icon(Icons.add),
-              label: const Text('Add another good'),
+                  const SizedBox(height: 16),
+                  if (_error != null) ...[
+                    Text(
+                      _error!,
+                      key: const Key('customer_form_error'),
+                      style: const TextStyle(color: AppColors.destructive),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  _sectionLabel(theme, 'Basics'),
+                  TextField(
+                    key: const Key('customer_form_name'),
+                    controller: _name,
+                    focusNode: _nameFocus,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Duka name',
+                      hintText: 'e.g. Wambua Hardware',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.storefront_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    key: const Key('customer_form_owner_name'),
+                    controller: _ownerName,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: "Owner's name",
+                      hintText: 'e.g. Jane Wambua',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    key: const Key('customer_form_phone'),
+                    controller: _phone,
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.next,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[\d+\s-]')),
+                    ],
+                    decoration: const InputDecoration(
+                      labelText: 'Phone',
+                      hintText: 'e.g. 0712 345 678',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.phone_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _sectionLabel(theme, 'Other details', hint: '(optional)'),
+                  TextField(
+                    key: const Key('customer_form_email'),
+                    controller: _email,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      hintText: kEmailExample,
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    key: const Key('customer_form_city'),
+                    controller: _city,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'City',
+                      hintText: 'e.g. Nairobi',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.location_city_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _sectionLabel(theme, 'Notes'),
+                  TextField(
+                    key: const Key('customer_form_landmark'),
+                    controller: _landmark,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Landmark',
+                      hintText: 'Next to the market, opposite the bus stage…',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.place_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    key: const Key('customer_form_contact_person'),
+                    controller: _contactPerson,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'Contact person',
+                      hintText: 'Who to ask for, if not the owner',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.badge_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _sectionLabel(
+                    theme,
+                    'Goods they buy most',
+                    hint: '(optional)',
+                  ),
+                  for (var i = 0; i < _goods.length; i++) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            key: Key('customer_form_good_$i'),
+                            controller: _goods[i],
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Good',
+                              hintText: 'e.g. Cement 50kg',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          key: Key('customer_form_remove_good_$i'),
+                          onPressed: () => _removeGood(i),
+                          icon: const Icon(Icons.remove_circle_outline),
+                          tooltip: 'Remove good',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      key: const Key('customer_form_add_good'),
+                      onPressed: _addGood,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add another good'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+          CbStickyActionBar(
+            primaryKey: const Key('customer_form_save'),
+            primaryLabel: _saving
+                ? 'Saving…'
+                : (_isEdit ? 'Save duka' : 'Register duka'),
+            onPrimary: _saving ? null : _save,
+          ),
         ],
-        ),
-      ),
-      bottomNavigationBar: CbStickyActionBar(
-        primaryKey: const Key('customer_form_save'),
-        primaryLabel: _saving
-            ? 'Saving…'
-            : (_isEdit ? 'Save changes' : 'Save duka'),
-        onPrimary: _saving ? null : _save,
       ),
     );
   }

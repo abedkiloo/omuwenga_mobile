@@ -55,6 +55,7 @@ class PermissionSet {
   bool get canUpdateCustomers => has('customers', 'update');
   bool get canViewDebtManagement => has('debt_management', 'view');
   bool get canUpdateDebtManagement => has('debt_management', 'update');
+  bool get canApproveDebtManagement => has('debt_management', 'approve');
   bool get canViewSales => has('sales', 'view');
   bool get canViewAllSales => has('sales', 'view_all');
   bool get canRefundSales => has('sales', 'refund');

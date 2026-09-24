@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:completebyte_pos_mobile/app/providers.dart';
+import 'package:completebyte_pos_mobile/app/routes.dart';
 import 'package:completebyte_pos_mobile/core/env/app_env.dart';
 import 'package:completebyte_pos_mobile/core/network/api_client.dart';
 import 'package:completebyte_pos_mobile/core/secure/token_store.dart';
@@ -15,6 +17,7 @@ import 'package:completebyte_pos_mobile/features/customers/domain/customer.dart'
 import 'package:completebyte_pos_mobile/features/customers/presentation/customer_detail_page.dart';
 import 'package:completebyte_pos_mobile/features/customers/presentation/customer_form_page.dart';
 import 'package:completebyte_pos_mobile/features/customers/presentation/customer_picker_sheet.dart';
+import 'package:completebyte_pos_mobile/features/auth/presentation/store_shell.dart';
 import 'package:completebyte_pos_mobile/features/customers/presentation/customers_list_page.dart';
 import 'package:completebyte_pos_mobile/features/customers/presentation/receive_payment_page.dart';
 import 'package:completebyte_pos_mobile/features/pos/application/pos_controllers.dart';
@@ -406,7 +409,10 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('customer_form_add_good')));
     await tester.tap(find.byKey(const Key('customer_form_add_good')));
     await tester.pump();
-    await tester.enterText(find.byKey(const Key('customer_form_good_0')), 'Cement');
+    await tester.enterText(
+      find.byKey(const Key('customer_form_good_0')),
+      'Cement',
+    );
     await tester.tap(find.byKey(const Key('customer_form_remove_good_1')));
     await tester.pump();
     await tester.tap(find.byKey(const Key('customer_form_save')));
@@ -417,9 +423,7 @@ void main() {
     await tester.tap(find.byKey(const Key('customer_settle')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('settle_amount')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('settle_method_card')));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('settle_reference')), 'ABC');
+    await tester.enterText(find.byKey(const Key('settle_amount')), '5');
     await tester.tap(find.byKey(const Key('settle_confirm')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('settle_commit_confirm')));
@@ -556,7 +560,10 @@ void main() {
     await tester.tap(find.byKey(const Key('settle_mpesa_capture_code')));
     await tester.pumpAndSettle();
     expect(find.text('M-Pesa code *'), findsOneWidget);
-    expect(find.textContaining('At least 4 letters and numbers'), findsOneWidget);
+    expect(
+      find.textContaining('At least 4 letters and numbers'),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('settle_reference')), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('settle_amount')), '0');
@@ -569,22 +576,16 @@ void main() {
     await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
     await tester.tap(find.byKey(const Key('settle_confirm')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('at least 4 letters and numbers'), findsOneWidget);
+    expect(
+      find.textContaining('at least 4 letters and numbers'),
+      findsOneWidget,
+    );
 
     await tester.enterText(find.byKey(const Key('settle_reference')), 'AB1');
     await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
     await tester.tap(find.byKey(const Key('settle_confirm')));
     await tester.pumpAndSettle();
     expect(find.textContaining('you entered 3'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('settle_method_card')));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('settle_amount')), '5');
-    await tester.enterText(find.byKey(const Key('settle_reference')), '');
-    await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
-    await tester.tap(find.byKey(const Key('settle_confirm')));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('card or receipt reference'), findsOneWidget);
   });
 
   test('list state copyWith keeps prior error', () {
@@ -705,6 +706,9 @@ void main() {
     await tester.tap(find.byKey(const Key('customer_form_save')));
     await tester.pumpAndSettle();
     expect(find.text('Duka name is required.'), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const Key('customer_form_remove_good_0')),
+    );
     await tester.tap(find.byKey(const Key('customer_form_remove_good_0')));
     await tester.pump();
     await tester.enterText(find.byKey(const Key('customer_form_name')), 'A');
@@ -841,7 +845,10 @@ void main() {
 
     await tester.tap(find.byKey(const Key('settle_method_mpesa')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('settle_mpesa_capture_prompt')), findsOneWidget);
+    expect(
+      find.byKey(const Key('settle_mpesa_capture_prompt')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('settle_mpesa_capture_code')), findsOneWidget);
   });
 
@@ -1046,5 +1053,351 @@ void main() {
     expect(find.text('Select duka'), findsOneWidget);
     expect(find.text('Ann Alpha'), findsOneWidget);
     expect(find.text('Zed Zulu'), findsOneWidget);
+  });
+
+  testWidgets('register duka docks save above the keyboard in the shell', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+
+    final client = MockClient((_) async => http.Response('{}', 200));
+    final router = GoRouter(
+      initialLocation: AppRoutes.customerNew,
+      routes: [
+        ShellRoute(
+          builder: (context, state, child) => StoreShellPage(child: child),
+          routes: [
+            GoRoute(
+              path: AppRoutes.home,
+              builder: (_, _) => const Text('home'),
+            ),
+            GoRoute(path: AppRoutes.pos, builder: (_, _) => const Text('pos')),
+            GoRoute(
+              path: AppRoutes.salesHistory,
+              builder: (_, _) => const Text('hist'),
+            ),
+            GoRoute(
+              path: AppRoutes.customers,
+              builder: (_, _) => const Text('list'),
+            ),
+            GoRoute(
+              path: AppRoutes.customerNew,
+              builder: (_, _) => const CustomerFormPage(),
+            ),
+            GoRoute(
+              path: AppRoutes.more,
+              builder: (_, _) => const Text('more'),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _base(client),
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byKey(const Key('customer_form_save')), findsOneWidget);
+    expect(find.text('Register duka'), findsWidgets);
+    final saveRect = tester.getRect(
+      find.byKey(const Key('customer_form_save')),
+    );
+    expect(saveRect.bottom, lessThanOrEqualTo(480 + 1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('picker register button stays visible with the keyboard open', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 320);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+
+    final client = MockClient((request) async {
+      if (request.url.path.contains('/sales/customers')) {
+        return http.Response(jsonEncode([]), 200);
+      }
+      return http.Response('{}', 200);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _base(client),
+        child: Consumer(
+          builder: (context, ref, _) {
+            return MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    key: const Key('open_picker_keyboard'),
+                    onPressed: () => showCustomerPickerSheet(context, ref),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('open_picker_keyboard')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('pos_customer_create')), findsOneWidget);
+    expect(
+      tester.getRect(find.byKey(const Key('pos_customer_create'))).bottom,
+      lessThanOrEqualTo(800 - 320 + 24),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('edit save pops, email error, and returnCustomer', (
+    tester,
+  ) async {
+    var updated = false;
+    final client = MockClient((request) async {
+      if (request.url.path.contains('/detail/')) {
+        return http.Response(
+          jsonEncode({
+            'customer': {
+              'id': 7,
+              'name': 'Debtor',
+              'email': 'ok@example.com',
+              'typical_goods': ['Cement'],
+            },
+            'standing_summary': {'standing': 'good'},
+            'orders': [],
+          }),
+          200,
+        );
+      }
+      if (request.method == 'PUT') {
+        updated = true;
+        return http.Response(jsonEncode({'id': 7, 'name': 'Debtor'}), 200);
+      }
+      if (request.method == 'POST') {
+        return http.Response(jsonEncode({'id': 88, 'name': 'Returned'}), 201);
+      }
+      return http.Response('{}', 200);
+    });
+
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const Text('LIST_HOME'),
+          routes: [
+            GoRoute(
+              path: 'edit',
+              builder: (_, _) => const CustomerFormPage(customerId: 7),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _base(client),
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    router.go('/edit');
+    await tester.pumpAndSettle();
+    expect(find.text('Cement'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('customer_form_email')),
+      'not-an-email',
+    );
+    await tester.tap(find.byKey(const Key('customer_form_save')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('customer_form_error')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('customer_form_email')),
+      'ok@example.com',
+    );
+    await tester.tap(find.byKey(const Key('customer_form_save')));
+    await tester.pumpAndSettle();
+    expect(updated, isTrue);
+    expect(find.text('LIST_HOME'), findsOneWidget);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _base(client),
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              key: const Key('open_return_customer'),
+              onPressed: () async {
+                await Navigator.of(context).push<CustomerSummary>(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        const CustomerFormPage(returnCustomer: true),
+                  ),
+                );
+              },
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('open_return_customer')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('customer_form_name')),
+      'Returned',
+    );
+    await tester.tap(find.byKey(const Key('customer_form_save')));
+    await tester.pumpAndSettle();
+    expect(find.text('open'), findsOneWidget);
+  });
+
+  testWidgets('picker named create succeeds and truncates long labels', (
+    tester,
+  ) async {
+    var created = false;
+    final client = MockClient((request) async {
+      if (request.method == 'POST' &&
+          request.url.path.endsWith('/customers/')) {
+        created = true;
+        return http.Response(jsonEncode({'id': 3, 'name': 'Long Duka'}), 201);
+      }
+      if (request.url.path.contains('/sales/customers')) {
+        return http.Response(
+          jsonEncode([
+            {'id': 1, 'name': 'Ann Alpha', 'phone': '0700'},
+            {'id': 2, 'name': 'Zed Zulu', 'phone': '0701'},
+          ]),
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _base(client),
+        child: Consumer(
+          builder: (context, ref, _) {
+            return MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    key: const Key('open_picker_named'),
+                    onPressed: () => showCustomerPickerSheet(context, ref),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('open_picker_named')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('pos_customer_search')),
+      'A very long duka name indeed',
+    );
+    await tester.pump();
+    expect(find.textContaining('Register “A very long duka n'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.byKey(const Key('pos_customer_create')));
+    await tester.pumpAndSettle();
+    expect(created, isTrue);
+
+    await tester.tap(find.byKey(const Key('open_picker_named')));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -120));
+    await tester.pumpAndSettle();
+    expect(find.text('Ann Alpha'), findsOneWidget);
+  });
+
+  testWidgets('picker scroll listener loads the next page', (tester) async {
+    tester.view.physicalSize = const Size(400, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    var page2 = false;
+    final client = MockClient((request) async {
+      if (!request.url.path.contains('/sales/customers')) {
+        return http.Response('{}', 200);
+      }
+      final page = request.url.queryParameters['page'] ?? '1';
+      if (page == '1') {
+        return http.Response(
+          jsonEncode({
+            'count': 21,
+            'next': 'http://example.com/api/sales/customers/?page=2',
+            'results': [
+              for (var i = 0; i < 20; i++)
+                {'id': i + 1, 'name': 'Shop $i', 'phone': '0700$i'},
+            ],
+          }),
+          200,
+        );
+      }
+      page2 = true;
+      return http.Response(
+        jsonEncode({
+          'count': 21,
+          'next': null,
+          'results': [
+            {'id': 21, 'name': 'Shop 20', 'phone': '0799'},
+          ],
+        }),
+        200,
+      );
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _base(client),
+        child: Consumer(
+          builder: (context, ref, _) {
+            return MaterialApp(
+              home: Scaffold(
+                body: Builder(
+                  builder: (context) => TextButton(
+                    key: const Key('open_picker_scroll'),
+                    onPressed: () => showCustomerPickerSheet(context, ref),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('open_picker_scroll')));
+    await tester.pumpAndSettle();
+    expect(page2, isFalse);
+    await tester.drag(find.byType(ListView).last, const Offset(0, -2400));
+    await tester.pumpAndSettle();
+    expect(page2, isTrue);
+    expect(find.text('Shop 20'), findsOneWidget);
   });
 }

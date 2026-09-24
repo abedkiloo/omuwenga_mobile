@@ -69,6 +69,7 @@ void main() {
     expect(ok, isTrue);
     expect(controller.state.detail!.debtAmount, 0);
     expect(controller.state.settling, isFalse);
+    expect(controller.state.queuedForApproval, isFalse);
     expect(detailCalls, 2);
   });
 
@@ -195,5 +196,56 @@ void main() {
       ),
       isFalse,
     );
+  });
+
+  test('queued collection marks pending without claiming the debt is paid', () async {
+    var detailCalls = 0;
+    final client = MockClient((request) async {
+      if (request.url.path.contains('/receive-wallet-payment/')) {
+        return http.Response(
+          jsonEncode({
+            'wallet_balance': '-100.00',
+            'message': 'queued',
+            'pending_change': {'id': 2, 'action_type': 'debt_collection'},
+          }),
+          202,
+        );
+      }
+      if (request.url.path.contains('/detail/')) {
+        detailCalls++;
+        return http.Response(
+          jsonEncode({
+            'customer': {'id': 5, 'name': 'Pat', 'wallet_balance': '-100.00'},
+            'standing_summary': {'standing': 'debt'},
+            'orders': [],
+          }),
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    });
+
+    final tokens = InMemoryTokenStore();
+    await tokens.writeTokens(access: 'a', refresh: 'r');
+    final api = CustomersApi(
+      ApiClient(
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
+        tokenStore: tokens,
+        httpClient: client,
+      ),
+    );
+    final controller = CustomerDetailController(api, _FixedUuid());
+    await controller.load(5);
+    final ok = await controller.receivePayment(
+      amount: 40,
+      paymentMethod: 'cash',
+    );
+    expect(ok, isTrue);
+    expect(controller.state.queuedForApproval, isTrue);
+    expect(controller.state.detail!.debtAmount, 100);
+    expect(detailCalls, 2);
   });
 }

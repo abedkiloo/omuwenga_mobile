@@ -130,7 +130,7 @@ class DispatchQueueController extends StateNotifier<DispatchQueueState> {
   Future<bool> assign(int orderId) async {
     final driverId = state.selectedDeliveryDriverId;
     if (driverId == null) {
-      state = state.copyWith(error: 'Select a delivery driver');
+      state = state.copyWith(error: 'Select who will deliver first');
       return false;
     }
     state = state.copyWith(acting: true, clearError: true);

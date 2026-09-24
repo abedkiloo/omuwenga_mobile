@@ -220,7 +220,7 @@ void main() {
       expect(c.state.drivers, isNotEmpty);
       expect(c.state.canAssign, isFalse);
       expect(await c.assign(11), isFalse);
-      expect(c.state.error, contains('Select a delivery driver'));
+      expect(c.state.error, contains('Select who will deliver first'));
       c.selectDeliveryDriver(101);
       expect(c.state.canAssign, isTrue);
       expect(await c.pack(11), isTrue);
@@ -344,6 +344,74 @@ void main() {
       expect(find.byKey(const Key('dispatch_add_driver')), findsOneWidget);
     });
 
+    testWidgets('picker shows role and empty delivery access hint', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authSessionSeedProvider.overrideWithValue(_dispatcherSession()),
+            dispatchApiProvider.overrideWithValue(
+              _api(
+                MockClient((request) async {
+                  if (request.url.path.contains('/drivers/')) {
+                    return http.Response(
+                      jsonEncode([
+                        {
+                          'id': 7,
+                          'username': 'ada',
+                          'display_name': 'Ada Sales',
+                          'role_name': 'Sales Personnel',
+                        },
+                      ]),
+                      200,
+                    );
+                  }
+                  if (request.url.path.contains('/queue/')) {
+                    return http.Response(jsonEncode([_orderJson()]), 200);
+                  }
+                  return http.Response(jsonEncode(_orderJson()), 200);
+                }),
+              ),
+            ),
+            pushNotifierProvider.overrideWithValue(FakePushNotifier()),
+          ],
+          child: const MaterialApp(home: DispatchOrderDetailPage(orderId: 11)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('dispatch_driver_select')));
+      await tester.pumpAndSettle();
+      expect(find.text('Ada Sales · Sales Personnel').last, findsOneWidget);
+    });
+
+    testWidgets('empty assignee list shows delivery access hint', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authSessionSeedProvider.overrideWithValue(_dispatcherSession()),
+            dispatchApiProvider.overrideWithValue(
+              _api(
+                MockClient((request) async {
+                  if (request.url.path.contains('/drivers/')) {
+                    return http.Response(jsonEncode([]), 200);
+                  }
+                  if (request.url.path.contains('/queue/')) {
+                    return http.Response(jsonEncode([_orderJson()]), 200);
+                  }
+                  return http.Response(jsonEncode(_orderJson()), 200);
+                }),
+              ),
+            ),
+            pushNotifierProvider.overrideWithValue(FakePushNotifier()),
+          ],
+          child: const MaterialApp(home: DispatchOrderDetailPage(orderId: 11)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('dispatch_no_drivers')), findsOneWidget);
+      expect(find.textContaining('grant Delivery on a role'), findsOneWidget);
+      expect(find.text('Assign for delivery'), findsOneWidget);
+    });
+
     testWidgets('view-only hides mark-ready actions', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -429,5 +497,29 @@ void main() {
     });
     expect(s.assignedDeliveryDriverId, 9);
     expect(s.stockAllocated, isTrue);
+
+    final named = DeliveryDriverOption.fromJson({
+      'id': 3,
+      'display_name': 'Ada Sales',
+      'username': 'ada',
+      'role_name': 'Sales Personnel',
+    });
+    expect(named.listLabel, 'Ada Sales · Sales Personnel');
+    expect(
+      DeliveryDriverOption.fromJson({
+        'id': 4,
+        'username': 'drv',
+      }).listLabel,
+      'drv',
+    );
+    expect(
+      CreatedDeliveryDriver.fromJson({
+        'id': 5,
+        'display_name': 'Ken',
+        'role_name': 'Delivery Driver',
+        'temporary_password': 'tmp',
+      }).listLabel,
+      'Ken · Delivery Driver',
+    );
   });
 }

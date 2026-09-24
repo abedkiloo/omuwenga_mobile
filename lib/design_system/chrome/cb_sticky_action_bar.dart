@@ -13,6 +13,7 @@ class CbStickyActionBar extends StatelessWidget {
     this.primaryKey,
     this.child,
     this.secondary,
+    this.safeArea = true,
   });
 
   final String? summary;
@@ -23,53 +24,56 @@ class CbStickyActionBar extends StatelessWidget {
   final Widget? child;
   final Widget? secondary;
 
+  /// When false, skip home-indicator padding (nested above a shell tab bar).
+  final bool safeArea;
+
   @override
   Widget build(BuildContext context) {
+    final content = Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (summary != null || summaryTrailing != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  if (summary != null)
+                    Expanded(
+                      child: Text(
+                        summary!,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ),
+                  if (summaryTrailing != null)
+                    Text(
+                      summaryTrailing!,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          if (secondary != null) ...[secondary!, const SizedBox(height: 4)],
+          child ??
+              CbPrimaryButton(
+                key: primaryKey,
+                label: primaryLabel,
+                onPressed: onPrimary,
+              ),
+        ],
+      ),
+    );
     return Material(
       color: AppColors.surface,
       elevation: 8,
       shadowColor: const Color(0x1A0F172A),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (summary != null || summaryTrailing != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      if (summary != null)
-                        Expanded(
-                          child: Text(
-                            summary!,
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(color: AppColors.mutedForeground),
-                          ),
-                        ),
-                      if (summaryTrailing != null)
-                        Text(
-                          summaryTrailing!,
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                    ],
-                  ),
-                ),
-              if (secondary != null) ...[secondary!, const SizedBox(height: 4)],
-              child ??
-                  CbPrimaryButton(
-                    key: primaryKey,
-                    label: primaryLabel,
-                    onPressed: onPrimary,
-                  ),
-            ],
-          ),
-        ),
-      ),
+      child: safeArea ? SafeArea(top: false, child: content) : content,
     );
   }
 }

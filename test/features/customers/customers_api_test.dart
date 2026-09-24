@@ -197,6 +197,31 @@ void main() {
     );
     expect(result.getOrThrow().walletBalance, -60);
     expect(result.getOrThrow().transactionId, 12);
+    expect(result.getOrThrow().pendingApproval, isFalse);
+  });
+
+  test('receiveWalletPayment maps queued 202 as pending approval', () async {
+    final api = apiWith(
+      MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'wallet_balance': '-100.00',
+            'message': 'queued',
+            'pending_change': {'id': 4, 'action_type': 'debt_collection'},
+          }),
+          202,
+        );
+      }),
+    );
+    final result = await api.receiveWalletPayment(
+      customerId: 3,
+      amount: 40,
+      paymentMethod: 'cash',
+      idempotencyKey: 'idem-pending',
+    );
+    expect(result.getOrThrow().pendingApproval, isTrue);
+    expect(result.getOrThrow().walletBalance, -100);
+    expect(result.getOrThrow().message, 'queued');
   });
 
   test('create and update and settings nested', () async {

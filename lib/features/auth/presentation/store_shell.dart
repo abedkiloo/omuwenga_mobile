@@ -19,6 +19,14 @@ import '../../home/presentation/store_home_dashboard.dart';
 import '../application/auth_controller.dart';
 import '../domain/persona.dart';
 
+/// Full-screen forms dock their own footer; the tab bar would rise with the
+/// keyboard and cover the page in a dark pane.
+bool shellHidesBottomNav(String location) {
+  final path = Uri.tryParse(location)?.path ?? location;
+  if (path == AppRoutes.customerNew) return true;
+  return RegExp(r'^/customers/\d+/edit/?$').hasMatch(path);
+}
+
 class StoreShellPage extends ConsumerWidget {
   const StoreShellPage({super.key, required this.child});
 
@@ -66,58 +74,62 @@ class StoreShellPage extends ConsumerWidget {
     return Stack(
       children: [
         Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: SyncStatusChip(
-                  status: sync,
-                  onTap: sync.failedCount > 0
-                      ? () async {
-                          final items = await ref
-                              .read(syncStatusProvider.notifier)
-                              .failedItems();
-                          if (!context.mounted) return;
-                          await SyncFailuresSheet.show(
-                            context,
-                            items: items,
-                            onRetry: (id) => ref
-                                .read(syncStatusProvider.notifier)
-                                .retryFailed(id),
-                            onDiscard: (id) => ref
-                                .read(syncStatusProvider.notifier)
-                                .discardFailed(id),
-                          );
-                        }
-                      : null,
+          backgroundColor: AppColors.background,
+          resizeToAvoidBottomInset: false,
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: SyncStatusChip(
+                      status: sync,
+                      onTap: sync.failedCount > 0
+                          ? () async {
+                              final items = await ref
+                                  .read(syncStatusProvider.notifier)
+                                  .failedItems();
+                              if (!context.mounted) return;
+                              await SyncFailuresSheet.show(
+                                context,
+                                items: items,
+                                onRetry: (id) => ref
+                                    .read(syncStatusProvider.notifier)
+                                    .retryFailed(id),
+                                onDiscard: (id) => ref
+                                    .read(syncStatusProvider.notifier)
+                                    .discardFailed(id),
+                              );
+                            }
+                          : null,
+                    ),
+                  ),
                 ),
-              ),
+                Expanded(
+                  child: MediaQuery.removePadding(
+                    context: context,
+                    removeTop: true,
+                    child: child,
+                  ),
+                ),
+              ],
             ),
-            Expanded(
-              child: MediaQuery.removePadding(
-                context: context,
-                removeTop: true,
-                child: child,
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: NavigationBar(
-        height: 64,
-        selectedIndex: _selectedVisualIndex(location, destinations),
-        onDestinationSelected: (i) => context.go(destinations[i].route),
-        destinations: [
-          for (final d in destinations)
-            NavigationDestination(icon: Icon(d.icon), label: d.label),
-        ],
-      ),
+          ),
+          bottomNavigationBar: shellHidesBottomNav(location)
+              ? null
+              : NavigationBar(
+                  height: 64,
+                  selectedIndex: _selectedVisualIndex(location, destinations),
+                  onDestinationSelected: (i) =>
+                      context.go(destinations[i].route),
+                  destinations: [
+                    for (final d in destinations)
+                      NavigationDestination(icon: Icon(d.icon), label: d.label),
+                  ],
+                ),
         ),
         const StickyNotesGate(),
       ],
@@ -314,13 +326,9 @@ class _DeliveryHomeState extends ConsumerState<_DeliveryHome> {
                 ),
               )
             else
-              for (final stop in board.assigned)
-                _AssignedStopTile(stop: stop),
+              for (final stop in board.assigned) _AssignedStopTile(stop: stop),
             const SizedBox(height: 20),
-            Text(
-              'Ready to pick up',
-              style: theme.textTheme.titleSmall,
-            ),
+            Text('Ready to pick up', style: theme.textTheme.titleSmall),
             const SizedBox(height: 4),
             Text(
               'Unassigned packed orders you can claim.',
@@ -359,9 +367,7 @@ class _AssignedStopTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = stop.customerName?.isNotEmpty == true
         ? stop.customerName!
-        : (stop.site.label.isNotEmpty
-              ? stop.site.label
-              : 'Stop #${stop.id}');
+        : (stop.site.label.isNotEmpty ? stop.site.label : 'Stop #${stop.id}');
     final orderLabel = stop.fieldOrderId != null
         ? 'Order #${stop.fieldOrderId}'
         : 'Stop #${stop.id}';
@@ -410,9 +416,9 @@ class _ClaimableOrderTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '#${order.id} · ${order.lines.length} lines · qty ${qty.toStringAsFixed(0)}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.mutedForeground,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
             ),
             const SizedBox(height: 8),
             Align(
@@ -475,7 +481,8 @@ class MorePage extends ConsumerWidget {
     final canPlaceVisit = session?.permissions.canPlaceVisitOrders ?? false;
     final canDispatch = session?.permissions.canDispatch ?? false;
     final canDelivery = session?.permissions.canAccessDelivery ?? false;
-    final canHistory = session != null &&
+    final canHistory =
+        session != null &&
         sessionCanViewDeliveryHistory(
           permissions: session.permissions,
           profile: session.profile,

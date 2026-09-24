@@ -166,4 +166,15 @@ void main() {
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('More'), findsOneWidget);
   });
+
+  test('shell hides tab bar on register and edit duka', () {
+    expect(shellHidesBottomNav(AppRoutes.customerNew), isTrue);
+    expect(
+      shellHidesBottomNav('${AppRoutes.customerNew}?returnTo=pos'),
+      isTrue,
+    );
+    expect(shellHidesBottomNav(AppRoutes.customerEdit(12)), isTrue);
+    expect(shellHidesBottomNav(AppRoutes.customers), isFalse);
+    expect(shellHidesBottomNav(AppRoutes.home), isFalse);
+  });
 }

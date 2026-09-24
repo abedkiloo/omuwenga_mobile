@@ -125,7 +125,7 @@ void main() {
     expect(dispatchPackRows(blank).where((r) => r.label == 'Customer').single.value, '—');
     expect(
       dispatchAssignRows(order: blank, driverName: 'Jane')
-          .where((r) => r.label == 'Driver')
+          .where((r) => r.label == 'Assigned to')
           .single
           .value,
       'Jane',
@@ -155,7 +155,7 @@ void main() {
   test('dispatchAssignError', () {
     expect(
       dispatchAssignError(canAssign: true, driverId: null),
-      'Select a delivery driver first.',
+      'Select who will deliver first.',
     );
     expect(
       dispatchAssignError(canAssign: false, driverId: 3),

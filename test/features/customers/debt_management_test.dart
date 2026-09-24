@@ -99,7 +99,11 @@ Map<String, dynamic> _collectionsJson({
   };
 }
 
-AuthSession _debtSession({bool canUpdate = true, bool canView = true}) {
+AuthSession _debtSession({
+  bool canUpdate = true,
+  bool canView = true,
+  bool canApprove = false,
+}) {
   return AuthSession(
     user: const AuthUser(
       id: 1,
@@ -119,6 +123,8 @@ AuthSession _debtSession({bool canUpdate = true, bool canView = true}) {
         const PermissionGrant(module: 'debt_management', action: 'view'),
       if (canUpdate)
         const PermissionGrant(module: 'debt_management', action: 'update'),
+      if (canApprove)
+        const PermissionGrant(module: 'debt_management', action: 'approve'),
     ]),
     persona: AppPersona.cashier,
   );
@@ -214,6 +220,47 @@ MockClient _debtHttpClient({
           'transaction': {'id': 11},
         }),
         201,
+      );
+    }
+    if (path.contains('/payments/intents/')) {
+      return http.Response(
+        jsonEncode({
+          'id': 1,
+          'amount': '80.00',
+          'phone': '0700123456',
+          'status': 'created',
+          'purpose': 'debt',
+          'invoice_number': 'INV-1',
+          'mpesa_receipt': null,
+        }),
+        201,
+      );
+    }
+    if (path.contains('/stk/')) {
+      return http.Response(
+        jsonEncode({
+          'id': 1,
+          'amount': '80.00',
+          'phone': '0700123456',
+          'status': 'prompted',
+          'purpose': 'debt',
+          'invoice_number': 'INV-1',
+        }),
+        200,
+      );
+    }
+    if (path.contains('/query/')) {
+      return http.Response(
+        jsonEncode({
+          'id': 1,
+          'amount': '80.00',
+          'phone': '0700123456',
+          'status': 'paid',
+          'purpose': 'debt',
+          'invoice_number': 'INV-1',
+          'mpesa_receipt': 'QHX7K2L9M1',
+        }),
+        200,
       );
     }
     return http.Response('{}', 200);
@@ -830,6 +877,169 @@ void main() {
       await tester.pump();
       expect(find.textContaining('greater than zero'), findsOneWidget);
       expect(find.byType(ReceivePaymentPage), findsOneWidget);
+    });
+
+    testWidgets('sales confirm copy and queued collection snackbar', (
+      tester,
+    ) async {
+      final client = MockClient((request) async {
+        final path = request.url.path;
+        if (path.contains('/detail/')) {
+          return http.Response(
+            jsonEncode({
+              'customer': {
+                'id': 7,
+                'name': 'Debtor Shop',
+                'phone': '0700123456',
+                'wallet_balance': '-80.00',
+              },
+              'standing_summary': {'standing': 'debt'},
+              'orders': <dynamic>[],
+            }),
+            200,
+          );
+        }
+        if (path.contains('receive-wallet-payment')) {
+          return http.Response(
+            jsonEncode({
+              'wallet_balance': '-80.00',
+              'message': 'queued',
+              'pending_change': {'id': 3, 'action_type': 'debt_collection'},
+            }),
+            202,
+          );
+        }
+        return http.Response('{}', 200);
+      });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _overrides(session: _debtSession(), httpClient: client),
+          child: MaterialApp(
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  key: const Key('open_settle'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const ReceivePaymentPage(customerId: 7),
+                      ),
+                    );
+                  },
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('open_settle')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
+      await tester.tap(find.byKey(const Key('settle_confirm')));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('A manager must approve it before the wallet is updated'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('settle_commit_confirm')));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Submitted for manager approval'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('approver confirm copy records payment live', (tester) async {
+      final client = _debtHttpClient();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _overrides(
+            session: _debtSession(canApprove: true),
+            httpClient: client,
+          ),
+          child: const MaterialApp(home: ReceivePaymentPage(customerId: 7)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
+      await tester.tap(find.byKey(const Key('settle_confirm')));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('This records the payment on the customer account'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('settle_commit_confirm')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Payment recorded'), findsOneWidget);
+    });
+
+    testWidgets('settle validates mpesa code', (tester) async {
+      final client = _debtHttpClient();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _overrides(session: _debtSession(), httpClient: client),
+          child: const MaterialApp(home: ReceivePaymentPage(customerId: 7)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('settle_method_mpesa')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('settle_mpesa_capture_code')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
+      await tester.tap(find.byKey(const Key('settle_confirm')));
+      await tester.pump();
+      expect(find.byType(ReceivePaymentPage), findsOneWidget);
+      expect(find.text('Proceed with this payment?'), findsNothing);
+
+      await tester.enterText(find.byKey(const Key('settle_reference')), 'QHX7K2L9M1');
+      await tester.tap(find.byKey(const Key('settle_confirm')));
+      await tester.pumpAndSettle();
+      expect(find.text('Proceed with this payment?'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('settle_commit_cancel')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('settle_mpesa_capture_prompt')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('settle_mpesa_phone')), '');
+      await tester.tap(find.byKey(const Key('settle_confirm')));
+      await tester.pump();
+      expect(find.text('Proceed with this payment?'), findsNothing);
+    });
+
+    testWidgets('mpesa prompt waits for STK then submits collection', (
+      tester,
+    ) async {
+      final client = _debtHttpClient();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _overrides(session: _debtSession(), httpClient: client),
+          child: const MaterialApp(home: ReceivePaymentPage(customerId: 7)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('settle_method_mpesa')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
+      await tester.tap(find.byKey(const Key('settle_confirm')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Phone'), findsWidgets);
+      await tester.tap(find.byKey(const Key('settle_commit_confirm')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byKey(const Key('stk_query')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('stk_query')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byKey(const Key('stk_done')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('stk_done')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
     });
   });
 }

@@ -94,7 +94,7 @@ List<CommitSummaryRow> dispatchPackRows(FieldOrderSummary order) {
 }
 
 String? dispatchAssignError({required bool canAssign, int? driverId}) {
-  if (driverId == null) return 'Select a delivery driver first.';
+  if (driverId == null) return 'Select who will deliver first.';
   if (!canAssign) return 'This order cannot be assigned yet.';
   return null;
 }
@@ -111,7 +111,7 @@ List<CommitSummaryRow> dispatchAssignRows({
           ? '—'
           : order.customerName!,
     ),
-    CommitSummaryRow(label: 'Driver', value: driverName, emphasis: true),
+    CommitSummaryRow(label: 'Assigned to', value: driverName, emphasis: true),
   ];
 }
 

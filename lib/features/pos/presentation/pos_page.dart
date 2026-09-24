@@ -1621,7 +1621,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                       }
                       if (draft.method.requiresReference && collectNow) {
                         final refErr = _reference.text.trim().isEmpty
-                            ? 'Enter the payment reference, e.g. card slip number.'
+                            ? 'Enter the M-Pesa confirmation code.'
                             : null;
                         if (refErr != null) {
                           ScaffoldMessenger.of(
@@ -1690,14 +1690,14 @@ class _TenderOptionCard extends StatelessWidget {
     final icon = switch (method) {
       PosPaymentMethod.mpesa => Icons.phone_android,
       PosPaymentMethod.cash => Icons.payments_outlined,
-      PosPaymentMethod.card => Icons.credit_card,
-      PosPaymentMethod.other => Icons.account_balance_wallet_outlined,
+      PosPaymentMethod.card => Icons.payments_outlined,
+      PosPaymentMethod.other => Icons.payments_outlined,
     };
     final subtitle = switch (method) {
       PosPaymentMethod.mpesa => 'Prompt PIN or add the SMS code',
       PosPaymentMethod.cash => 'Direct till physical note collection',
-      PosPaymentMethod.card => 'Card or bank transfer reference',
-      PosPaymentMethod.other => 'Other recorded tender',
+      PosPaymentMethod.card => 'Cash or M-Pesa only',
+      PosPaymentMethod.other => 'Cash or M-Pesa only',
     };
 
     return CbSurfaceCard(

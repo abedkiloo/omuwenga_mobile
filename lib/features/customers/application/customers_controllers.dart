@@ -98,18 +98,21 @@ class CustomerDetailState {
     this.loading = false,
     this.error,
     this.settling = false,
+    this.queuedForApproval = false,
   });
 
   final CustomerDetail? detail;
   final bool loading;
   final String? error;
   final bool settling;
+  final bool queuedForApproval;
 
   CustomerDetailState copyWith({
     CustomerDetail? detail,
     bool? loading,
     String? error,
     bool? settling,
+    bool? queuedForApproval,
     bool clearError = false,
   }) {
     return CustomerDetailState(
@@ -117,6 +120,7 @@ class CustomerDetailState {
       loading: loading ?? this.loading,
       error: clearError ? null : (error ?? this.error),
       settling: settling ?? this.settling,
+      queuedForApproval: queuedForApproval ?? this.queuedForApproval,
     );
   }
 }
@@ -147,7 +151,11 @@ class CustomerDetailController extends StateNotifier<CustomerDetailState> {
   }) async {
     final detail = state.detail;
     if (detail == null) return false;
-    state = state.copyWith(settling: true, clearError: true);
+    state = state.copyWith(
+      settling: true,
+      clearError: true,
+      queuedForApproval: false,
+    );
     final result = await _api.receiveWalletPayment(
       customerId: detail.id,
       amount: amount,
@@ -161,8 +169,12 @@ class CustomerDetailController extends StateNotifier<CustomerDetailState> {
       state = state.copyWith(settling: false, error: f.error.toString());
       return false;
     }
+    final payment = result.getOrThrow();
     await load(detail.id);
-    state = state.copyWith(settling: false);
+    state = state.copyWith(
+      settling: false,
+      queuedForApproval: payment.pendingApproval,
+    );
     return true;
   }
 }

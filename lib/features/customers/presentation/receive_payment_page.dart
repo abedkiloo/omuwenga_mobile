@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
+import '../../auth/application/auth_controller.dart';
 import '../../pos/domain/payment.dart';
 import '../../payments/domain/mpesa_capture.dart';
 import '../../payments/presentation/mpesa_capture.dart';
@@ -64,18 +65,6 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     return paymentAmountValidationMessage(_amount.text);
   }
 
-  String? get _referenceError {
-    if (_method == PosPaymentMethod.mpesa) {
-      if (_mpesaCapture == MpesaCaptureMode.prompt) return null;
-      if (!_attempted && _reference.text.trim().isEmpty) return null;
-      return mpesaReceiptValidationMessage(_reference.text);
-    }
-    if (_method.requiresReference && _attempted && _reference.text.trim().isEmpty) {
-      return 'Enter the card or receipt reference.';
-    }
-    return null;
-  }
-
   Future<void> _confirm() async {
     setState(() => _attempted = true);
     final amountError = paymentAmountValidationMessage(_amount.text);
@@ -91,19 +80,22 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
         if (mpesaReceiptValidationMessage(reference) != null) return;
         reference = normalizeMpesaReceipt(reference);
       }
-    } else if (_method.requiresReference && reference.trim().isEmpty) {
-      return;
     }
 
     final detail = ref.read(customerDetailProvider(widget.customerId)).detail;
     if (detail == null) return;
 
+    final canApprove =
+        ref.read(authControllerProvider).session?.permissions.canApproveDebtManagement ??
+        false;
     final confirmed = await showCommitConfirm(
       context: context,
       title: 'Proceed with this payment?',
-      description:
-          'Do you really want to continue with this transaction? '
-          'This records the payment on the customer account.',
+      description: canApprove
+          ? 'Do you really want to continue with this transaction? '
+                'This records the payment on the customer account.'
+          : 'Do you really want to continue with this transaction? '
+                'A manager must approve it before the wallet is updated.',
       rows: [
         CommitSummaryRow(label: 'Customer', value: detail.name),
         CommitSummaryRow(label: 'Amount', value: _kes(amount), emphasis: true),
@@ -156,7 +148,25 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
         );
     if (!mounted) return;
     if (ok) {
-      context.pop();
+      final queued = ref
+          .read(customerDetailProvider(widget.customerId))
+          .queuedForApproval;
+      final messenger = ScaffoldMessenger.of(context);
+      final router = GoRouter.maybeOf(context);
+      if (router != null) {
+        if (router.canPop()) router.pop();
+      } else if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            queued
+                ? 'Submitted for manager approval — wallet unchanged until it is approved.'
+                : 'Payment recorded.',
+          ),
+        ),
+      );
     } else {
       final err = ref.read(customerDetailProvider(widget.customerId)).error;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -239,8 +249,6 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                     for (final m in const [
                       PosPaymentMethod.cash,
                       PosPaymentMethod.mpesa,
-                      PosPaymentMethod.card,
-                      PosPaymentMethod.other,
                     ])
                       ChoiceChip(
                         key: Key('settle_method_${m.name}'),
@@ -271,23 +279,6 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                     codeModeKey: const Key('settle_mpesa_capture_code'),
                     showErrors: _attempted,
                     onChanged: () => setState(() {}),
-                  ),
-                ] else if (_method.requiresReference) ...[
-                  const SizedBox(height: 16),
-                  TextField(
-                    key: const Key('settle_reference'),
-                    controller: _reference,
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: InputDecoration(
-                      labelText: 'Payment reference',
-                      hintText: 'Receipt or last 4 digits',
-                      helperText: 'Optional for cash; required for card.',
-                      helperMaxLines: 3,
-                      errorText: _referenceError,
-                      errorMaxLines: 3,
-                      border: const OutlineInputBorder(),
-                    ),
-                    onChanged: (_) => setState(() {}),
                   ),
                 ],
                 const SizedBox(height: 16),

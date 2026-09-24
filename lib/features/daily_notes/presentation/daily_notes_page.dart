@@ -22,10 +22,7 @@ bool _canAssign(AuthSession? session) {
 }
 
 Future<bool?> _showBoundedSheet(BuildContext context, Widget child) {
-  return showCbBoundedSheet<bool>(
-    context: context,
-    builder: (_) => child,
-  );
+  return showCbBoundedSheet<bool>(context: context, builder: (_) => child);
 }
 
 class DailyNotesPage extends ConsumerStatefulWidget {
@@ -41,9 +38,9 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final session = ref.read(authControllerProvider).session;
-      ref.read(dailyNotesProvider.notifier).load(
-            loadStaff: _canAssign(session),
-          );
+      ref
+          .read(dailyNotesProvider.notifier)
+          .load(loadStaff: _canAssign(session));
     });
   }
 
@@ -82,9 +79,9 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
         actions: [
           IconButton(
             key: const Key('daily_notes_refresh'),
-            onPressed: () => ref.read(dailyNotesProvider.notifier).load(
-                  loadStaff: canAssign,
-                ),
+            onPressed: () => ref
+                .read(dailyNotesProvider.notifier)
+                .load(loadStaff: canAssign),
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -101,10 +98,7 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 88),
               children: [
-                Text(
-                  state.date,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
+                Text(state.date, style: Theme.of(context).textTheme.titleSmall),
                 if (canAssign)
                   Align(
                     alignment: Alignment.centerLeft,
@@ -151,8 +145,9 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                           ),
-                    onChanged: (_) =>
-                        ref.read(dailyNotesProvider.notifier).toggleTask(task.id),
+                    onChanged: (_) => ref
+                        .read(dailyNotesProvider.notifier)
+                        .toggleTask(task.id),
                   ),
                 const SizedBox(height: 16),
                 Text('Notes', style: Theme.of(context).textTheme.titleSmall),
@@ -226,15 +221,15 @@ class _NoteBoardColumn extends ConsumerWidget {
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 Text(
                   '${notes.length}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.mutedForeground,
-                      ),
+                    color: AppColors.mutedForeground,
+                  ),
                 ),
               ],
             ),
@@ -269,14 +264,17 @@ class _NoteBoardColumn extends ConsumerWidget {
                                     Checkbox(
                                       key: Key('daily_note_tick_${note.id}'),
                                       value: note.isDone,
-                                      onChanged: canToggleDailyNote(
-                                        note,
-                                        userId,
-                                        viewAll: viewAll,
-                                      )
+                                      onChanged:
+                                          canToggleDailyNote(
+                                            note,
+                                            userId,
+                                            viewAll: viewAll,
+                                          )
                                           ? (_) => ref
-                                              .read(dailyNotesProvider.notifier)
-                                              .toggleNote(note.id)
+                                                .read(
+                                                  dailyNotesProvider.notifier,
+                                                )
+                                                .toggleNote(note.id)
                                           : null,
                                     ),
                                     Expanded(
@@ -360,9 +358,9 @@ class _NoteDetailSheet extends ConsumerWidget {
         const SizedBox(height: 8),
         Text(
           _noteMeta(note),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.mutedForeground,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
         ),
         const SizedBox(height: 16),
         if (canToggle)
@@ -466,12 +464,14 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
               TextField(
                 key: const Key('daily_note_title'),
                 controller: _title,
-                decoration: const InputDecoration(labelText: 'Title (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Title (optional)',
+                ),
               ),
               TextField(
                 key: const Key('daily_note_content'),
                 controller: _content,
-                maxLines: 6,
+                maxLines: 4,
                 decoration: const InputDecoration(labelText: 'Note'),
               ),
               SwitchListTile(
@@ -577,10 +577,7 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
                       for (final r in state.roles)
                         DropdownMenuItem<int?>(
                           value: r.id,
-                          child: Text(
-                            r.name,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          child: Text(r.name, overflow: TextOverflow.ellipsis),
                         ),
                     ],
                     onChanged: (v) => setState(() => _assignedRole = v),
@@ -595,9 +592,7 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
               ] else if (_sticky)
                 const Padding(
                   padding: EdgeInsets.only(top: 4),
-                  child: Text(
-                    'This note will block you until you tick it.',
-                  ),
+                  child: Text('This note will block you until you tick it.'),
                 ),
               if (state.error != null)
                 Padding(
@@ -628,8 +623,9 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
                               title: _title.text,
                               isSticky: _sticky,
                               assignedTo: _assignToRole ? null : _assignedTo,
-                              assignedRole:
-                                  _assignToRole ? _assignedRole : null,
+                              assignedRole: _assignToRole
+                                  ? _assignedRole
+                                  : null,
                             )
                           : await notifier.createNote(
                               content: _content.text,
@@ -638,8 +634,9 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
                               assignedTo: _assignToRole || _assignToAll
                                   ? null
                                   : _assignedTo,
-                              assignedRole:
-                                  _assignToRole ? _assignedRole : null,
+                              assignedRole: _assignToRole
+                                  ? _assignedRole
+                                  : null,
                               assignToAll: _assignToAll,
                             );
                       if (ok && context.mounted) {

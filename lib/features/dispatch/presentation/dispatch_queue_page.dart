@@ -167,13 +167,13 @@ class _DispatchOrderDetailPageState
     }
     final driverName = state.drivers
             .where((d) => d.id == state.selectedDeliveryDriverId)
-            .map((d) => d.displayName)
+            .map((d) => d.listLabel)
             .firstOrNull ??
-        'Selected driver';
+        'Selected person';
     final confirmed = await showCommitConfirm(
       context: context,
       title: 'Assign this order?',
-      description: 'The driver will see it on their route after you confirm.',
+      description: 'The person you pick will see it on their route after you confirm.',
       rows: dispatchAssignRows(order: order, driverName: driverName),
       confirmLabel: 'Confirm & assign',
       confirmKey: const Key('dispatch_assign_confirm'),
@@ -330,14 +330,14 @@ class _DispatchOrderDetailPageState
               key: const Key('dispatch_driver_select'),
               initialValue: state.selectedDeliveryDriverId,
               decoration: const InputDecoration(
-                labelText: 'Delivery driver',
+                labelText: 'Assign to',
                 border: OutlineInputBorder(),
               ),
               items: [
                 for (final d in state.drivers)
                   DropdownMenuItem(
                     value: d.id,
-                    child: Text(d.displayName),
+                    child: Text(d.listLabel),
                   ),
               ],
               onChanged: state.drivers.isEmpty
@@ -350,7 +350,7 @@ class _DispatchOrderDetailPageState
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'No delivery drivers yet. Add one to assign this order.',
+                'No one with delivery access yet. Add a driver, or grant Delivery on a role (Sales have it by default).',
                 key: const Key('dispatch_no_drivers'),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppColors.mutedForeground,
@@ -396,7 +396,7 @@ class _DispatchOrderDetailPageState
                   const SizedBox(height: 8),
                   CbPrimaryButton(
                     key: const Key('dispatch_assign'),
-                    label: 'Assign delivery driver',
+                    label: 'Assign for delivery',
                     onPressed: state.canAssign
                         ? () => _confirmAssign(order)
                         : null,

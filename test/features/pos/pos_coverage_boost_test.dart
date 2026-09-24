@@ -100,7 +100,7 @@ void main() {
           if (request.url.path.contains('store-settings')) {
             return http.Response(
               jsonEncode({
-                'enabled_payment_methods': ['cash', 'card'],
+                'enabled_payment_methods': ['cash', 'mpesa'],
               }),
               200,
             );
@@ -116,7 +116,7 @@ void main() {
     expect((await api.searchProducts('x')).isFailure, isTrue);
     expect((await api.searchProducts('y')).isSuccess, isTrue);
     final settings = (await api.loadSettings()).getOrThrow();
-    expect(settings.enabledPaymentMethods, contains(PosPaymentMethod.card));
+    expect(settings.enabledPaymentMethods, contains(PosPaymentMethod.cash));
 
     final cart = const PosCart().addProduct(
       const CatalogProduct(id: 1, name: 'A', price: 10),
@@ -125,9 +125,9 @@ void main() {
       (await api.createSale(
         cart: cart,
         draft: const CheckoutDraft(
-          method: PosPaymentMethod.card,
+          method: PosPaymentMethod.mpesa,
           amountPaid: 10,
-          paymentReference: 'REF',
+          paymentReference: 'QHX7K2L9M1',
         ),
         idempotencyKey: 'k',
       )).isFailure,

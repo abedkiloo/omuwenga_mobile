@@ -3,6 +3,45 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('sheet height does not double-count keyboard insets', () {
+    expect(
+      cbSheetFrameHeight(
+        mediaHeight: 800,
+        inset: 300,
+        maxConstraintHeight: 800,
+        heightFactor: 0.5,
+      ),
+      250,
+    );
+    expect(
+      cbSheetFrameHeight(
+        mediaHeight: 800,
+        inset: 300,
+        maxConstraintHeight: 400,
+        heightFactor: 0.5,
+      ),
+      200,
+    );
+    expect(
+      cbSheetFrameHeight(
+        mediaHeight: 800,
+        inset: 300,
+        maxConstraintHeight: double.infinity,
+        heightFactor: 0.5,
+      ),
+      250,
+    );
+    expect(
+      cbSheetFrameHeight(
+        mediaHeight: 100,
+        inset: 200,
+        maxConstraintHeight: 600,
+        heightFactor: 0.9,
+      ),
+      0,
+    );
+  });
+
   testWidgets('bounded sheet fits above the keyboard', (tester) async {
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1;
@@ -46,10 +85,7 @@ void main() {
           ),
           child: Directionality(
             textDirection: TextDirection.ltr,
-            child: CbSheetFrame(
-              heightFactor: 0.5,
-              child: SizedBox.expand(),
-            ),
+            child: CbSheetFrame(heightFactor: 0.5, child: SizedBox.expand()),
           ),
         ),
       ),

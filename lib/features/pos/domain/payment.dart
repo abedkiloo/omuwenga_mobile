@@ -19,8 +19,7 @@ extension PosPaymentMethodX on PosPaymentMethod {
     }
   }
 
-  bool get requiresReference =>
-      this == PosPaymentMethod.card || this == PosPaymentMethod.other;
+  bool get requiresReference => this == PosPaymentMethod.mpesa;
 
   static PosPaymentMethod? tryParse(String raw) {
     final key = raw.trim().toLowerCase();
@@ -40,7 +39,6 @@ class PosSettings {
     this.enabledPaymentMethods = const [
       PosPaymentMethod.cash,
       PosPaymentMethod.mpesa,
-      PosPaymentMethod.card,
     ],
     this.allowPartialPayment = true,
     this.storeName = 'CompleteByte POS',
@@ -81,8 +79,11 @@ class PosSettings {
     if (rawMethods is List) {
       for (final item in rawMethods) {
         final parsed = PosPaymentMethodX.tryParse(item.toString());
-        // wallet is not a payment_method on create — skip for method chips
-        if (parsed != null) methods.add(parsed);
+        if (parsed == PosPaymentMethod.cash) {
+          methods.add(PosPaymentMethod.cash);
+        } else if (parsed == PosPaymentMethod.mpesa) {
+          methods.add(PosPaymentMethod.mpesa);
+        }
       }
     }
     String text(Object? value) => (value ?? '').toString().trim();
@@ -210,7 +211,7 @@ String? validateCheckout({
     if (draft.method == PosPaymentMethod.mpesa) {
       return mpesaReceiptValidationMessage(draft.paymentReference);
     }
-    return 'Enter the payment reference, e.g. card slip number.';
+    return 'Enter the M-Pesa confirmation code.';
   }
   return null;
 }

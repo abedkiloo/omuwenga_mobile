@@ -108,24 +108,31 @@ void main() {
         'doing',
       );
       expect(
-        DailyNote.fromJson({..._noteJson(), 'board_column': 'doing'}).boardColumn,
+        DailyNote.fromJson({
+          ..._noteJson(),
+          'board_column': 'doing',
+        }).boardColumn,
         'doing',
       );
       expect(
-        notesForBoardColumn(
-          [
-            DailyNote.fromJson(_noteJson()),
-            DailyNote.fromJson({..._noteJson(id: 2), 'in_progress': true}),
-          ],
-          'doing',
-        ).single.id,
+        notesForBoardColumn([
+          DailyNote.fromJson(_noteJson()),
+          DailyNote.fromJson({..._noteJson(id: 2), 'in_progress': true}),
+        ], 'doing').single.id,
         2,
       );
-      expect(kNoteBoardColumns.map((c) => c.id).toList(), ['todo', 'doing', 'past']);
+      expect(kNoteBoardColumns.map((c) => c.id).toList(), [
+        'todo',
+        'doing',
+        'past',
+      ]);
       expect(hasBlockingStickyNotes([sticky, general]), isTrue);
       expect(unresolvedStickyNotes([sticky, general]).single.id, 1);
       expect(hasInboxNotes([general]), isTrue);
-      expect(hasInboxNotes([DailyNote.fromJson(_noteJson(done: true))]), isFalse);
+      expect(
+        hasInboxNotes([DailyNote.fromJson(_noteJson(done: true))]),
+        isFalse,
+      );
       expect(canEditDailyNote(sticky, 9), isTrue);
       expect(canEditDailyNote(sticky, 20), isFalse);
       expect(canToggleDailyNote(sticky, 20), isTrue);
@@ -167,10 +174,7 @@ void main() {
         'doing',
       );
       expect(canEditDailyNote(sticky, null), isFalse);
-      expect(
-        sessionCanAssignDailyNotes(viewAll: false, isAdmin: true),
-        isTrue,
-      );
+      expect(sessionCanAssignDailyNotes(viewAll: false, isAdmin: true), isTrue);
       expect(sessionCanAssignDailyNotes(viewAll: false), isFalse);
       expect(
         noteAudienceLabel(
@@ -237,10 +241,7 @@ void main() {
           }
           if (request.method == 'POST' &&
               request.url.path.contains('/toggle-done/')) {
-            return http.Response(
-              jsonEncode(_noteJson(done: true)),
-              200,
-            );
+            return http.Response(jsonEncode(_noteJson(done: true)), 200);
           }
           if (request.method == 'PATCH') {
             return http.Response(
@@ -253,11 +254,17 @@ void main() {
             );
           }
           if (request.method == 'PUT') {
-            return http.Response(jsonEncode(_noteJson(id: 8, sticky: false)), 200);
+            return http.Response(
+              jsonEncode(_noteJson(id: 8, sticky: false)),
+              200,
+            );
           }
           if (request.method == 'POST' &&
               request.url.path.contains('/notes/')) {
-            return http.Response(jsonEncode(_noteJson(id: 8, sticky: false)), 201);
+            return http.Response(
+              jsonEncode(_noteJson(id: 8, sticky: false)),
+              201,
+            );
           }
           if (request.url.path.contains('/tasks/') &&
               request.url.path.contains('/toggle-done/')) {
@@ -286,7 +293,10 @@ void main() {
         (await api.listNotes(noteDate: '2026-09-24')).getOrThrow().single.id,
         1,
       );
-      expect((await api.listTasks(taskDate: '2026-09-24')).getOrThrow().single.title, 'Restock');
+      expect(
+        (await api.listTasks(taskDate: '2026-09-24')).getOrThrow().single.title,
+        'Restock',
+      );
       expect(
         (await api.createNote(
           createNotePayload(noteDate: '2026-09-24', content: 'Hi'),
@@ -302,7 +312,10 @@ void main() {
         )).getOrThrow().id,
         8,
       );
-      expect((await api.moveNote(8, 'doing')).getOrThrow().boardColumn, 'doing');
+      expect(
+        (await api.moveNote(8, 'doing')).getOrThrow().boardColumn,
+        'doing',
+      );
 
       final bad = _api(MockClient((_) async => http.Response('no', 500)));
       expect((await bad.blocking()).isFailure, isTrue);
@@ -336,16 +349,16 @@ void main() {
       );
       expect((await details.createNote({'content': 'x'})).isFailure, isTrue);
       final fields = _api(
-        MockClient((_) async => http.Response('{"content":["Write the note"]}', 400)),
+        MockClient(
+          (_) async => http.Response('{"content":["Write the note"]}', 400),
+        ),
       );
       expect((await fields.createNote({'content': 'x'})).isFailure, isTrue);
       final emptyErr = _api(
         MockClient((_) async => http.Response('{"a":null}', 400)),
       );
       expect((await emptyErr.createNote({'content': 'x'})).isFailure, isTrue);
-      final broken = _api(
-        MockClient((_) async => http.Response('{', 201)),
-      );
+      final broken = _api(MockClient((_) async => http.Response('{', 201)));
       expect((await broken.createNote({'content': 'x'})).isFailure, isTrue);
     });
   });
@@ -381,10 +394,16 @@ void main() {
             );
           }
           if (request.method == 'PUT') {
-            return http.Response(jsonEncode(_noteJson(id: 1, sticky: false)), 200);
+            return http.Response(
+              jsonEncode(_noteJson(id: 1, sticky: false)),
+              200,
+            );
           }
           if (request.method == 'POST') {
-            return http.Response(jsonEncode(_noteJson(id: 9, sticky: true)), 201);
+            return http.Response(
+              jsonEncode(_noteJson(id: 9, sticky: true)),
+              201,
+            );
           }
           if (request.url.path.contains('/tasks/')) {
             return http.Response(jsonEncode([_taskJson()]), 200);
@@ -457,9 +476,15 @@ void main() {
             return http.Response(jsonEncode([_taskJson()]), 200);
           }
           if (request.method == 'POST') {
-            return http.Response(jsonEncode(_noteJson(id: 11, sticky: false)), 201);
+            return http.Response(
+              jsonEncode(_noteJson(id: 11, sticky: false)),
+              201,
+            );
           }
-          return http.Response(jsonEncode([_noteJson(), _noteJson(id: 2, sticky: false)]), 200);
+          return http.Response(
+            jsonEncode([_noteJson(), _noteJson(id: 2, sticky: false)]),
+            200,
+          );
         }),
       );
       final container = ProviderContainer(
@@ -489,9 +514,7 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: const MaterialApp(
-            home: Scaffold(
-              body: Stack(children: [StickyNotesGate()]),
-            ),
+            home: Scaffold(body: Stack(children: [StickyNotesGate()])),
           ),
         ),
       );
@@ -566,13 +589,18 @@ void main() {
       expect(find.byKey(const Key('daily_note_assign_person')), findsOneWidget);
       await tester.tap(find.byKey(const Key('daily_note_assign_role')));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const Key('daily_note_content')), 'Quiet shift');
+      await tester.enterText(
+        find.byKey(const Key('daily_note_content')),
+        'Quiet shift',
+      );
       await tester.ensureVisible(find.byKey(const Key('daily_note_save')));
       await tester.tap(find.byKey(const Key('daily_note_save')));
       await tester.pumpAndSettle();
     });
 
-    testWidgets('opens a note, completes it, and edits own note', (tester) async {
+    testWidgets('opens a note, completes it, and edits own note', (
+      tester,
+    ) async {
       final api = _api(
         MockClient((request) async {
           if (request.url.path.contains('/tasks/')) {
@@ -624,7 +652,10 @@ void main() {
       expect(find.byKey(const Key('daily_note_edit')), findsOneWidget);
       await tester.tap(find.byKey(const Key('daily_note_edit')));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const Key('daily_note_content')), 'Updated log');
+      await tester.enterText(
+        find.byKey(const Key('daily_note_content')),
+        'Updated log',
+      );
       await tester.ensureVisible(find.byKey(const Key('daily_note_save')));
       await tester.ensureVisible(find.byKey(const Key('daily_note_save')));
       await tester.tap(find.byKey(const Key('daily_note_save')));
@@ -658,12 +689,18 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('daily_notes_everyone')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('daily_note_assign_everyone')), findsOneWidget);
+      expect(
+        find.byKey(const Key('daily_note_assign_everyone')),
+        findsOneWidget,
+      );
       await tester.tap(find.byKey(const Key('daily_note_assign_person')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('daily_note_assign_everyone')));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const Key('daily_note_content')), 'All hands');
+      await tester.enterText(
+        find.byKey(const Key('daily_note_content')),
+        'All hands',
+      );
       await tester.tap(find.byKey(const Key('daily_note_sticky')));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.byKey(const Key('daily_note_save')));
@@ -671,7 +708,9 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('login inbox shows a general note with continue', (tester) async {
+    testWidgets('login inbox shows a general note with continue', (
+      tester,
+    ) async {
       final api = _api(
         MockClient((request) async {
           if (request.url.path.contains('/blocking/')) {
@@ -690,9 +729,7 @@ void main() {
             dailyNotesApiProvider.overrideWithValue(api),
           ],
           child: const MaterialApp(
-            home: Scaffold(
-              body: Stack(children: [StickyNotesGate()]),
-            ),
+            home: Scaffold(body: Stack(children: [StickyNotesGate()])),
           ),
         ),
       );
@@ -724,9 +761,7 @@ void main() {
             dailyNotesApiProvider.overrideWithValue(api),
           ],
           child: const MaterialApp(
-            home: Scaffold(
-              body: Stack(children: [StickyNotesGate()]),
-            ),
+            home: Scaffold(body: Stack(children: [StickyNotesGate()])),
           ),
         ),
       );
@@ -761,10 +796,7 @@ void main() {
           if (request.url.path.contains('/blocking/')) {
             return http.Response(
               jsonEncode([
-                {
-                  ..._noteJson(id: 11, sticky: false),
-                  'title': '',
-                },
+                {..._noteJson(id: 11, sticky: false), 'title': ''},
               ]),
               200,
             );
@@ -809,6 +841,8 @@ void main() {
       await tester.tap(find.byKey(const Key('daily_notes_add')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('daily_note_assign_role')));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView).last, const Offset(0, -280));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(DropdownButtonFormField<int?>));
       await tester.pumpAndSettle();

@@ -21,6 +21,7 @@ void main() {
       expect(set.canViewCustomers, isTrue);
       expect(set.canViewDebtManagement, isTrue);
       expect(set.canUpdateDebtManagement, isTrue);
+      expect(set.canApproveDebtManagement, isFalse);
       expect(set.canCreateCustomers, isFalse);
       expect(set.canUpdateCustomers, isFalse);
       expect(set.has('sales', 'view'), isFalse);
@@ -47,6 +48,23 @@ void main() {
         isTrue,
       );
       expect(PermissionSet(const []).canRollbackSales, isFalse);
+      expect(
+        PermissionSet([
+          const PermissionGrant(module: 'debt_management', action: 'approve'),
+        ]).canApproveDebtManagement,
+        isTrue,
+      );
+      expect(PermissionSet.fromJsonList(null).isEmpty, isTrue);
+      expect(
+        PermissionSet.fromJsonList([
+          {'module': 'daily_notes', 'action': 'view'},
+          Map<dynamic, dynamic>.from({
+            'module': 'daily_notes',
+            'action': 'create',
+          }),
+        ]).canCreateDailyNotes,
+        isTrue,
+      );
     });
 
     test('canViewSales and Map grants', () {
@@ -225,6 +243,29 @@ void main() {
           permissions: perms,
         ),
         AppPersona.deliveryDriver,
+      );
+    });
+
+    test('sales with delivery still uses cashier home', () {
+      final perms = PermissionSet([
+        const PermissionGrant(module: 'pos', action: 'view'),
+        const PermissionGrant(module: 'sales', action: 'view'),
+        const PermissionGrant(module: 'delivery', action: 'view'),
+        const PermissionGrant(module: 'delivery', action: 'update'),
+      ]);
+      expect(perms.canAccessDelivery, isTrue);
+      expect(perms.canAccessPos, isTrue);
+      expect(
+        resolvePersona(
+          profile: const UserProfileSnapshot(
+            role: 'cashier',
+            isSuperAdmin: false,
+            isAdmin: false,
+            isManager: false,
+          ),
+          permissions: perms,
+        ),
+        AppPersona.cashier,
       );
     });
 

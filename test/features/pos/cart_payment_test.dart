@@ -77,7 +77,7 @@ void main() {
             amountPaid: 150,
           ),
         ),
-        isTrue,
+        isFalse,
       );
       expect(
         canSubmitCheckout(
