@@ -137,7 +137,7 @@ void main() {
     expect(empty, contains('No items.'));
     expect(empty, contains('Paid from customer wallet.'));
     expect(empty, contains('Wallet'));
-    expect(empty, contains('COMPLETEBYTE POS'));
+    expect(empty, contains('OMUWENGA SUPPLIERS'));
 
     final owed = buildThermalReceiptText(
       _receipt(
@@ -303,7 +303,7 @@ void main() {
     );
     expect(find.text('No items.'), findsOneWidget);
     expect(find.text('Paid from customer wallet.'), findsOneWidget);
-    expect(find.text('COMPLETEBYTE POS'), findsOneWidget);
+    expect(find.text('OMUWENGA SUPPLIERS'), findsOneWidget);
   });
 
   testWidgets('thermal receipt shows balance owed', (tester) async {

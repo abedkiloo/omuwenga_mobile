@@ -117,7 +117,7 @@ void main() {
         PosPaymentMethod.cash,
         PosPaymentMethod.mpesa,
       ]);
-      expect(settings.storeName, 'CompleteByte POS');
+      expect(settings.storeName, 'Omuwenga Suppliers');
       expect(settings.receiptFooter, 'Thank you for your business!');
       expect(settings.showSku, isFalse);
       expect(PosPaymentMethod.card.label, 'Card');

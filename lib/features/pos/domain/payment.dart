@@ -1,4 +1,5 @@
 import '../../../core/validation/field_types.dart';
+import '../../../core/branding/brand_assets.dart';
 import 'cart.dart';
 
 enum PosPaymentMethod { cash, mpesa, card, other }
@@ -41,7 +42,7 @@ class PosSettings {
       PosPaymentMethod.mpesa,
     ],
     this.allowPartialPayment = true,
-    this.storeName = 'CompleteByte POS',
+    this.storeName = BrandAssets.appName,
     this.branchName = '',
     this.address = '',
     this.phone = '',
@@ -99,7 +100,7 @@ class PosSettings {
       enabledPaymentMethods: methods.isEmpty
           ? const PosSettings().enabledPaymentMethods
           : methods,
-      storeName: storeName.isEmpty ? 'CompleteByte POS' : storeName,
+      storeName: storeName.isEmpty ? BrandAssets.appName : storeName,
       branchName: text(store?['branch_name']),
       address: text(store?['address']),
       phone: text(store?['phone']),

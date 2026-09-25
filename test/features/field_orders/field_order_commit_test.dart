@@ -116,6 +116,40 @@ void main() {
     expect(labeled.where((r) => r.label == 'Drop pin').single.value, contains('-1.20000'));
   });
 
+  test('dispatchPackError requires customer and lines', () {
+    const blank = FieldOrderSummary(
+      id: 11,
+      status: FieldOrderStatus.submitted,
+      siteId: 1,
+    );
+    expect(dispatchPackError(blank), 'This field sale needs a customer before it can be packed.');
+    expect(
+      dispatchPackError(
+        FieldOrderSummary(
+          id: 12,
+          status: FieldOrderStatus.submitted,
+          siteId: 1,
+          customerName: 'Ada',
+        ),
+      ),
+      'This order has no products to pack.',
+    );
+    expect(
+      dispatchPackError(
+        FieldOrderSummary(
+          id: 13,
+          status: FieldOrderStatus.submitted,
+          siteId: 1,
+          customerName: 'Ada',
+          lines: [
+            CartLine(productId: 1, name: 'A', unitPrice: 10, quantity: 2),
+          ],
+        ),
+      ),
+      isNull,
+    );
+  });
+
   test('dispatch and claim rows hide blank customer names', () {
     const blank = FieldOrderSummary(
       id: 11,

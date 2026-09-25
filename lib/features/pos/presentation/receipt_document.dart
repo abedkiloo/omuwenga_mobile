@@ -39,7 +39,7 @@ Future<Uint8List> buildReceiptPdf(
 }) async {
   final document = pw.Document(
     title: 'Receipt ${receipt.saleNumber}',
-    author: 'CompleteByte POS',
+    author: kDefaultReceiptStoreName,
   );
 
   document.addPage(

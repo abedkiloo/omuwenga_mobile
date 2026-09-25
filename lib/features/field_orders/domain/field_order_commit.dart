@@ -73,6 +73,14 @@ List<CommitSummaryRow> fieldOrderReviewRows(FieldOrderCart cart) {
   ];
 }
 
+String? dispatchPackError(FieldOrderSummary order) {
+  if ((order.customerName ?? '').trim().isEmpty) {
+    return 'This field sale needs a customer before it can be packed.';
+  }
+  if (order.lines.isEmpty) return 'This order has no products to pack.';
+  return null;
+}
+
 List<CommitSummaryRow> dispatchPackRows(FieldOrderSummary order) {
   final qty = order.lines.fold<double>(0, (sum, line) => sum + line.quantity);
   final total = order.lines.fold<double>(0, (sum, line) => sum + line.lineTotal);
@@ -89,7 +97,10 @@ List<CommitSummaryRow> dispatchPackRows(FieldOrderSummary order) {
       value: '${order.lines.length} lines · qty ${qty.round()}',
     ),
     CommitSummaryRow(label: 'Total', value: _kes(total), emphasis: true),
-    const CommitSummaryRow(label: 'After confirm', value: 'Ready for pickup'),
+    const CommitSummaryRow(
+      label: 'After confirm',
+      value: 'Customer debt — collect later as Cash or M-Pesa',
+    ),
   ];
 }
 

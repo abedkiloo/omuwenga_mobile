@@ -1,8 +1,9 @@
+import '../../../core/branding/brand_assets.dart';
 import '../data/pos_api.dart';
 import '../domain/cart.dart';
 import '../domain/payment.dart';
 
-const kDefaultReceiptStoreName = 'CompleteByte POS';
+const kDefaultReceiptStoreName = BrandAssets.appName;
 const kDefaultReceiptFooter = 'Thank you for your business!';
 const kReceiptReachUsPhone = '0718515142';
 const kReceiptReachUsLabel = 'You can reach us via $kReceiptReachUsPhone';

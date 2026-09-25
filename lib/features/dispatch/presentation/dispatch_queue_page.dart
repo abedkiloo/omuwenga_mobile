@@ -141,11 +141,16 @@ class _DispatchOrderDetailPageState
   }
 
   Future<void> _confirmPack(FieldOrderSummary order) async {
+    final packError = dispatchPackError(order);
+    if (packError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(packError)));
+      return;
+    }
     final confirmed = await showCommitConfirm(
       context: context,
       title: 'Pack this order?',
       description:
-          'Stock will be allocated and the order marked ready for pickup.',
+          'Stock is allocated, the customer is billed, and cash is collected later through debt collection.',
       rows: dispatchPackRows(order),
       confirmLabel: 'Confirm & pack',
       confirmKey: const Key('dispatch_pack_confirm'),

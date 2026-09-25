@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Omuwenga</string>
+	<string>Omuwenga Suppliers</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Omuwenga</string>
+	<string>Omuwenga Suppliers</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -28,7 +28,7 @@
 	<true/>
 	<!-- Allow http:// to local Django during development -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Omuwenga uses your location to drop a delivery pin and show today’s route.</string>
+	<string>Omuwenga Suppliers uses your location to drop a delivery pin and show today’s route.</string>
 	<key>GMSApiKey</key>
 	<string>REPLACE_WITH_MAPS_API_KEY</string>
 	<key>NSAppTransportSecurity</key>
@@ -39,7 +39,7 @@
 		<true/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Omuwenga connects to your local CompleteBytePOS server on the same Wi‑Fi.</string>
+	<string>Omuwenga Suppliers connects to your local server on the same Wi‑Fi.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
