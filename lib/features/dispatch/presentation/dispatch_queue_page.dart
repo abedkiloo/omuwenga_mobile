@@ -148,11 +148,10 @@ class _DispatchOrderDetailPageState
     }
     final confirmed = await showCommitConfirm(
       context: context,
-      title: 'Pack this order?',
-      description:
-          'Stock is allocated, the customer is billed, and cash is collected later through debt collection.',
+      title: 'Mark ready for pickup?',
+      description: dispatchPackDescription(order),
       rows: dispatchPackRows(order),
-      confirmLabel: 'Confirm & pack',
+      confirmLabel: 'Confirm & mark ready',
       confirmKey: const Key('dispatch_pack_confirm'),
       cancelKey: const Key('dispatch_pack_cancel'),
     );
@@ -178,7 +177,7 @@ class _DispatchOrderDetailPageState
     final confirmed = await showCommitConfirm(
       context: context,
       title: 'Assign this order?',
-      description: 'The person you pick will see it on their route after you confirm.',
+      description: dispatchAssignDescription(order),
       rows: dispatchAssignRows(order: order, driverName: driverName),
       confirmLabel: 'Confirm & assign',
       confirmKey: const Key('dispatch_assign_confirm'),

@@ -118,8 +118,8 @@ class DispatchQueueController extends StateNotifier<DispatchQueueState> {
       return false;
     }
     await _push.notify(
-      title: 'Packed',
-      body: 'Order #$orderId ready',
+      title: 'Ready for pickup',
+      body: 'Customer added as a debtor. Collect later as Cash or M-Pesa.',
       data: {'field_order_id': '$orderId'},
     );
     state = state.copyWith(acting: false);
@@ -179,9 +179,14 @@ class DispatchQueueController extends StateNotifier<DispatchQueueState> {
       return null;
     }
     final driver = result.getOrThrow();
+    final drivers = [
+      for (final row in state.drivers)
+        if (row.id != driver.id) row,
+      driver,
+    ];
     state = state.copyWith(
       creatingDriver: false,
-      drivers: [...state.drivers, driver],
+      drivers: drivers,
       selectedDeliveryDriverId: driver.id,
       lastCreatedTempPassword: driver.temporaryPassword,
     );

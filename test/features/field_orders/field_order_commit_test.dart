@@ -176,6 +176,12 @@ void main() {
       ],
     );
     expect(dispatchPackRows(named).where((r) => r.label == 'Customer').single.value, 'Ada');
+    expect(
+      dispatchPackRows(named).where((r) => r.label == 'Customer account').single.value,
+      debtorConfirmCopy,
+    );
+    expect(dispatchPackDescription(named), contains('Ada is added as a debtor'));
+    expect(dispatchPackDescription(blank), contains('this customer is added as a debtor'));
     expect(deliveryClaimRows(named).where((r) => r.label == 'Customer').single.value, 'Ada');
     expect(
       dispatchAssignRows(order: named, driverName: 'Jane')
@@ -184,6 +190,26 @@ void main() {
           .value,
       'Ada',
     );
+    expect(
+      dispatchAssignRows(order: named, driverName: 'Jane')
+          .any((r) => r.label == 'Customer account'),
+      isFalse,
+    );
+    const packing = FieldOrderSummary(
+      id: 13,
+      status: FieldOrderStatus.packing,
+      siteId: 1,
+      customerName: 'Ada',
+    );
+    expect(
+      dispatchAssignRows(order: packing, driverName: 'Jane')
+          .where((r) => r.label == 'Customer account')
+          .single
+          .value,
+      debtorConfirmCopy,
+    );
+    expect(dispatchAssignDescription(named), contains('route'));
+    expect(dispatchAssignDescription(packing), contains('debtor'));
   });
 
   test('dispatchAssignError', () {

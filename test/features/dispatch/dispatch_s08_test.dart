@@ -263,6 +263,13 @@ void main() {
       expect(driver?.id, 201);
       expect(c.state.selectedDeliveryDriverId, 201);
       expect(c.state.lastCreatedTempPassword, 'tmpPass99');
+      expect(c.state.drivers.where((d) => d.id == 201).length, 1);
+      final again = await c.createDriver(
+        displayName: 'Ken Mutua',
+        phone: '0712345678',
+      );
+      expect(again?.id, 201);
+      expect(c.state.drivers.where((d) => d.id == 201).length, 1);
     });
 
     test('load and action failures', () async {

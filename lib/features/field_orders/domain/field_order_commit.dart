@@ -81,6 +81,22 @@ String? dispatchPackError(FieldOrderSummary order) {
   return null;
 }
 
+const String debtorConfirmCopy =
+    'This customer will be added as a debtor in the system. Collect later as Cash or M-Pesa.';
+
+String dispatchPackDescription(FieldOrderSummary order) {
+  final name = (order.customerName ?? '').trim();
+  final who = name.isEmpty ? 'this customer' : name;
+  return 'After you confirm, $who is added as a debtor. Collect later as Cash or M-Pesa.';
+}
+
+String dispatchAssignDescription(FieldOrderSummary order) {
+  if (order.status == FieldOrderStatus.packing && !order.stockAllocated) {
+    return 'This also marks the order ready. $debtorConfirmCopy';
+  }
+  return 'The person you pick will see it on their route after you confirm.';
+}
+
 List<CommitSummaryRow> dispatchPackRows(FieldOrderSummary order) {
   final qty = order.lines.fold<double>(0, (sum, line) => sum + line.quantity);
   final total = order.lines.fold<double>(0, (sum, line) => sum + line.lineTotal);
@@ -94,12 +110,12 @@ List<CommitSummaryRow> dispatchPackRows(FieldOrderSummary order) {
     ),
     CommitSummaryRow(
       label: 'Items',
-      value: '${order.lines.length} lines · qty ${qty.round()}',
+      value: '${order.lines.length} SKU · qty ${qty.round()}',
     ),
     CommitSummaryRow(label: 'Total', value: _kes(total), emphasis: true),
     const CommitSummaryRow(
-      label: 'After confirm',
-      value: 'Customer debt — collect later as Cash or M-Pesa',
+      label: 'Customer account',
+      value: debtorConfirmCopy,
     ),
   ];
 }
@@ -123,6 +139,11 @@ List<CommitSummaryRow> dispatchAssignRows({
           : order.customerName!,
     ),
     CommitSummaryRow(label: 'Assigned to', value: driverName, emphasis: true),
+    if (order.status == FieldOrderStatus.packing && !order.stockAllocated)
+      const CommitSummaryRow(
+        label: 'Customer account',
+        value: debtorConfirmCopy,
+      ),
   ];
 }
 
@@ -138,7 +159,7 @@ List<CommitSummaryRow> deliveryClaimRows(FieldOrderSummary order) {
     ),
     CommitSummaryRow(
       label: 'Items',
-      value: '${order.lines.length} lines · qty ${qty.round()}',
+      value: '${order.lines.length} SKU · qty ${qty.round()}',
     ),
   ];
 }
