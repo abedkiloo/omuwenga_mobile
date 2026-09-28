@@ -78,7 +78,7 @@ class AppraisalProgressCard extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: TextButton(
                 onPressed: () => context.push(AppRoutes.appraisals),
-                child: const Text('Open full appraisal'),
+                child: const Text('Open my progress'),
               ),
             ),
           ],

@@ -74,7 +74,7 @@ class _AppraisalGreetingState extends ConsumerState<AppraisalGreeting> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: CbPrimaryButton(
-                            label: 'Open appraisals',
+                            label: 'Open my progress',
                             onPressed: () {
                               ref.read(appraisalsProvider.notifier).dismissGreeting();
                               context.push(AppRoutes.appraisals);
