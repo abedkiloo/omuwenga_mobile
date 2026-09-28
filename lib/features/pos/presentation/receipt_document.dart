@@ -33,6 +33,14 @@ String receiptFileName(SaleReceipt receipt) {
   return 'receipt-$safeNumber.pdf';
 }
 
+String receiptPngFileName(SaleReceipt receipt) {
+  final pdfName = receiptFileName(receipt);
+  if (pdfName.toLowerCase().endsWith('.pdf')) {
+    return '${pdfName.substring(0, pdfName.length - 4)}.png';
+  }
+  return '$pdfName.png';
+}
+
 Future<Uint8List> buildReceiptPdf(
   SaleReceipt receipt, {
   ReceiptStoreInfo store = const ReceiptStoreInfo(),

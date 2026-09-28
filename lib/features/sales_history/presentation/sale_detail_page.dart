@@ -12,6 +12,7 @@ import '../../pos/application/pos_controllers.dart';
 import '../../pos/presentation/receipt_document.dart';
 import '../../pos/presentation/receipt_layout.dart';
 import '../../pos/presentation/receipt_share.dart';
+import '../../pos/presentation/thermal_receipt.dart';
 import '../../pos/domain/payment.dart';
 import '../application/sales_history_controllers.dart';
 import '../domain/payment_status.dart';
@@ -29,6 +30,7 @@ class SaleDetailPage extends ConsumerStatefulWidget {
 }
 
 class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
+  final GlobalKey _receiptSnapshotKey = GlobalKey();
   bool _exporting = false;
 
   @override
@@ -45,6 +47,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
             .canRollbackSales ??
         false;
     final detail = state.detail;
+    final awaitingApproval = detail?.status == 'pending_approval';
     final showRefund =
         canRefundPerm &&
         detail != null &&
@@ -80,15 +83,45 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
               exporting: _exporting,
               showRefund: showRefund,
               showRollback: showRollback,
-              onPrint: () => _export(
+              receiptReady: !awaitingApproval,
+              onPrint: () {
+                if (awaitingApproval) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'A manager will approve this sale so you can issue the receipt.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+                _export(
                 () => downloadOrPrintReceipt(
                   _receipt(detail),
                   store: _storeInfo(),
                 ),
-              ),
-              onShare: () => _export(
-                () => shareReceipt(_receipt(detail), store: _storeInfo()),
-              ),
+              );
+              },
+              onShare: () {
+                if (awaitingApproval) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'A manager will approve this sale so you can issue the receipt.',
+                      ),
+                    ),
+                  );
+                  return;
+                }
+                _export(() async {
+                final png = await snapshotWidgetPng(_receiptSnapshotKey);
+                await shareReceipt(
+                  _receipt(detail),
+                  store: _storeInfo(),
+                  pngBytes: png,
+                );
+              });
+              },
               onRefund: () => _openRefund(context, ref),
               onRollback: () => _openRollback(context, ref),
             ),
@@ -121,58 +154,88 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
         ? detail.subtotal
         : detail.items.fold<double>(0, (sum, item) => sum + item.lineTotal);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+    return Stack(
       children: [
-        if (state.error != null) ...[
-          Container(
-            key: const Key('sale_detail_error'),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEE2E2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              state.error!,
-              style: const TextStyle(color: AppColors.destructive),
-            ),
-          ),
-          const SizedBox(height: 10),
-        ],
-        _CompletionBanner(detail: detail),
-        const SizedBox(height: 12),
-        _AccountCard(detail: detail),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Itemized SKUs',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+        Positioned(
+          left: -4000,
+          top: 0,
+          child: SizedBox(
+            width: 280,
+            child: RepaintBoundary(
+              key: _receiptSnapshotKey,
+              child: Material(
+                color: Colors.white,
+                child: ThermalReceiptView(
+                  receipt: _receipt(detail),
+                  store: _storeInfo(),
+                ),
               ),
             ),
-            CbStatusPill(
-              label: '${detail.items.length} LINES',
-              variant: CbStatusPillVariant.neutral,
+          ),
+        ),
+        ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+          children: [
+            if (detail.status == 'pending_approval') ...[
+              CbSurfaceCard(
+                child: Text(
+                  'A manager will approve this sale so you can issue the receipt.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (state.error != null) ...[
+              Container(
+                key: const Key('sale_detail_error'),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEE2E2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  state.error!,
+                  style: const TextStyle(color: AppColors.destructive),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+            _CompletionBanner(detail: detail),
+            const SizedBox(height: 12),
+            _AccountCard(detail: detail),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Itemized SKUs',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                CbStatusPill(
+                  label: '${detail.items.length} LINES',
+                  variant: CbStatusPillVariant.neutral,
+                ),
+              ],
             ),
+            const SizedBox(height: 8),
+            if (detail.items.isEmpty)
+              const CbSurfaceCard(
+                child: Text('No line items were returned for this sale.'),
+              )
+            else
+              for (final line in detail.items) ...[
+                _SaleLineCard(line: line),
+                const SizedBox(height: 8),
+              ],
+            const SizedBox(height: 8),
+            _FinancialAccounting(detail: detail, subtotal: subtotal),
+            const SizedBox(height: 12),
+            _TenderAudit(detail: detail),
           ],
         ),
-        const SizedBox(height: 8),
-        if (detail.items.isEmpty)
-          const CbSurfaceCard(
-            child: Text('No line items were returned for this sale.'),
-          )
-        else
-          for (final line in detail.items) ...[
-            _SaleLineCard(line: line),
-            const SizedBox(height: 8),
-          ],
-        const SizedBox(height: 8),
-        _FinancialAccounting(detail: detail, subtotal: subtotal),
-        const SizedBox(height: 12),
-        _TenderAudit(detail: detail),
       ],
     );
   }
@@ -486,6 +549,8 @@ class _Meta extends StatelessWidget {
             Expanded(
               child: Text(
                 value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -531,7 +596,9 @@ class _SaleLineCard extends StatelessWidget {
                 ),
                 if (line.sku?.isNotEmpty == true)
                   Text(
-                    'SKU: ${line.sku}',
+                    line.sku!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: AppColors.mutedForeground,
                     ),
@@ -546,9 +613,15 @@ class _SaleLineCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                _money(line.lineTotal),
-                style: const TextStyle(fontWeight: FontWeight.w800),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 96),
+                child: Text(
+                  _money(line.lineTotal),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
               ),
               Text(
                 'Qty: ${line.quantity.toStringAsFixed(line.quantity % 1 == 0 ? 0 : 2)}',
@@ -625,17 +698,26 @@ class _AmountRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontWeight: strong ? FontWeight.w800 : FontWeight.w400,
                 color: highlight ? AppColors.success : null,
               ),
             ),
           ),
-          Text(
-            _money(value),
-            style: TextStyle(
-              fontWeight: strong ? FontWeight.w900 : FontWeight.w600,
-              color: highlight ? AppColors.success : null,
+          const SizedBox(width: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 120),
+            child: Text(
+              _money(value),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontWeight: strong ? FontWeight.w900 : FontWeight.w600,
+                color: highlight ? AppColors.success : null,
+              ),
             ),
           ),
         ],
@@ -713,6 +795,7 @@ class _SaleActions extends StatelessWidget {
     required this.exporting,
     required this.showRefund,
     required this.showRollback,
+    required this.receiptReady,
     required this.onPrint,
     required this.onShare,
     required this.onRefund,
@@ -721,6 +804,7 @@ class _SaleActions extends StatelessWidget {
   final bool exporting;
   final bool showRefund;
   final bool showRollback;
+  final bool receiptReady;
   final VoidCallback onPrint;
   final VoidCallback onShare;
   final VoidCallback onRefund;
@@ -741,42 +825,70 @@ class _SaleActions extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton.icon(
                   key: const Key('sale_print_receipt'),
-                  onPressed: exporting ? null : onPrint,
+                  onPressed: exporting || !receiptReady ? null : onPrint,
                   icon: const Icon(Icons.print_outlined),
-                  label: Text(
-                    exporting
-                        ? 'Preparing receipt…'
-                        : 'Print Duplicate Receipt',
+                  label: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      exporting
+                          ? 'Preparing receipt…'
+                          : 'Print Duplicate Receipt',
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      key: const Key('sale_share_receipt'),
-                      onPressed: exporting ? null : onShare,
-                      icon: const Icon(Icons.share_outlined),
-                      label: const Text('WhatsApp Receipt'),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final stacked = showRefund && constraints.maxWidth < 400;
+                  final share = OutlinedButton.icon(
+                    key: const Key('sale_share_receipt'),
+                    onPressed: exporting || !receiptReady ? null : onShare,
+                    icon: const Icon(Icons.share_outlined),
+                    label: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text('WhatsApp Receipt'),
                     ),
-                  ),
-                  if (showRefund) ...[
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        key: const Key('sale_refund'),
-                        onPressed: onRefund,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.destructive,
+                  );
+                  if (!showRefund) {
+                    return SizedBox(width: double.infinity, child: share);
+                  }
+                  final refund = OutlinedButton.icon(
+                    key: const Key('sale_refund'),
+                    onPressed: onRefund,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.destructive,
+                    ),
+                    icon: const Icon(Icons.block_outlined),
+                    label: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text('Void / refund'),
+                    ),
+                  );
+                  if (stacked) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        share,
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(child: refund),
+                            SaleActionHelpIcon(help: SaleActionHelp.refund),
+                          ],
                         ),
-                        icon: const Icon(Icons.block_outlined),
-                        label: const Text('Void / refund'),
-                      ),
-                    ),
-                    SaleActionHelpIcon(help: SaleActionHelp.refund),
-                  ],
-                ],
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: share),
+                      const SizedBox(width: 8),
+                      Expanded(child: refund),
+                      SaleActionHelpIcon(help: SaleActionHelp.refund),
+                    ],
+                  );
+                },
               ),
               if (showRollback) ...[
                 const SizedBox(height: 8),

@@ -164,6 +164,23 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: CbFilterChip(
+                      key: const Key('sales_filter_awaiting'),
+                      label: 'Awaiting approval',
+                      selected: filters.status == 'pending_approval',
+                      compact: true,
+                      onTap: () {
+                        final selected = filters.status == 'pending_approval';
+                        ref.read(salesHistoryProvider.notifier).load(
+                          filters: selected
+                              ? filters.copyWith(clearStatus: true)
+                              : filters.copyWith(status: 'pending_approval'),
+                        );
+                      },
+                    ),
+                  ),
                   for (final method in const ['', 'mpesa', 'cash'])
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
@@ -390,7 +407,8 @@ class _RangeSelector extends StatelessWidget {
                 child: CbFilterChip(
                   key: const Key('sales_filter_from'),
                   label: _friendlyDate(filters.dateFrom, 'From'),
-                  selected: preset == _DatePreset.custom &&
+                  selected:
+                      preset == _DatePreset.custom &&
                       (filters.dateFrom?.isNotEmpty ?? false),
                   leading: const Icon(Icons.calendar_today_outlined),
                   expand: true,
@@ -410,7 +428,8 @@ class _RangeSelector extends StatelessWidget {
                 child: CbFilterChip(
                   key: const Key('sales_filter_to'),
                   label: _friendlyDate(filters.dateTo, 'To'),
-                  selected: preset == _DatePreset.custom &&
+                  selected:
+                      preset == _DatePreset.custom &&
                       (filters.dateTo?.isNotEmpty ?? false),
                   leading: const Icon(Icons.event_outlined),
                   expand: true,
@@ -426,7 +445,6 @@ class _RangeSelector extends StatelessWidget {
 }
 
 enum _DatePreset { today, yesterday, week, custom }
-
 
 class _ShiftSummary extends StatelessWidget {
   const _ShiftSummary({required this.items});
@@ -449,9 +467,12 @@ class _ShiftSummary extends StatelessWidget {
               const Expanded(
                 child: Text(
                   'Total Shift Sales (Gross)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: AppColors.mutedForeground),
                 ),
               ),
+              const SizedBox(width: 8),
               CbStatusPill(
                 label: '${items.length} TXNS',
                 variant: CbStatusPillVariant.info,
@@ -504,6 +525,7 @@ class _TenderTotal extends StatelessWidget {
           Text(
             _money(value),
             maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
           ),
         ],
@@ -543,17 +565,26 @@ class _SaleHistoryCard extends StatelessWidget {
                         : (sale.customerName?.trim().isNotEmpty == true
                               ? sale.customerName!
                               : 'Walk-in Retail'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       color: voided ? AppColors.destructive : null,
                     ),
                   ),
                 ),
-                Text(
-                  _money(sale.total),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: voided ? AppColors.destructive : AppColors.primary,
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 110),
+                  child: Text(
+                    _money(sale.total),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: voided ? AppColors.destructive : AppColors.primary,
+                    ),
                   ),
                 ),
               ],
@@ -581,7 +612,7 @@ class _SaleHistoryCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(
+                Flexible(
                   child: CbStatusPill(
                     label: voided
                         ? 'VOIDED · ${sale.refundStatus ?? 'Cancelled'}'
@@ -593,11 +624,18 @@ class _SaleHistoryCard extends StatelessWidget {
                         : CbStatusPillVariant.warning,
                   ),
                 ),
-                if (sale.cashierName != null)
-                  Text(
-                    'Cashier: ${sale.cashierName}',
-                    style: Theme.of(context).textTheme.labelSmall,
+                if (sale.cashierName != null) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      sale.cashierName!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
                   ),
+                ],
                 const SizedBox(width: 4),
                 const Icon(Icons.chevron_right, size: 18),
               ],

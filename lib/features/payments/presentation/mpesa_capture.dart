@@ -56,11 +56,21 @@ class MpesaCapture extends StatelessWidget {
             Expanded(
               child: _ModeChip(
                 key: promptKey,
-                selected: promptSelected,
+                selected: promptSelected && !kMpesaPromptComingSoon,
                 enabled: enabled,
                 icon: Icons.phone_android,
-                label: 'Prompt payment',
-                onTap: () => onModeChanged(MpesaCaptureMode.prompt),
+                label: kMpesaPromptComingSoon
+                    ? 'Prompt payment (soon)'
+                    : 'Prompt payment',
+                onTap: () {
+                  if (kMpesaPromptComingSoon) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text(kMpesaPromptComingSoonMessage)),
+                    );
+                    return;
+                  }
+                  onModeChanged(MpesaCaptureMode.prompt);
+                },
               ),
             ),
             const SizedBox(width: 8),

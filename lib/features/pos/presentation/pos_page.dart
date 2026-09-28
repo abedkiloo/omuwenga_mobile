@@ -228,6 +228,29 @@ class _PosPageState extends ConsumerState<PosPage> {
 
     final checkout = ref.read(checkoutControllerProvider);
     if (!mounted) return;
+    if (checkout.phase == CheckoutPhase.pendingApproval) {
+      final receipt = checkout.receipt;
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Waiting for manager approval'),
+          content: Text(
+            receipt?.message ??
+                'A manager will approve this sale so you can issue the receipt.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      if (mounted) {
+        ref.read(checkoutControllerProvider.notifier).resetPhase();
+      }
+      return;
+    }
     if (checkout.phase == CheckoutPhase.success ||
         checkout.phase == CheckoutPhase.queued) {
       final receipt = checkout.receipt;
@@ -484,16 +507,18 @@ class _PosPageState extends ConsumerState<PosPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'SUBTOTAL (${cart.lines.fold<double>(0, (s, l) => s + l.quantity).round()} PACKS)',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: AppColors.mutedForeground,
-                            fontWeight: FontWeight.w600,
+                        Expanded(
+                          child: CbEllipsisText(
+                            'SUBTOTAL (${cart.lines.fold<double>(0, (s, l) => s + l.quantity).round()} PACKS)',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: AppColors.mutedForeground,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                        Text(
+                        const SizedBox(width: 8),
+                        CbFitMoney(
                           _kes(cart.total),
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
@@ -508,16 +533,17 @@ class _PosPageState extends ConsumerState<PosPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              CbEllipsisText(
                                 'NET TOTAL DUE',
                                 style: theme.textTheme.labelMedium?.copyWith(
                                   color: AppColors.mutedForeground,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              Text(
-                                key: const Key('pos_total'),
+                              CbFitMoney(
                                 _kes(cart.total),
+                                key: const Key('pos_total'),
+                                alignment: Alignment.centerLeft,
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.primary,
@@ -565,95 +591,94 @@ class _PosHeaderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return CbSurfaceCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: AppColors.accentSoft,
-            child: Text(
-              userName.isNotEmpty ? userName[0].toUpperCase() : 'C',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  userName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final narrow = constraints.maxWidth < 340;
+          return Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: AppColors.accentSoft,
+                child: Text(
+                  userName.isNotEmpty ? userName[0].toUpperCase() : 'C',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: AppColors.primary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                Text(
-                  roleLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.mutedForeground,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const CbStatusPill(
-            label: 'Online · Synced',
-            variant: CbStatusPillVariant.online,
-            showOnlineDot: true,
-          ),
-          const SizedBox(width: 8),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                key: const Key('pos_cart_icon'),
-                tooltip: 'Current cart',
-                onPressed: onCartTap,
-                icon: const Icon(
-                  Icons.shopping_cart_outlined,
-                  color: AppColors.primary,
-                ),
               ),
-              if (cartItemCount > 0)
-                Positioned(
-                  right: 2,
-                  top: 0,
-                  child: Container(
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: const BoxDecoration(
-                      color: AppColors.destructive,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      cartItemCount > 99 ? '99+' : '$cartItemCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CbEllipsisText(
+                      userName,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
+                    CbEllipsisText(
+                      roleLabel,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+              if (!narrow) ...[
+                const CbStatusPill(
+                  label: 'Online',
+                  variant: CbStatusPillVariant.online,
+                  showOnlineDot: true,
+                ),
+                const SizedBox(width: 4),
+              ],
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    key: const Key('pos_cart_icon'),
+                    tooltip: 'Current cart',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: onCartTap,
+                    icon: const Icon(
+                      Icons.shopping_cart_outlined,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  if (cartItemCount > 0)
+                    Positioned(
+                      right: 2,
+                      top: 0,
+                      child: Container(
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        decoration: const BoxDecoration(
+                          color: AppColors.destructive,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          cartItemCount > 99 ? '99+' : '$cartItemCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ],
-          ),
-          const CircleAvatar(
-            radius: 16,
-            backgroundColor: AppColors.primary,
-            child: Icon(Icons.person, size: 16, color: Colors.white),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -786,38 +811,40 @@ class _CartLineCard extends StatelessWidget {
     final lowStock = stock != null && stock > 0 && stock <= 50;
 
     return CbSurfaceCard(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       child: Column(
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: AppColors.accentSoft,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
                   Icons.inventory_2_outlined,
                   color: AppColors.primary,
+                  size: 20,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    CbEllipsisText(
                       line.displayName,
+                      maxLines: 2,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     if (line.sku != null && line.sku!.isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Text(
+                      CbEllipsisText(
                         line.sku!,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppColors.mutedForeground,
@@ -825,7 +852,7 @@ class _CartLineCard extends StatelessWidget {
                       ),
                     ],
                     if (stock != null) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       CbStatusPill(
                         label: 'Stock ${stock.round()}',
                         variant: lowStock
@@ -836,23 +863,28 @@ class _CartLineCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    _kes(line.lineTotal),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
+              const SizedBox(width: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 96),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    CbFitMoney(
+                      _kes(line.lineTotal),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
                     ),
-                  ),
-                  Text(
-                    '@ ${line.unitPrice.toStringAsFixed(2)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.mutedForeground,
+                    CbEllipsisText(
+                      '@ ${line.unitPrice.toStringAsFixed(2)}',
+                      textAlign: TextAlign.right,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.mutedForeground,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -915,16 +947,16 @@ class _CatalogProductCard extends StatelessWidget {
 
     return CbSurfaceCard(
       key: Key('pos_product_card_${product.id}'),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       onTap: onTap,
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: AppColors.accentSoft,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
             clipBehavior: Clip.antiAlias,
             child: product.imageUrl != null && product.imageUrl!.isNotEmpty
@@ -934,27 +966,30 @@ class _CatalogProductCard extends StatelessWidget {
                     errorBuilder: (_, _, _) => const Icon(
                       Icons.inventory_2_outlined,
                       color: AppColors.primary,
+                      size: 20,
                     ),
                   )
                 : const Icon(
                     Icons.inventory_2_outlined,
                     color: AppColors.primary,
+                    size: 20,
                   ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                CbEllipsisText(
                   product.name,
                   key: Key('pos_product_${product.id}'),
+                  maxLines: 2,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                CbEllipsisText(
                   [
                     if (product.hasVariants) 'Has variants',
                     if (product.sku != null && product.sku!.isNotEmpty)
@@ -967,13 +1002,13 @@ class _CatalogProductCard extends StatelessWidget {
                   ),
                 ),
                 if (unavailable) ...[
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   const CbStatusPill(
                     label: 'Stock unavailable',
                     variant: CbStatusPillVariant.neutral,
                   ),
                 ] else if (stock != null) ...[
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   CbStatusPill(
                     label: 'Stock ${stock.round()}',
                     variant: lowStock
@@ -984,10 +1019,14 @@ class _CatalogProductCard extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            _kes(product.price),
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
+          const SizedBox(width: 8),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 88),
+            child: CbFitMoney(
+              _kes(product.price),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           const SizedBox(width: 4),
@@ -1095,6 +1134,8 @@ class _CustomerStrip extends StatelessWidget {
                 Text(
                   key: const Key('pos_customer_label'),
                   customerLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -1129,8 +1170,8 @@ class _CustomerStrip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(hasCustomer ? 'Change customer' : 'Select customer'),
-                const SizedBox(width: 4),
+                Text(hasCustomer ? 'Change' : 'Select'),
+                const SizedBox(width: 2),
                 const Icon(Icons.keyboard_arrow_down, size: 18),
               ],
             ),
@@ -1159,7 +1200,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
   late final TextEditingController _amount;
   late final TextEditingController _reference;
   late final TextEditingController _phone;
-  MpesaCaptureMode _mpesaCapture = MpesaCaptureMode.prompt;
+  MpesaCaptureMode _mpesaCapture = MpesaCaptureMode.code;
   bool _showMpesaErrors = false;
 
   @override
@@ -1404,7 +1445,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                     }
                     if (m != PosPaymentMethod.mpesa) {
                       setState(() {
-                        _mpesaCapture = MpesaCaptureMode.prompt;
+                        _mpesaCapture = MpesaCaptureMode.code;
                         _showMpesaErrors = false;
                       });
                     }

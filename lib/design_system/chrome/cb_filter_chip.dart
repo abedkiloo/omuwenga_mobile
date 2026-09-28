@@ -98,4 +98,3 @@ class CbFilterChip extends StatelessWidget {
     return child;
   }
 }
-

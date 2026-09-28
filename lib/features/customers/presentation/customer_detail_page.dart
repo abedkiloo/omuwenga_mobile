@@ -87,7 +87,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
             padding: EdgeInsets.only(right: 8),
             child: Center(
               child: CbStatusPill(
-                label: 'Online · Synced',
+                label: 'Online',
                 variant: CbStatusPillVariant.online,
                 showOnlineDot: true,
               ),
@@ -1064,4 +1064,3 @@ class _OrderDebtRow extends StatelessWidget {
     );
   }
 }
-

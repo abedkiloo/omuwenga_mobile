@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -8,7 +10,11 @@ import 'receipt_share.dart';
 import 'thermal_receipt.dart';
 
 typedef ReceiptExport =
-    Future<void> Function(SaleReceipt receipt, {ReceiptStoreInfo store});
+    Future<void> Function(
+      SaleReceipt receipt, {
+      ReceiptStoreInfo store,
+      Uint8List? pngBytes,
+    });
 
 class ReceiptPage extends StatefulWidget {
   const ReceiptPage({
@@ -29,6 +35,7 @@ class ReceiptPage extends StatefulWidget {
 }
 
 class _ReceiptPageState extends State<ReceiptPage> {
+  final GlobalKey _receiptSnapshotKey = GlobalKey();
   bool _exporting = false;
 
   SaleReceipt get receipt => widget.receipt;
@@ -91,16 +98,24 @@ class _ReceiptPageState extends State<ReceiptPage> {
                 Expanded(
                   child: Text(
                     bannerLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                Text(
-                  '#${receipt.saleNumber}',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppColors.mutedForeground,
-                    fontWeight: FontWeight.w700,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    '#${receipt.saleNumber}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppColors.mutedForeground,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -171,10 +186,16 @@ class _ReceiptPageState extends State<ReceiptPage> {
                 Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 280),
-                    child: Material(
-                      color: Colors.white,
-                      elevation: 1,
-                      child: ThermalReceiptView(receipt: receipt, store: store),
+                    child: RepaintBoundary(
+                      key: _receiptSnapshotKey,
+                      child: Material(
+                        color: Colors.white,
+                        elevation: 1,
+                        child: ThermalReceiptView(
+                          receipt: receipt,
+                          store: store,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -225,7 +246,10 @@ class _ReceiptPageState extends State<ReceiptPage> {
                                 ),
                               )
                             : const Icon(Icons.print_outlined, size: 19),
-                        label: const Text('Download / Print Receipt'),
+                        label: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('Download / Print Receipt'),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -235,11 +259,21 @@ class _ReceiptPageState extends State<ReceiptPage> {
                         key: const Key('receipt_share'),
                         onPressed: !synced || _exporting
                             ? null
-                            : () => _runExport(
-                                () => widget.onShare(receipt, store: store),
-                              ),
+                            : () => _runExport(() async {
+                                final png = await snapshotWidgetPng(
+                                  _receiptSnapshotKey,
+                                );
+                                await widget.onShare(
+                                  receipt,
+                                  store: store,
+                                  pngBytes: png,
+                                );
+                              }),
                         icon: const Icon(Icons.share_outlined, size: 18),
-                        label: const Text('Share via WhatsApp / SMS'),
+                        label: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text('Share via WhatsApp / SMS'),
+                        ),
                       ),
                     ),
                     TextButton(

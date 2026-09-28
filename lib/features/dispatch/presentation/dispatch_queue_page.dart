@@ -93,13 +93,21 @@ class _DispatchQueuePageState extends ConsumerState<DispatchQueuePage> {
                                 order.customerName?.isNotEmpty == true
                                     ? order.customerName!
                                     : 'Order #${order.id}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context).textTheme.titleSmall
                                     ?.copyWith(fontWeight: FontWeight.w600),
                               ),
                             ),
-                            CbStatusPill(
-                              label: order.status.name,
-                              variant: _dispatchStatusVariant(order.status),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Align(
+                                alignment: Alignment.centerRight,
+                                child: CbStatusPill(
+                                  label: order.status.name,
+                                  variant: _dispatchStatusVariant(order.status),
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -143,7 +151,9 @@ class _DispatchOrderDetailPageState
   Future<void> _confirmPack(FieldOrderSummary order) async {
     final packError = dispatchPackError(order);
     if (packError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(packError)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(packError)));
       return;
     }
     final confirmed = await showCommitConfirm(
@@ -161,15 +171,46 @@ class _DispatchOrderDetailPageState
 
   Future<void> _confirmAssign(FieldOrderSummary order) async {
     final state = ref.read(dispatchQueueProvider);
+    final blocked = dispatchAssignBlockedStep(
+      order,
+      driverId: state.selectedDeliveryDriverId,
+    );
+    if (blocked != null) {
+      final goNext = await showCommitConfirm(
+        context: context,
+        title: blocked.title,
+        description: blocked.message,
+        rows: [
+          CommitSummaryRow(
+            label: 'Do this first',
+            value: blocked.currentStep,
+            emphasis: true,
+          ),
+          CommitSummaryRow(label: 'Then', value: blocked.nextStep),
+        ],
+        confirmLabel: blocked.opensPack ? 'Pack now' : 'OK',
+        cancelLabel: 'Close',
+        confirmKey: const Key('dispatch_blocked_confirm'),
+        cancelKey: const Key('dispatch_blocked_cancel'),
+      );
+      if (goNext && blocked.opensPack && mounted) {
+        await _confirmPack(order);
+      }
+      return;
+    }
     final error = dispatchAssignError(
+      order: order,
       canAssign: state.canAssign,
       driverId: state.selectedDeliveryDriverId,
     );
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
-    final driverName = state.drivers
+    final driverName =
+        state.drivers
             .where((d) => d.id == state.selectedDeliveryDriverId)
             .map((d) => d.listLabel)
             .firstOrNull ??
@@ -184,7 +225,12 @@ class _DispatchOrderDetailPageState
       cancelKey: const Key('dispatch_assign_cancel'),
     );
     if (!confirmed || !mounted) return;
-    await ref.read(dispatchQueueProvider.notifier).assign(order.id);
+    final ok = await ref.read(dispatchQueueProvider.notifier).assign(order.id);
+    if (!ok || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Order #${order.id} assigned for delivery')),
+    );
+    Navigator.of(context).maybePop();
   }
 
   Future<void> _addDriver() async {
@@ -222,10 +268,7 @@ class _DispatchOrderDetailPageState
               onPressed: () async {
                 final driver = await ref
                     .read(dispatchQueueProvider.notifier)
-                    .createDriver(
-                      displayName: name.text,
-                      phone: phone.text,
-                    );
+                    .createDriver(displayName: name.text, phone: phone.text);
                 if (driver != null && ctx.mounted) {
                   Navigator.pop(ctx, driver);
                 }
@@ -293,94 +336,126 @@ class _DispatchOrderDetailPageState
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: Text('Order #${order.id}')),
-      body: ListView(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(12),
-        children: [
-          Text(
-            order.customerName?.isNotEmpty == true
-                ? order.customerName!
-                : 'Order #${order.id}',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Container(
-            key: const Key('dispatch_map'),
-            height: 120,
-            alignment: Alignment.center,
-            color: AppColors.secondary,
-            child: Text(
-              order.latitude == null
-                  ? 'No pin'
-                  : '${order.latitude}, ${order.longitude}',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              order.customerName?.isNotEmpty == true
+                  ? order.customerName!
+                  : 'Order #${order.id}',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Products to pack',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          for (final line in order.lines)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(line.displayName),
-              subtitle: Text(
-                'Qty ${line.quantity} · ${line.unitPrice.toStringAsFixed(2)} each',
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: CbStatusPill(
+                label: order.status.name,
+                variant: _dispatchStatusVariant(order.status),
               ),
-              trailing: Text(line.lineTotal.toStringAsFixed(2)),
             ),
-          const SizedBox(height: 16),
-          if (canPack)
-            DropdownButtonFormField<int>(
-              key: const Key('dispatch_driver_select'),
-              initialValue: state.selectedDeliveryDriverId,
-              decoration: const InputDecoration(
-                labelText: 'Assign to',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                for (final d in state.drivers)
-                  DropdownMenuItem(
-                    value: d.id,
-                    child: Text(d.listLabel),
+            const SizedBox(height: 12),
+            ...[
+              for (final step in dispatchWorkflowSteps(order).asMap().entries)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    '${step.key + 1}. ${step.value.label}'
+                    '${step.value.done
+                        ? ' — done'
+                        : step.value.current
+                        ? ' — do this now'
+                        : ' — waiting'}',
+                    key: Key('dispatch_step_${step.value.id}'),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: step.value.current
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                      color: step.value.current
+                          ? null
+                          : AppColors.mutedForeground,
+                    ),
                   ),
-              ],
-              onChanged: state.drivers.isEmpty
-                  ? null
-                  : (v) => ref
-                        .read(dispatchQueueProvider.notifier)
-                        .selectDeliveryDriver(v),
-            ),
-          if (canPack && state.drivers.isEmpty && !state.loading)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
+                ),
+            ],
+            const SizedBox(height: 8),
+            Container(
+              key: const Key('dispatch_map'),
+              height: 120,
+              alignment: Alignment.center,
+              color: AppColors.secondary,
               child: Text(
-                'No one with delivery access yet. Add a driver, or grant Delivery on a role (Sales have it by default).',
-                key: const Key('dispatch_no_drivers'),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.mutedForeground,
+                order.latitude == null
+                    ? 'No pin'
+                    : '${order.latitude}, ${order.longitude}',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Products to pack',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            for (final line in order.lines)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(line.displayName),
+                subtitle: Text(
+                  'Qty ${line.quantity} · ${line.unitPrice.toStringAsFixed(2)} each',
+                ),
+                trailing: Text(line.lineTotal.toStringAsFixed(2)),
+              ),
+            const SizedBox(height: 16),
+            if (canPack)
+              DropdownButtonFormField<int>(
+                key: const Key('dispatch_driver_select'),
+                initialValue: state.selectedDeliveryDriverId,
+                decoration: const InputDecoration(
+                  labelText: 'Assign to',
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  for (final d in state.drivers)
+                    DropdownMenuItem(value: d.id, child: Text(d.listLabel)),
+                ],
+                onChanged: state.drivers.isEmpty
+                    ? null
+                    : (v) => ref
+                          .read(dispatchQueueProvider.notifier)
+                          .selectDeliveryDriver(v),
+              ),
+            if (canPack && state.drivers.isEmpty && !state.loading)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'No one with delivery access yet. Add a driver, or grant Delivery on a role (Sales have it by default).',
+                  key: const Key('dispatch_no_drivers'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
                 ),
               ),
-            ),
-          if (canPack)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: OutlinedButton.icon(
-                key: const Key('dispatch_add_driver'),
-                onPressed: state.creatingDriver ? null : _addDriver,
-                icon: const Icon(Icons.person_add_alt_1_outlined),
-                label: const Text('Add driver'),
+            if (canPack)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: OutlinedButton.icon(
+                  key: const Key('dispatch_add_driver'),
+                  onPressed: state.creatingDriver ? null : _addDriver,
+                  icon: const Icon(Icons.person_add_alt_1_outlined),
+                  label: const Text('Add driver'),
+                ),
               ),
-            ),
-          if (state.error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                state.error!,
-                key: const Key('dispatch_error'),
-                style: const TextStyle(color: AppColors.destructive),
+            if (state.error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  state.error!,
+                  key: const Key('dispatch_error'),
+                  style: const TextStyle(color: AppColors.destructive),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: canPack
           ? CbStickyActionBar(
@@ -401,9 +476,10 @@ class _DispatchOrderDetailPageState
                   CbPrimaryButton(
                     key: const Key('dispatch_assign'),
                     label: 'Assign for delivery',
-                    onPressed: state.canAssign
-                        ? () => _confirmAssign(order)
-                        : null,
+                    onPressed:
+                        state.acting || order.assignedDeliveryDriverId != null
+                        ? null
+                        : () => _confirmAssign(order),
                   ),
                 ],
               ),

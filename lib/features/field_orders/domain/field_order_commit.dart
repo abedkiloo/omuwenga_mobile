@@ -91,10 +91,91 @@ String dispatchPackDescription(FieldOrderSummary order) {
 }
 
 String dispatchAssignDescription(FieldOrderSummary order) {
-  if (order.status == FieldOrderStatus.packing && !order.stockAllocated) {
-    return 'This also marks the order ready. $debtorConfirmCopy';
-  }
   return 'The person you pick will see it on their route after you confirm.';
+}
+
+const String dispatchStepPack = 'Pack & mark ready for pickup';
+const String dispatchStepAssign = 'Assign for delivery';
+
+bool fieldOrderIsPacked(FieldOrderSummary order) {
+  return order.status == FieldOrderStatus.ready ||
+      order.status == FieldOrderStatus.outForDelivery ||
+      order.status == FieldOrderStatus.done;
+}
+
+class DispatchWorkflowStep {
+  const DispatchWorkflowStep({
+    required this.id,
+    required this.label,
+    required this.done,
+    required this.current,
+  });
+
+  final String id;
+  final String label;
+  final bool done;
+  final bool current;
+}
+
+List<DispatchWorkflowStep> dispatchWorkflowSteps(FieldOrderSummary order) {
+  final packed = fieldOrderIsPacked(order);
+  final assigned = order.assignedDeliveryDriverId != null;
+  return [
+    DispatchWorkflowStep(
+      id: 'pack',
+      label: dispatchStepPack,
+      done: packed,
+      current: !packed,
+    ),
+    DispatchWorkflowStep(
+      id: 'assign',
+      label: dispatchStepAssign,
+      done: assigned,
+      current: packed && !assigned,
+    ),
+  ];
+}
+
+class DispatchBlockedStep {
+  const DispatchBlockedStep({
+    required this.title,
+    required this.message,
+    required this.currentStep,
+    required this.nextStep,
+    this.opensPack = false,
+  });
+
+  final String title;
+  final String message;
+  final String currentStep;
+  final String nextStep;
+  final bool opensPack;
+}
+
+DispatchBlockedStep? dispatchAssignBlockedStep(
+  FieldOrderSummary order, {
+  int? driverId,
+}) {
+  if (!fieldOrderIsPacked(order)) {
+    return const DispatchBlockedStep(
+      title: 'Pack this order first',
+      message:
+          'Assign for delivery is the next step. Finish packing and mark the order ready for pickup before you choose who delivers.',
+      currentStep: dispatchStepPack,
+      nextStep: dispatchStepAssign,
+      opensPack: true,
+    );
+  }
+  if (driverId == null) {
+    return const DispatchBlockedStep(
+      title: 'Choose who delivers first',
+      message:
+          'Select the sales person or driver, then assign for delivery.',
+      currentStep: 'Choose who delivers',
+      nextStep: dispatchStepAssign,
+    );
+  }
+  return null;
 }
 
 List<CommitSummaryRow> dispatchPackRows(FieldOrderSummary order) {
@@ -120,8 +201,13 @@ List<CommitSummaryRow> dispatchPackRows(FieldOrderSummary order) {
   ];
 }
 
-String? dispatchAssignError({required bool canAssign, int? driverId}) {
-  if (driverId == null) return 'Select who will deliver first.';
+String? dispatchAssignError({
+  required FieldOrderSummary order,
+  required bool canAssign,
+  int? driverId,
+}) {
+  final blocked = dispatchAssignBlockedStep(order, driverId: driverId);
+  if (blocked != null) return blocked.message;
   if (!canAssign) return 'This order cannot be assigned yet.';
   return null;
 }
@@ -139,11 +225,6 @@ List<CommitSummaryRow> dispatchAssignRows({
           : order.customerName!,
     ),
     CommitSummaryRow(label: 'Assigned to', value: driverName, emphasis: true),
-    if (order.status == FieldOrderStatus.packing && !order.stockAllocated)
-      const CommitSummaryRow(
-        label: 'Customer account',
-        value: debtorConfirmCopy,
-      ),
   ];
 }
 

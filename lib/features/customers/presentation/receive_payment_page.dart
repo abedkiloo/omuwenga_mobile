@@ -29,7 +29,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
   late final TextEditingController _reference;
   late final TextEditingController _phone;
   PosPaymentMethod _method = PosPaymentMethod.cash;
-  MpesaCaptureMode _mpesaCapture = MpesaCaptureMode.prompt;
+  MpesaCaptureMode _mpesaCapture = MpesaCaptureMode.code;
   bool _initialized = false;
   bool _attempted = false;
 
@@ -257,7 +257,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                         onSelected: (_) => setState(() {
                           _method = m;
                           if (m != PosPaymentMethod.mpesa) {
-                            _mpesaCapture = MpesaCaptureMode.prompt;
+                            _mpesaCapture = MpesaCaptureMode.code;
                           }
                         }),
                       ),

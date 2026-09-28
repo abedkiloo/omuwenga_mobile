@@ -514,7 +514,7 @@ class _DirectoryHeaderCard extends StatelessWidget {
             ),
           ),
           const CbStatusPill(
-            label: 'Online · Synced',
+            label: 'Online',
             variant: CbStatusPillVariant.online,
             showOnlineDot: true,
           ),
@@ -981,6 +981,8 @@ class _StandingBadge extends StatelessWidget {
                   customer.debtAmount <= 0
             ? 'Zero Balance'
             : label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           color: fg,
           fontWeight: FontWeight.w700,
@@ -1038,6 +1040,8 @@ class _OutlineAction extends StatelessWidget {
         ),
         child: Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
         ),
       ),
@@ -1072,6 +1076,8 @@ class _FilledAction extends StatelessWidget {
         ),
         child: Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
         ),
       ),

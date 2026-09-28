@@ -19,19 +19,13 @@ Future<void> showPosCartSheet({
     isScrollControlled: true,
     showDragHandle: true,
     backgroundColor: AppColors.background,
-    builder: (context) => PosCartSheet(
-      onCheckout: onCheckout,
-      onClearCart: onClearCart,
-    ),
+    builder: (context) =>
+        PosCartSheet(onCheckout: onCheckout, onClearCart: onClearCart),
   );
 }
 
 class PosCartSheet extends ConsumerWidget {
-  const PosCartSheet({
-    super.key,
-    required this.onCheckout,
-    this.onClearCart,
-  });
+  const PosCartSheet({super.key, required this.onCheckout, this.onClearCart});
 
   final VoidCallback onCheckout;
   final Future<void> Function()? onClearCart;
@@ -44,160 +38,162 @@ class PosCartSheet extends ConsumerWidget {
       child: CbSheetFrame(
         heightFactor: 0.88,
         child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.shopping_cart_outlined,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Current cart',
-                            key: const Key('pos_cart_sheet_title'),
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.shopping_cart_outlined,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Current cart',
+                          key: const Key('pos_cart_sheet_title'),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
                           ),
-                          Text(
-                            cart.isEmpty
-                                ? 'No items yet — add products from the catalog'
-                                : '${cart.itemCount} packs · ${cart.lines.length} SKUs'
-                                      '${cart.customerName == null ? '' : ' · ${cart.customerName}'}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppColors.mutedForeground,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (!cart.isEmpty)
-                      TextButton(
-                        key: const Key('pos_cart_sheet_clear'),
-                        onPressed: () async {
-                          if (onClearCart != null) {
-                            await onClearCart!();
-                          } else {
-                            ref.read(cartControllerProvider.notifier).clear();
-                          }
-                        },
-                        child: const Text(
-                          'Clear',
-                          style: TextStyle(color: AppColors.destructive),
                         ),
+                        Text(
+                          cart.isEmpty
+                              ? 'No items yet — add products from the catalog'
+                              : '${cart.itemCount} packs · ${cart.lines.length} SKUs'
+                                    '${cart.customerName == null ? '' : ' · ${cart.customerName}'}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.mutedForeground,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!cart.isEmpty)
+                    TextButton(
+                      key: const Key('pos_cart_sheet_clear'),
+                      onPressed: () async {
+                        if (onClearCart != null) {
+                          await onClearCart!();
+                        } else {
+                          ref.read(cartControllerProvider.notifier).clear();
+                        }
+                      },
+                      child: const Text(
+                        'Clear',
+                        style: TextStyle(color: AppColors.destructive),
                       ),
-                    IconButton(
-                      key: const Key('pos_cart_sheet_close'),
-                      tooltip: 'Close cart',
+                    ),
+                  IconButton(
+                    key: const Key('pos_cart_sheet_close'),
+                    tooltip: 'Close cart',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: cart.isEmpty
+                  ? EmptyState(
+                      key: const Key('pos_cart_sheet_empty'),
+                      title: 'Cart is empty',
+                      message:
+                          'Tap products in the catalog to add them, then open the cart to edit quantities and check out.',
+                      primaryLabel: 'Keep shopping',
+                      onPrimary: () => Navigator.pop(context),
+                    )
+                  : ListView.separated(
+                      key: const Key('pos_cart_sheet_list'),
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                      itemCount: cart.lines.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final line = cart.lines[index];
+                        return _CartSheetLine(
+                          line: line,
+                          onDec: () => ref
+                              .read(cartControllerProvider.notifier)
+                              .setQuantity(line.lineKey, line.quantity - 1),
+                          onInc:
+                              line.stockQuantity == null ||
+                                  line.quantity >= line.stockQuantity!
+                              ? null
+                              : () => ref
+                                    .read(cartControllerProvider.notifier)
+                                    .setQuantity(
+                                      line.lineKey,
+                                      line.quantity + 1,
+                                    ),
+                          onRemove: () => ref
+                              .read(cartControllerProvider.notifier)
+                              .removeProduct(line.lineKey),
+                        );
+                      },
+                    ),
+            ),
+            CbStickyActionBar(
+              summary: cart.isEmpty
+                  ? null
+                  : '${cart.itemCount} packs · ${cart.lines.length} SKUs',
+              summaryTrailing: cart.isEmpty ? null : _kes(cart.total),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (!cart.isEmpty) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'NET TOTAL',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: AppColors.mutedForeground,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          key: const Key('pos_cart_sheet_total'),
+                          _kes(cart.total),
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  CbPrimaryButton(
+                    key: const Key('pos_cart_sheet_checkout'),
+                    label: cart.isEmpty
+                        ? 'Add items to continue'
+                        : 'Proceed to payment',
+                    onPressed: cart.isEmpty
+                        ? null
+                        : () {
+                            Navigator.pop(context);
+                            onCheckout();
+                          },
+                  ),
+                  if (cart.isEmpty) ...[
+                    const SizedBox(height: 8),
+                    TextButton(
+                      key: const Key('pos_cart_sheet_keep_shopping'),
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
+                      child: const Text('Back to catalog'),
                     ),
                   ],
-                ),
+                ],
               ),
-              const Divider(height: 1),
-              Expanded(
-                child: cart.isEmpty
-                    ? EmptyState(
-                        key: const Key('pos_cart_sheet_empty'),
-                        title: 'Cart is empty',
-                        message:
-                            'Tap products in the catalog to add them, then open the cart to edit quantities and check out.',
-                        primaryLabel: 'Keep shopping',
-                        onPrimary: () => Navigator.pop(context),
-                      )
-                    : ListView.separated(
-                        key: const Key('pos_cart_sheet_list'),
-                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                        itemCount: cart.lines.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final line = cart.lines[index];
-                          return _CartSheetLine(
-                            line: line,
-                            onDec: () => ref
-                                .read(cartControllerProvider.notifier)
-                                .setQuantity(line.lineKey, line.quantity - 1),
-                            onInc:
-                                line.stockQuantity == null ||
-                                    line.quantity >= line.stockQuantity!
-                                ? null
-                                : () => ref
-                                      .read(cartControllerProvider.notifier)
-                                      .setQuantity(
-                                        line.lineKey,
-                                        line.quantity + 1,
-                                      ),
-                            onRemove: () => ref
-                                .read(cartControllerProvider.notifier)
-                                .removeProduct(line.lineKey),
-                          );
-                        },
-                      ),
-              ),
-              CbStickyActionBar(
-                summary: cart.isEmpty
-                    ? null
-                    : '${cart.itemCount} packs · ${cart.lines.length} SKUs',
-                summaryTrailing: cart.isEmpty ? null : _kes(cart.total),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (!cart.isEmpty) ...[
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'NET TOTAL',
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: AppColors.mutedForeground,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            key: const Key('pos_cart_sheet_total'),
-                            _kes(cart.total),
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                    CbPrimaryButton(
-                      key: const Key('pos_cart_sheet_checkout'),
-                      label: cart.isEmpty
-                          ? 'Add items to continue'
-                          : 'Proceed to payment',
-                      onPressed: cart.isEmpty
-                          ? null
-                          : () {
-                              Navigator.pop(context);
-                              onCheckout();
-                            },
-                    ),
-                    if (cart.isEmpty) ...[
-                      const SizedBox(height: 8),
-                      TextButton(
-                        key: const Key('pos_cart_sheet_keep_shopping'),
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Back to catalog'),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+            ),
+          ],
         ),
       ),
     );
@@ -236,6 +232,8 @@ class _CartSheetLine extends StatelessWidget {
                   children: [
                     Text(
                       line.displayName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -243,6 +241,8 @@ class _CartSheetLine extends StatelessWidget {
                     if (line.sku != null && line.sku!.isNotEmpty)
                       Text(
                         line.sku!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppColors.mutedForeground,
                         ),
@@ -257,11 +257,17 @@ class _CartSheetLine extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(
-                _kes(line.lineTotal),
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 96),
+                child: Text(
+                  _kes(line.lineTotal),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ],
@@ -315,11 +321,7 @@ class _CartSheetLine extends StatelessWidget {
 }
 
 class _SheetQtyButton extends StatelessWidget {
-  const _SheetQtyButton({
-    super.key,
-    required this.icon,
-    required this.onTap,
-  });
+  const _SheetQtyButton({super.key, required this.icon, required this.onTap});
 
   final IconData icon;
   final VoidCallback? onTap;

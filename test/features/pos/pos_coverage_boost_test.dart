@@ -788,8 +788,10 @@ void main() {
 
     expect(find.byKey(const Key('pos_mpesa_capture_prompt')), findsOneWidget);
     expect(find.byKey(const Key('pos_mpesa_capture_code')), findsOneWidget);
-    expect(find.byKey(const Key('pos_mpesa_phone')), findsOneWidget);
-    expect(find.textContaining('Send M-Pesa prompt'), findsOneWidget);
+    expect(find.byKey(const Key('pos_payment_ref')), findsOneWidget);
+    expect(find.byKey(const Key('pos_mpesa_phone')), findsNothing);
+    expect(find.textContaining('Send M-Pesa prompt'), findsNothing);
+    expect(find.textContaining('Prompt payment'), findsOneWidget);
   });
 }
 

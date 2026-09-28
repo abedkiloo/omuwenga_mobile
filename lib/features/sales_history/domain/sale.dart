@@ -203,25 +203,30 @@ class SalesHistoryFilters {
     this.dateTo,
     this.paymentMethod = '',
     this.search = '',
+    this.status,
   });
 
   final String? dateFrom;
   final String? dateTo;
   final String paymentMethod;
   final String search;
+  final String? status;
 
   SalesHistoryFilters copyWith({
     String? dateFrom,
     String? dateTo,
     String? paymentMethod,
     String? search,
+    String? status,
     bool clearDates = false,
+    bool clearStatus = false,
   }) {
     return SalesHistoryFilters(
       dateFrom: clearDates ? null : (dateFrom ?? this.dateFrom),
       dateTo: clearDates ? null : (dateTo ?? this.dateTo),
       paymentMethod: paymentMethod ?? this.paymentMethod,
       search: search ?? this.search,
+      status: clearStatus ? null : (status ?? this.status),
     );
   }
 
@@ -233,6 +238,9 @@ class SalesHistoryFilters {
       q['payment_method'] = paymentMethod.trim();
     }
     if (search.trim().isNotEmpty) q['search'] = search.trim();
+    if (status != null && status!.trim().isNotEmpty) {
+      q['status'] = status!.trim();
+    }
     return q;
   }
 }

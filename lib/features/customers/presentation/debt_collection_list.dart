@@ -117,9 +117,9 @@ class DebtCollectionsPanel extends StatelessWidget {
           ],
           Text(
             '$count payment${count == 1 ? '' : 's'} · ${_kes(total)}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),
           if (loading && rows.isEmpty)
@@ -138,10 +138,7 @@ class DebtCollectionsPanel extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   if (onRetry != null)
-                    TextButton(
-                      onPressed: onRetry,
-                      child: const Text('Retry'),
-                    ),
+                    TextButton(onPressed: onRetry, child: const Text('Retry')),
                 ],
               ),
             )
@@ -173,11 +170,7 @@ class DebtCollectionsPanel extends StatelessWidget {
 }
 
 class DebtCollectionTile extends StatelessWidget {
-  const DebtCollectionTile({
-    super.key,
-    required this.row,
-    this.onOpenCustomer,
-  });
+  const DebtCollectionTile({super.key, required this.row, this.onOpenCustomer});
 
   final DebtCollectionRow row;
   final VoidCallback? onOpenCustomer;
@@ -229,6 +222,8 @@ class DebtCollectionTile extends StatelessWidget {
             onTap: onOpenCustomer,
             child: Text(
               row.customerName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: onOpenCustomer == null ? null : AppColors.primary,
@@ -241,9 +236,9 @@ class DebtCollectionTile extends StatelessWidget {
           if (row.subtitle.isNotEmpty)
             Text(
               row.subtitle,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.mutedForeground,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
             ),
           const SizedBox(height: 6),
           Row(
@@ -269,9 +264,9 @@ class DebtCollectionTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Received by ${row.receivedBy}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.mutedForeground,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
             ),
           ],
           if (notes.isNotEmpty) ...[
@@ -280,9 +275,9 @@ class DebtCollectionTile extends StatelessWidget {
               notes,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.mutedForeground,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
             ),
           ],
         ],

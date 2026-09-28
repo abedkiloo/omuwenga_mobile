@@ -44,6 +44,8 @@ class ThermalReceiptView extends StatelessWidget {
             Text(
               store.storeName.toUpperCase(),
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 13.5,
@@ -198,6 +200,8 @@ class ThermalReceiptView extends StatelessWidget {
                 child: const Text(
                   kReceiptReachUsLabel,
                   textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
                 ),
               ),
@@ -251,10 +255,14 @@ class _ItemBlock extends StatelessWidget {
                   ),
               ],
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           if (showSku && sku.isNotEmpty)
             Text(
               sku,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: 10,
                 color: AppColors.mutedForeground,
@@ -299,18 +307,24 @@ class _ReceiptRow extends StatelessWidget {
           Expanded(
             child: Text(
               left,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(fontWeight: weight, fontSize: size),
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            key: amountKey,
-            right,
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: emphasised ? 15 : size,
-              color: price ? _priceGreen : _receiptBlack,
+          Flexible(
+            child: Text(
+              key: amountKey,
+              right,
+              textAlign: TextAlign.right,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: emphasised ? 15 : size,
+                color: price ? _priceGreen : _receiptBlack,
+              ),
             ),
           ),
         ],

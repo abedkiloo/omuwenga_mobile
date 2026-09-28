@@ -1006,13 +1006,12 @@ void main() {
 
       await tester.tap(find.byKey(const Key('settle_mpesa_capture_prompt')));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byKey(const Key('settle_mpesa_phone')), '');
-      await tester.tap(find.byKey(const Key('settle_confirm')));
-      await tester.pump();
+      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.byKey(const Key('settle_reference')), findsOneWidget);
       expect(find.text('Proceed with this payment?'), findsNothing);
     });
 
-    testWidgets('mpesa prompt waits for STK then submits collection', (
+    testWidgets('mpesa prompt is coming soon and collection uses a typed code', (
       tester,
     ) async {
       final client = _debtHttpClient();
@@ -1025,21 +1024,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('settle_method_mpesa')));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
-      await tester.tap(find.byKey(const Key('settle_confirm')));
+      await tester.tap(find.byKey(const Key('settle_mpesa_capture_prompt')));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Phone'), findsWidgets);
-      await tester.tap(find.byKey(const Key('settle_commit_confirm')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(find.byKey(const Key('stk_query')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('stk_query')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-      expect(find.byKey(const Key('stk_done')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('stk_done')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.byKey(const Key('stk_query')), findsNothing);
+      expect(find.byKey(const Key('settle_reference')), findsOneWidget);
     });
   });
 }

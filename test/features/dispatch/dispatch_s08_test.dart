@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:completebyte_pos_mobile/core/env/app_env.dart';
 import 'package:completebyte_pos_mobile/core/network/api_client.dart';
 import 'package:completebyte_pos_mobile/core/notifications/push_notifier.dart';
+import 'package:completebyte_pos_mobile/core/result/result.dart';
 import 'package:completebyte_pos_mobile/core/secure/token_store.dart';
 import 'package:completebyte_pos_mobile/features/auth/application/auth_controller.dart';
 import 'package:completebyte_pos_mobile/features/auth/domain/auth_session.dart';
@@ -166,6 +167,78 @@ void main() {
         isTrue,
       );
 
+      final typed = _api(
+        MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'status': 'Cannot assign from status done.',
+            }),
+            400,
+          ),
+        ),
+      );
+      final typedFail = await typed.assign(orderId: 1, deliveryDriverId: 1);
+      expect(typedFail.isFailure, isTrue);
+      expect(
+        (typedFail as Failure).error.toString(),
+        'Cannot assign from status done.',
+      );
+
+      final listed = _api(
+        MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'delivery_agent_id': [
+                'This person cannot be assigned delivery.',
+              ],
+            }),
+            400,
+          ),
+        ),
+      );
+      final listedFail = await listed.assign(orderId: 1, deliveryDriverId: 1);
+      expect(
+        (listedFail as Failure).error.toString(),
+        'This person cannot be assigned delivery.',
+      );
+
+      final notMap = _api(MockClient((_) async => http.Response('[]', 200)));
+      expect((await notMap.pack(1)).isFailure, isTrue);
+      expect(
+        (await notMap.createDriver(displayName: 'A', phone: '0712')).isFailure,
+        isTrue,
+      );
+
+      final brokenJson = _api(
+        MockClient(
+          (_) async => http.Response(
+            jsonEncode([
+              {'username': 'no-id'},
+            ]),
+            200,
+          ),
+        ),
+      );
+      expect((await brokenJson.queue()).isFailure, isTrue);
+      expect((await brokenJson.drivers()).isFailure, isTrue);
+      expect(
+        (await brokenJson.createDriver(displayName: 'A', phone: '0712')).isFailure,
+        isTrue,
+      );
+
+      final missingId = _api(
+        MockClient(
+          (_) async => http.Response(
+            jsonEncode({'username': 'x'}),
+            201,
+          ),
+        ),
+      );
+      expect(
+        (await missingId.createDriver(displayName: 'A', phone: '0712')).isFailure,
+        isTrue,
+      );
+
       final invalid = _api(MockClient((_) async => http.Response('{}', 200)));
       expect((await invalid.queue()).isFailure, isTrue);
       expect((await invalid.drivers()).isFailure, isTrue);
@@ -182,6 +255,12 @@ void main() {
         ),
       );
       expect((await net.queue()).isFailure, isTrue);
+      expect((await net.pack(1)).isFailure, isTrue);
+      expect((await net.assign(orderId: 1, deliveryDriverId: 1)).isFailure, isTrue);
+      expect(
+        (await net.createDriver(displayName: 'A', phone: '0712')).isFailure,
+        isTrue,
+      );
       expect(DispatchApiException('e').toString(), 'e');
     });
   });
@@ -286,7 +365,7 @@ void main() {
   });
 
   group('widgets', () {
-    testWidgets('assign CTA disabled until driver selected', (tester) async {
+    testWidgets('assign before pack shows previous-step popup', (tester) async {
       final container = ProviderContainer(
         overrides: [
           authSessionSeedProvider.overrideWithValue(_dispatcherSession()),
@@ -328,26 +407,26 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('dispatch_map')), findsOneWidget);
+      expect(find.byKey(const Key('dispatch_step_pack')), findsOneWidget);
+      expect(find.textContaining('do this now'), findsOneWidget);
       final assign = tester.widget<FilledButton>(
         find.descendant(
           of: find.byKey(const Key('dispatch_assign')),
           matching: find.byType(FilledButton),
         ),
       );
-      expect(assign.onPressed, isNull);
+      expect(assign.onPressed, isNotNull);
 
-      await tester.tap(find.byKey(const Key('dispatch_driver_select')));
+      await tester.tap(find.descendant(
+        of: find.byKey(const Key('dispatch_assign')),
+        matching: find.byType(FilledButton),
+      ));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Driver A').last);
+      expect(find.text('Pack this order first'), findsOneWidget);
+      expect(find.textContaining('Finish packing'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('dispatch_blocked_cancel')));
       await tester.pumpAndSettle();
-
-      final assignEnabled = tester.widget<FilledButton>(
-        find.descendant(
-          of: find.byKey(const Key('dispatch_assign')),
-          matching: find.byType(FilledButton),
-        ),
-      );
-      expect(assignEnabled.onPressed, isNotNull);
+      expect(find.text('Pack this order first'), findsNothing);
       expect(find.byKey(const Key('dispatch_add_driver')), findsOneWidget);
     });
 

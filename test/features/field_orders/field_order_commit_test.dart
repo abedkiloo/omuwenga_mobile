@@ -203,25 +203,59 @@ void main() {
     );
     expect(
       dispatchAssignRows(order: packing, driverName: 'Jane')
-          .where((r) => r.label == 'Customer account')
-          .single
-          .value,
-      debtorConfirmCopy,
+          .any((r) => r.label == 'Customer account'),
+      isFalse,
     );
     expect(dispatchAssignDescription(named), contains('route'));
-    expect(dispatchAssignDescription(packing), contains('debtor'));
+    expect(dispatchAssignDescription(packing), contains('route'));
+    const waiting = FieldOrderSummary(
+      id: 14,
+      status: FieldOrderStatus.submitted,
+      siteId: 1,
+      customerName: 'Ada',
+    );
+    expect(dispatchAssignDescription(waiting), contains('route'));
+    expect(
+      dispatchAssignRows(order: waiting, driverName: 'Jane')
+          .any((r) => r.label == 'Customer account'),
+      isFalse,
+    );
+    expect(dispatchWorkflowSteps(waiting).first.current, isTrue);
+    expect(dispatchWorkflowSteps(named).last.current, isTrue);
+    expect(
+      dispatchAssignBlockedStep(waiting)?.title,
+      'Pack this order first',
+    );
+    expect(dispatchAssignBlockedStep(named, driverId: 3), isNull);
   });
 
   test('dispatchAssignError', () {
-    expect(
-      dispatchAssignError(canAssign: true, driverId: null),
-      'Select who will deliver first.',
+    const ready = FieldOrderSummary(
+      id: 12,
+      status: FieldOrderStatus.ready,
+      siteId: 1,
+    );
+    const waiting = FieldOrderSummary(
+      id: 14,
+      status: FieldOrderStatus.submitted,
+      siteId: 1,
     );
     expect(
-      dispatchAssignError(canAssign: false, driverId: 3),
+      dispatchAssignError(order: ready, canAssign: true, driverId: null),
+      contains('Select the sales person'),
+    );
+    expect(
+      dispatchAssignError(order: ready, canAssign: false, driverId: 3),
       'This order cannot be assigned yet.',
     );
-    expect(dispatchAssignError(canAssign: true, driverId: 3), isNull);
+    expect(
+      dispatchAssignError(order: ready, canAssign: true, driverId: 3),
+      isNull,
+    );
+    expect(
+      dispatchAssignError(order: waiting, canAssign: true, driverId: 3),
+      contains('Finish packing'),
+    );
   });
 
   testWidgets('showCommitConfirm confirms and cancels', (tester) async {

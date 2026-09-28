@@ -132,7 +132,9 @@ class DispatchApi {
     final response = res.getOrThrow();
     if (response.statusCode < 200 || response.statusCode >= 300) {
       return Failure(
-        DispatchApiException(_driverError(response.body, response.statusCode)),
+        DispatchApiException(
+          _apiError(response.body, response.statusCode, 'Could not add driver'),
+        ),
       );
     }
     try {
@@ -148,23 +150,32 @@ class DispatchApi {
     }
   }
 
-  String _driverError(String body, int statusCode) {
+  String _apiError(String body, int statusCode, String fallback) {
     try {
       final data = jsonDecode(body);
       if (data is Map) {
-        if (data['display_name'] is List && data['display_name'].isNotEmpty) {
-          return data['display_name'].first.toString();
+        for (final key in [
+          'status',
+          'delivery_agent_id',
+          'customer',
+          'detail',
+          'error',
+          'display_name',
+          'phone',
+        ]) {
+          final value = data[key];
+          if (value is List && value.isNotEmpty) {
+            return value.first.toString();
+          }
+          if (value is String && value.trim().isNotEmpty) {
+            return value;
+          }
         }
-        if (data['phone'] is List && data['phone'].isNotEmpty) {
-          return data['phone'].first.toString();
-        }
-        if (data['detail'] != null) return data['detail'].toString();
-        if (data['error'] != null) return data['error'].toString();
       }
     } on Object {
       /* ignore */
     }
-    return 'Could not add driver ($statusCode)';
+    return '$fallback ($statusCode)';
   }
 
   Future<Result<FieldOrderSummary>> pack(int orderId) async {
@@ -192,7 +203,9 @@ class DispatchApi {
     }
     final response = responseResult.getOrThrow();
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      return Failure(DispatchApiException('$label (${response.statusCode})'));
+      return Failure(
+        DispatchApiException(_apiError(response.body, response.statusCode, label)),
+      );
     }
     try {
       final data = jsonDecode(response.body);

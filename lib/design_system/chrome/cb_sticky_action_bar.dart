@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../buttons/cb_primary_button.dart';
+import 'cb_fit_text.dart';
 
 class CbStickyActionBar extends StatelessWidget {
   const CbStickyActionBar({
@@ -42,7 +43,7 @@ class CbStickyActionBar extends StatelessWidget {
                 children: [
                   if (summary != null)
                     Expanded(
-                      child: Text(
+                      child: CbEllipsisText(
                         summary!,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppColors.mutedForeground,
@@ -50,7 +51,7 @@ class CbStickyActionBar extends StatelessWidget {
                       ),
                     ),
                   if (summaryTrailing != null)
-                    Text(
+                    CbFitMoney(
                       summaryTrailing!,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,

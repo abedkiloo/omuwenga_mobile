@@ -23,7 +23,7 @@ class CbPrimaryButton extends StatelessWidget {
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.primaryForeground,
         ),
-        child: Text(label),
+        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );
   }

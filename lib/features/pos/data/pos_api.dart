@@ -25,6 +25,8 @@ class SaleReceipt {
     this.createdAt,
     this.servedByName,
     this.queuedOffline = false,
+    this.pendingApproval = false,
+    this.message,
   });
 
   final int? id;
@@ -44,6 +46,8 @@ class SaleReceipt {
   final DateTime? createdAt;
   final String? servedByName;
   final bool queuedOffline;
+  final bool pendingApproval;
+  final String? message;
 
   factory SaleReceipt.fromJson(Map<String, dynamic> json) {
     double asDouble(Object? v) {
@@ -113,6 +117,8 @@ class SaleReceipt {
         final cashier = json['cashier_name']?.toString().trim() ?? '';
         return cashier.isEmpty ? null : cashier;
       }(),
+      pendingApproval: json['status']?.toString() == 'pending_approval',
+      message: json['message']?.toString(),
     );
   }
 }

@@ -57,12 +57,19 @@ class StoreHomeDashboard extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: theme.textTheme.titleLarge),
+                      Text(
+                        title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleLarge,
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         home.summary?.scopeAll == true
                             ? 'Today’s sales — all cashiers'
                             : 'Today’s sales — yours only',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: AppColors.mutedForeground,
                         ),
@@ -70,8 +77,9 @@ class StoreHomeDashboard extends ConsumerWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 const CbStatusPill(
-                  label: 'Online · Synced',
+                  label: 'Online',
                   variant: CbStatusPillVariant.online,
                   showOnlineDot: true,
                 ),
@@ -324,6 +332,8 @@ class _QuickActionTile extends StatelessWidget {
               children: [
                 Text(
                   action.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -331,6 +341,8 @@ class _QuickActionTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   action.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppColors.mutedForeground,
                   ),
@@ -464,6 +476,8 @@ class _MetricCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'KES ${value.toStringAsFixed(2)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: AppColors.primary,
@@ -473,6 +487,8 @@ class _MetricCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               subtitle!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: AppColors.mutedForeground,
               ),
@@ -535,6 +551,8 @@ class _OrderTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     order.customerName!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: AppColors.mutedForeground,
                     ),
@@ -559,10 +577,16 @@ class _OrderTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Text(
-            'KES ${order.total.toStringAsFixed(2)}',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 104),
+            child: Text(
+              'KES ${order.total.toStringAsFixed(2)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

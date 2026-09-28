@@ -59,7 +59,7 @@ final cartControllerProvider = StateNotifierProvider<CartController, PosCart>(
   (ref) => CartController(),
 );
 
-enum CheckoutPhase { idle, submitting, success, queued, error }
+enum CheckoutPhase { idle, submitting, success, queued, pendingApproval, error }
 
 class CheckoutState {
   const CheckoutState({
@@ -177,7 +177,12 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     );
     return result.when(
       success: (receipt) {
-        state = state.copyWith(phase: CheckoutPhase.success, receipt: receipt);
+        state = state.copyWith(
+          phase: receipt.pendingApproval
+              ? CheckoutPhase.pendingApproval
+              : CheckoutPhase.success,
+          receipt: receipt,
+        );
         _ref.read(cartControllerProvider.notifier).clear();
         return true;
       },
