@@ -7,7 +7,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
 import '../../daily_sales/domain/daily_report.dart';
-import '../../sales_history/domain/payment_status.dart';
 import '../application/home_daily_controller.dart';
 
 /// Shared store home: daily summary + Start New Sale / web-like Quick actions.
@@ -586,8 +585,8 @@ class _OrderTile extends StatelessWidget {
                       variant: _paymentMethodPillVariant(order.paymentMethod),
                     ),
                     CbStatusPill(
-                      label: paymentStatusLabel(order.paymentStatus),
-                      variant: CbStatusPillVariant.neutral,
+                      label: order.lifecycle.label,
+                      variant: order.lifecycle.pillVariant,
                     ),
                   ],
                 ),

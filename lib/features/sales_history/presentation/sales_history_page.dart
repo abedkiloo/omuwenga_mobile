@@ -547,11 +547,8 @@ class _SaleHistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final voided =
-        sale.status == 'cancelled' ||
-        sale.status == 'voided' ||
-        (sale.refundStatus != null && sale.refundStatus != 'none');
-    final method = (sale.paymentMethod ?? 'credit').toUpperCase();
+    final voided = sale.lifecycle.inactive;
+    final statusLabel = sale.lifecycle.label;
 
     return CbSurfaceCard(
       padding: EdgeInsets.zero,
@@ -565,11 +562,9 @@ class _SaleHistoryCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    voided
-                        ? 'Cancelled/Void'
-                        : (sale.customerName?.trim().isNotEmpty == true
-                              ? sale.customerName!
-                              : 'Walk-in Retail'),
+                    sale.customerName?.trim().isNotEmpty == true
+                        ? sale.customerName!
+                        : 'Walk-in Retail',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -619,14 +614,8 @@ class _SaleHistoryCard extends StatelessWidget {
               children: [
                 Flexible(
                   child: CbStatusPill(
-                    label: voided
-                        ? 'VOIDED · ${sale.refundStatus ?? 'Cancelled'}'
-                        : '$method · ${paymentStatusLabel(sale.paymentStatus)}',
-                    variant: voided
-                        ? CbStatusPillVariant.warning
-                        : sale.paymentStatus == PaymentStatusDisplay.paid
-                        ? CbStatusPillVariant.success
-                        : CbStatusPillVariant.warning,
+                    label: statusLabel,
+                    variant: sale.lifecycle.pillVariant,
                   ),
                 ),
                 if (sale.cashierName != null) ...[
