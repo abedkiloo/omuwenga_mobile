@@ -634,6 +634,18 @@ class _SaleHistoryCard extends StatelessWidget {
                 const Icon(Icons.chevron_right, size: 18),
               ],
             ),
+            if (sale.needsSalespersonAction &&
+                (sale.rejectionReason ?? '').trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                sale.rejectionReason!.trim(),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.destructive,
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -7,6 +7,13 @@ double? _asDouble(Object? v) {
   return double.tryParse(v.toString());
 }
 
+bool _asBool(Object? value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  final raw = value?.toString().trim().toLowerCase();
+  return raw == 'true' || raw == '1';
+}
+
 int? _asInt(Object? value) {
   if (value == null) return null;
   if (value is num) return value.toInt();
@@ -28,6 +35,8 @@ class SaleSummary {
     this.cashierName,
     this.itemCount = 0,
     this.clientChannel,
+    this.needsSalespersonAction = false,
+    this.rejectionReason,
   });
 
   final int id;
@@ -42,6 +51,8 @@ class SaleSummary {
   final String? cashierName;
   final int itemCount;
   final String? clientChannel;
+  final bool needsSalespersonAction;
+  final String? rejectionReason;
 
   PaymentStatusDisplay get paymentStatus =>
       classifyPaymentStatus(total: total, amountPaid: amountPaid);
@@ -50,6 +61,7 @@ class SaleSummary {
     status: status,
     refundStatus: refundStatus,
     payment: paymentStatus,
+    needsSalespersonAction: needsSalespersonAction,
   );
 
   double get debtAmount {
@@ -72,6 +84,8 @@ class SaleSummary {
       cashierName: json['cashier_name']?.toString(),
       itemCount: (json['item_count'] as num?)?.toInt() ?? 0,
       clientChannel: json['client_channel']?.toString(),
+      needsSalespersonAction: _asBool(json['needs_salesperson_action']),
+      rejectionReason: json['rejection_reason']?.toString(),
     );
   }
 }
@@ -134,6 +148,8 @@ class SaleDetail {
     this.saleType,
     this.items = const [],
     this.clientChannel,
+    this.needsSalespersonAction = false,
+    this.rejectionReason,
   });
 
   final int id;
@@ -160,6 +176,8 @@ class SaleDetail {
   final String? saleType;
   final List<SaleLine> items;
   final String? clientChannel;
+  final bool needsSalespersonAction;
+  final String? rejectionReason;
 
   PaymentStatusDisplay get paymentStatus =>
       classifyPaymentStatus(total: total, amountPaid: amountPaid);
@@ -168,6 +186,7 @@ class SaleDetail {
     status: status,
     refundStatus: refundStatus,
     payment: paymentStatus,
+    needsSalespersonAction: needsSalespersonAction,
   );
 
   factory SaleDetail.fromJson(Map<String, dynamic> json) {
@@ -206,6 +225,8 @@ class SaleDetail {
       saleType: json['sale_type']?.toString(),
       items: items,
       clientChannel: json['client_channel']?.toString(),
+      needsSalespersonAction: _asBool(json['needs_salesperson_action']),
+      rejectionReason: json['rejection_reason']?.toString(),
     );
   }
 }

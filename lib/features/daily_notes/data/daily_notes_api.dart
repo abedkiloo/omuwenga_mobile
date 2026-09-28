@@ -91,7 +91,11 @@ class DailyNotesApi {
     if (res.isFailure) return Failure((res as Failure).error);
     final response = res.getOrThrow();
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      return Failure(DailyNotesApiException('Load failed (${response.statusCode})'));
+      return Failure(
+        DailyNotesApiException(
+          _errorMessage(response.body, 'Load failed (${response.statusCode})'),
+        ),
+      );
     }
     try {
       final data = jsonDecode(response.body);

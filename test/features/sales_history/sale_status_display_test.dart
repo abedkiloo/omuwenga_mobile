@@ -50,6 +50,14 @@ void main() {
         ).label,
         'On hold',
       );
+      expect(
+        describeSaleLifecycle(
+          status: 'holding',
+          payment: PaymentStatusDisplay.paid,
+          needsSalespersonAction: true,
+        ).label,
+        'Needs salesperson action',
+      );
     });
 
     test('open completed sales use payment status', () {
@@ -93,5 +101,22 @@ void main() {
     expect(list.lifecycle.label, detail.lifecycle.label);
     expect(list.lifecycle.label, 'Cancelled');
     expect(detail.paymentStatus, PaymentStatusDisplay.paid);
+  });
+
+  test('returned holding is labelled for salesperson action on list and detail', () {
+    const json = {
+      'id': 11,
+      'sale_number': 'S-11',
+      'total': '100',
+      'amount_paid': '100',
+      'status': 'holding',
+      'needs_salesperson_action': true,
+      'rejection_reason': 'Wrong prices',
+    };
+    final list = SaleSummary.fromJson(json);
+    final detail = SaleDetail.fromJson(json);
+    expect(list.lifecycle.label, 'Needs salesperson action');
+    expect(detail.lifecycle.label, list.lifecycle.label);
+    expect(detail.rejectionReason, 'Wrong prices');
   });
 }

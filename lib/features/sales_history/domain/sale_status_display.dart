@@ -34,10 +34,17 @@ SaleLifecycleDisplay describeSaleLifecycle({
   String? status,
   String? refundStatus,
   required PaymentStatusDisplay payment,
+  bool needsSalespersonAction = false,
 }) {
   final saleStatus = (status ?? '').trim().toLowerCase();
   final refund = (refundStatus ?? '').trim().toLowerCase();
 
+  if (needsSalespersonAction) {
+    return const SaleLifecycleDisplay(
+      label: 'Needs salesperson action',
+      tone: SaleLifecycleTone.danger,
+    );
+  }
   if (saleStatus == 'pending_approval') {
     return const SaleLifecycleDisplay(
       label: 'Awaiting approval',

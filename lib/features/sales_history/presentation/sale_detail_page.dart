@@ -195,6 +195,34 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
               ),
               const SizedBox(height: 12),
             ],
+            if (detail.needsSalespersonAction) ...[
+              CbSurfaceCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Needs salesperson action',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'This sale was returned. Fix it on POS and send it again. A sticky Daily note was also sent.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    if ((detail.rejectionReason ?? '').trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Manager comment: ${detail.rejectionReason!.trim()}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             if (state.error != null) ...[
               Container(
                 key: const Key('sale_detail_error'),
