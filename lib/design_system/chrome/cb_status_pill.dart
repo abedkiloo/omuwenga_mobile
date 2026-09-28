@@ -38,37 +38,44 @@ class CbStatusPill extends StatelessWidget {
       ),
     };
 
+    final labelText = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      softWrap: false,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: fg,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (showOnlineDot || variant == CbStatusPillVariant.online) ...[
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: AppColors.online,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 6),
-          ],
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            softWrap: false,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: fg,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final bounded = constraints.maxWidth.isFinite;
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (showOnlineDot || variant == CbStatusPillVariant.online) ...[
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: AppColors.online,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+              if (bounded) Flexible(child: labelText) else labelText,
+            ],
+          );
+        },
       ),
     );
   }

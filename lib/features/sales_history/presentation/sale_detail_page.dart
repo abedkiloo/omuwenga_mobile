@@ -65,26 +65,6 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
         title: Text(
           detail == null ? 'Sale Detail' : 'Sale Detail #${detail.saleNumber}',
         ),
-        actions: [
-          if (detail != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CbStatusPill(
-                    label: detail.lifecycle.label,
-                    variant: detail.lifecycle.pillVariant,
-                  ),
-                  const SizedBox(width: 8),
-                  CbStatusPill(
-                    label: (detail.saleType ?? 'POS').toUpperCase(),
-                    variant: CbStatusPillVariant.info,
-                  ),
-                ],
-              ),
-            ),
-        ],
       ),
       body: _body(context, ref, state),
       bottomNavigationBar: detail == null
@@ -882,10 +862,12 @@ class _SaleActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Material(
-        elevation: 10,
-        color: AppColors.surface,
+    return Material(
+      elevation: 10,
+      color: AppColors.surface,
+      child: SafeArea(
+        top: false,
+        bottom: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
           child: Column(

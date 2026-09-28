@@ -391,6 +391,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
     }
 
     return CbStickyActionBar(
+      safeArea: false,
       summary: summary,
       summaryTrailing: summaryTrailing,
       primaryLabel: label,

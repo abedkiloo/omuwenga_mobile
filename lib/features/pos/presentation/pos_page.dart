@@ -218,11 +218,9 @@ class _PosPageState extends ConsumerState<PosPage> {
         .read(checkoutControllerProvider.notifier)
         .setDraft(CheckoutDraft(method: method, amountPaid: cart.total));
 
-    await showModalBottomSheet<void>(
+    await showCbBoundedSheet<void>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: AppColors.background,
+      heightFactor: 0.92,
       builder: (context) => const _PaySheet(),
     );
 
@@ -306,80 +304,6 @@ class _PosPageState extends ConsumerState<PosPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              CbCollapsibleChrome(
-                collapsed: _chromeCollapsed,
-                onToggle: () =>
-                    setState(() => _chromeCollapsed = !_chromeCollapsed),
-                collapsedLabel: 'Sale header & customer',
-                collapsedSummary: cart.isEmpty
-                    ? userName
-                    : '${cart.itemCount} items · ${_kes(cart.total)}'
-                          '${cart.customerName == null ? '' : ' · ${cart.customerName}'}',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                      child: _PosHeaderCard(
-                        userName: userName,
-                        roleLabel: roleLabel,
-                        cartItemCount: cart.itemCount,
-                        onCartTap: _openCartSheet,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                      child: _CustomerStrip(
-                        cart: cart,
-                        settingsAsync: settingsAsync,
-                        onPickCustomer: () =>
-                            showCustomerPickerSheet(context, ref),
-                        onClearCustomer: () => ref
-                            .read(cartControllerProvider.notifier)
-                            .clearCustomer(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-                child: _PosSearchRow(
-                  controller: _search,
-                  focusNode: _searchFocus,
-                  onSubmitted: _loadCatalog,
-                  onSearchTap: _catalog.loading ? null : () => _loadCatalog(),
-                ),
-              ),
-              if (_categories.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: SizedBox(
-                    height: 36,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      children: [
-                        _CategoryChip(
-                          label: 'All',
-                          count: null,
-                          selected: _catalog.categoryId == null,
-                          onTap: () => _selectCategory(null),
-                        ),
-                        const SizedBox(width: 8),
-                        for (final c in _categories) ...[
-                          _CategoryChip(
-                            label: c.name,
-                            count: c.productCount > 0 ? c.productCount : null,
-                            selected: _catalog.categoryId == c.id,
-                            onTap: () => _selectCategory(c.id),
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
               if (_catalog.loading && _catalog.items.isEmpty)
                 const LinearProgressIndicator(minHeight: 2),
               if (_catalog.error != null)
@@ -399,8 +323,92 @@ class _PosPageState extends ConsumerState<PosPage> {
                   child: ListView(
                     key: const Key('pos_catalog_scroll'),
                     controller: _catalogScroll,
-                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 10),
                     children: [
+                      CbCollapsibleChrome(
+                        collapsed: _chromeCollapsed,
+                        onToggle: () =>
+                            setState(() => _chromeCollapsed = !_chromeCollapsed),
+                        collapsedLabel: 'Sale header & customer',
+                        collapsedSummary: cart.isEmpty
+                            ? userName
+                            : '${cart.itemCount} items · ${_kes(cart.total)}'
+                                  '${cart.customerName == null ? '' : ' · ${cart.customerName}'}',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                              child: _PosHeaderCard(
+                                userName: userName,
+                                roleLabel: roleLabel,
+                                cartItemCount: cart.itemCount,
+                                onCartTap: _openCartSheet,
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                              child: _CustomerStrip(
+                                cart: cart,
+                                settingsAsync: settingsAsync,
+                                onPickCustomer: () =>
+                                    showCustomerPickerSheet(context, ref),
+                                onClearCustomer: () => ref
+                                    .read(cartControllerProvider.notifier)
+                                    .clearCustomer(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+                        child: _PosSearchRow(
+                          controller: _search,
+                          focusNode: _searchFocus,
+                          onSubmitted: _loadCatalog,
+                          onSearchTap:
+                              _catalog.loading ? null : () => _loadCatalog(),
+                        ),
+                      ),
+                      if (_categories.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: SizedBox(
+                            height: 36,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              children: [
+                                _CategoryChip(
+                                  label: 'All',
+                                  count: null,
+                                  selected: _catalog.categoryId == null,
+                                  onTap: () => _selectCategory(null),
+                                ),
+                                const SizedBox(width: 8),
+                                for (final c in _categories) ...[
+                                  _CategoryChip(
+                                    label: c.name,
+                                    count: c.productCount > 0
+                                        ? c.productCount
+                                        : null,
+                                    selected: _catalog.categoryId == c.id,
+                                    onTap: () => _selectCategory(c.id),
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
                       if (!cart.isEmpty) ...[
                         Row(
                           children: [
@@ -499,72 +507,84 @@ class _PosPageState extends ConsumerState<PosPage> {
                           ),
                         ),
                     ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              CbStickyActionBar(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CbEllipsisText(
-                            'SUBTOTAL (${cart.lines.fold<double>(0, (s, l) => s + l.quantity).round()} PACKS)',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: AppColors.mutedForeground,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        CbFitMoney(
-                          _kes(cart.total),
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+            ],
+          ),
+        ),
+        bottomNavigationBar: CbStickyActionBar(
+          safeArea: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: CbEllipsisText(
+                      'SUBTOTAL (${cart.lines.fold<double>(0, (s, l) => s + l.quantity).round()} PACKS)',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: AppColors.mutedForeground,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CbEllipsisText(
-                                'NET TOTAL DUE',
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: AppColors.mutedForeground,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              CbFitMoney(
-                                _kes(cart.total),
-                                key: const Key('pos_total'),
-                                alignment: Alignment.centerLeft,
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        SizedBox(
-                          width: 140,
-                          child: CbPrimaryButton(
-                            key: const Key('pos_pay'),
-                            label: 'Proceed',
-                            onPressed: cart.isEmpty ? null : _openPay,
-                          ),
-                        ),
-                      ],
+                  ),
+                  const SizedBox(width: 8),
+                  CbFitMoney(
+                    _kes(cart.total),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final stacked = constraints.maxWidth < 340;
+                  final totals = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CbEllipsisText(
+                        'NET TOTAL DUE',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: AppColors.mutedForeground,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      CbFitMoney(
+                        _kes(cart.total),
+                        key: const Key('pos_total'),
+                        alignment: Alignment.centerLeft,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  );
+                  final pay = CbPrimaryButton(
+                    key: const Key('pos_pay'),
+                    label: 'Proceed',
+                    onPressed: cart.isEmpty ? null : _openPay,
+                  );
+                  if (stacked) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [totals, const SizedBox(height: 8), pay],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: totals),
+                      const SizedBox(width: 12),
+                      SizedBox(width: 140, child: pay),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -1299,7 +1319,6 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
       settings: settings,
       draft: draft,
     );
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
     final theme = Theme.of(context);
     final amountPaid =
         parseMoney(_amount.text, allowZero: true, required: false) ?? 0;
@@ -1345,13 +1364,15 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
       confirmLabel = 'Confirm Payment - ${_kes(cart.total)}';
     }
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottom),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             Row(
               children: [
                 IconButton(
@@ -1617,8 +1638,13 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                 style: const TextStyle(color: AppColors.destructive),
               ),
             ],
-            const SizedBox(height: 16),
-            CbPrimaryButton(
+              ],
+            ),
+          ),
+        ),
+        CbStickyActionBar(
+          safeArea: false,
+          child: CbPrimaryButton(
               key: const Key('pos_confirm_pay'),
               label: confirmLabel,
               onPressed: !valid || checkout.phase == CheckoutPhase.submitting
@@ -1706,10 +1732,9 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                           .submit();
                       if (ok && context.mounted) Navigator.pop(context);
                     },
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

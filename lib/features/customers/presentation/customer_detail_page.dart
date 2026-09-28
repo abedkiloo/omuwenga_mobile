@@ -204,6 +204,7 @@ class _LedgerBottomBar extends StatelessWidget {
       shadowColor: const Color(0x1A0F172A),
       child: SafeArea(
         top: false,
+        bottom: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
           child: Row(
@@ -234,9 +235,13 @@ class _LedgerBottomBar extends StatelessWidget {
                         backgroundColor: AppColors.primary,
                         foregroundColor: AppColors.primaryForeground,
                       ),
-                      child: Text(
-                        'Receive Payment  ${_kes(debtAmount)}',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Receive Payment  ${_kes(debtAmount)}',
+                          maxLines: 1,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ),
                     ),
                   ),

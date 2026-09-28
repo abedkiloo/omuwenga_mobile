@@ -123,6 +123,35 @@ void main() {
     expect(find.text('KES 1,234,567.89'), findsOneWidget);
   });
 
+  testWidgets('long status pill ellipsizes inside a 320px row', (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Padding(
+            padding: EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: CbStatusPill(label: 'Needs salesperson action'),
+                ),
+                SizedBox(width: 8),
+                Icon(Icons.chevron_right, size: 18),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Needs salesperson action'), findsOneWidget);
+  });
+
   testWidgets('CbPasswordField toggles visibility and stays inside 320px', (
     tester,
   ) async {

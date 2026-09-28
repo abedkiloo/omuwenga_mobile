@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
+import '../../auth/application/auth_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
 import '../../daily_sales/domain/daily_report.dart';
+import '../../appraisals/application/appraisals_controller.dart';
+import '../../appraisals/presentation/appraisal_progress_card.dart';
 import '../application/home_daily_controller.dart';
 
 /// Shared store home: daily summary + Start New Sale / web-like Quick actions.
@@ -41,11 +44,20 @@ class StoreHomeDashboard extends ConsumerWidget {
     final home = ref.watch(homeDailyProvider);
     final theme = Theme.of(context);
     final tools = _buildTools(context);
+    final canAppraisals =
+        ref.watch(authControllerProvider).session?.permissions.canViewAppraisals ??
+        false;
+    final appraisal = ref.watch(appraisalsProvider).snapshot;
 
     return ColoredBox(
       color: AppColors.background,
       child: RefreshIndicator(
-        onRefresh: () => ref.read(homeDailyProvider.notifier).load(),
+        onRefresh: () async {
+          await Future.wait([
+            ref.read(homeDailyProvider.notifier).load(),
+            if (canAppraisals) ref.read(appraisalsProvider.notifier).load(),
+          ]);
+        },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
           children: [
@@ -86,6 +98,10 @@ class StoreHomeDashboard extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             _SummarySection(state: home),
+            if (canAppraisals && appraisal != null && appraisal.showOnHome) ...[
+              const SizedBox(height: 12),
+              AppraisalProgressCard(snapshot: appraisal, compact: true),
+            ],
             const SizedBox(height: 12),
             if (canAccessPos)
               CbPrimaryButton(

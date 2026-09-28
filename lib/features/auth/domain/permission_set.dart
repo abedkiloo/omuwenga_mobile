@@ -83,6 +83,10 @@ class PermissionSet {
   bool get canUpdateDailyNotes =>
       has('daily_notes', 'update') || canViewSales || canAccessPos;
   bool get canViewAllDailyNotes => has('daily_notes', 'view_all');
+  bool get canViewAppraisals =>
+      has('appraisals', 'view') || canViewSales || canAccessPos;
+  bool get canManageAppraisals => has('appraisals', 'manage');
+  bool get canViewAllAppraisals => has('appraisals', 'view_all');
 
   bool get isEmpty => _keys.isEmpty;
   int get length => _keys.length;

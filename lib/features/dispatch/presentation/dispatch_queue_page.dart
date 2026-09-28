@@ -459,6 +459,7 @@ class _DispatchOrderDetailPageState
       ),
       bottomNavigationBar: canPack
           ? CbStickyActionBar(
+              safeArea: false,
               primaryLabel: 'Actions',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -158,51 +158,53 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
                 ],
               ),
             ),
-            SizedBox(
-              height: 44,
-              child: ListView(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 6, 0, 0),
+              child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: CbFilterChip(
-                      key: const Key('sales_filter_awaiting'),
-                      label: 'Awaiting approval',
-                      selected: filters.status == 'pending_approval',
-                      compact: true,
-                      onTap: () {
-                        final selected = filters.status == 'pending_approval';
-                        ref.read(salesHistoryProvider.notifier).load(
-                          filters: selected
-                              ? filters.copyWith(clearStatus: true)
-                              : filters.copyWith(status: 'pending_approval'),
-                        );
-                      },
-                    ),
-                  ),
-                  for (final method in const ['', 'mpesa', 'cash'])
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+                child: Row(
+                  children: [
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: CbFilterChip(
-                        key: Key(
-                          'sales_method_${method.isEmpty ? 'all' : method}',
-                        ),
-                        label: method.isEmpty
-                            ? 'All (${state.items.length})'
-                            : method == 'mpesa'
-                            ? 'M-Pesa'
-                            : 'Cash',
-                        selected: filters.paymentMethod == method,
+                        key: const Key('sales_filter_awaiting'),
+                        label: 'Awaiting approval',
+                        selected: filters.status == 'pending_approval',
                         compact: true,
-                        onTap: () => ref
-                            .read(salesHistoryProvider.notifier)
-                            .load(
-                              filters: filters.copyWith(paymentMethod: method),
-                            ),
+                        onTap: () {
+                          final selected = filters.status == 'pending_approval';
+                          ref.read(salesHistoryProvider.notifier).load(
+                            filters: selected
+                                ? filters.copyWith(clearStatus: true)
+                                : filters.copyWith(status: 'pending_approval'),
+                          );
+                        },
                       ),
                     ),
-                ],
+                    for (final method in const ['', 'mpesa', 'cash'])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: CbFilterChip(
+                          key: Key(
+                            'sales_method_${method.isEmpty ? 'all' : method}',
+                          ),
+                          label: method.isEmpty
+                              ? 'All (${state.items.length})'
+                              : method == 'mpesa'
+                              ? 'M-Pesa'
+                              : 'Cash',
+                          selected: filters.paymentMethod == method,
+                          compact: true,
+                          onTap: () => ref
+                              .read(salesHistoryProvider.notifier)
+                              .load(
+                                filters: filters.copyWith(paymentMethod: method),
+                              ),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             if (state.loading) const LinearProgressIndicator(minHeight: 2),
@@ -603,6 +605,8 @@ class _SaleHistoryCard extends StatelessWidget {
                 ),
                 Text(
                   _time(sale.occurredAt),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: AppColors.mutedForeground,
                   ),
@@ -611,25 +615,29 @@ class _SaleHistoryCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Flexible(
-                  child: CbStatusPill(
-                    label: statusLabel,
-                    variant: sale.lifecycle.pillVariant,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CbStatusPill(
+                        label: statusLabel,
+                        variant: sale.lifecycle.pillVariant,
+                      ),
+                      if (sale.cashierName != null &&
+                          sale.cashierName!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          sale.cashierName!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                if (sale.cashierName != null) ...[
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      sale.cashierName!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.right,
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ),
-                ],
                 const SizedBox(width: 4),
                 const Icon(Icons.chevron_right, size: 18),
               ],

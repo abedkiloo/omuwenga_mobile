@@ -11,8 +11,11 @@ import 'package:completebyte_pos_mobile/features/home/presentation/store_home_da
 import 'package:completebyte_pos_mobile/features/pos/application/pos_controllers.dart';
 import 'package:completebyte_pos_mobile/features/pos/domain/payment.dart';
 import 'package:completebyte_pos_mobile/features/pos/presentation/pos_page.dart';
+import 'package:completebyte_pos_mobile/features/sales_history/application/sales_history_controllers.dart';
 import 'package:completebyte_pos_mobile/features/sales_history/data/sales_history_api.dart';
 import 'package:completebyte_pos_mobile/features/sales_history/domain/payment_status.dart';
+import 'package:completebyte_pos_mobile/features/sales_history/domain/sale.dart';
+import 'package:completebyte_pos_mobile/features/sales_history/presentation/sales_history_page.dart';
 import 'package:completebyte_pos_mobile/sync/application/connectivity_monitor.dart';
 import 'package:completebyte_pos_mobile/sync/data/memory_outbox_store.dart';
 import 'package:completebyte_pos_mobile/sync/providers.dart';
@@ -198,4 +201,127 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('sales history awaiting cards stay inside 320–414 widths', (
+    tester,
+  ) async {
+    final tokens = InMemoryTokenStore();
+    final httpClient = MockClient((request) async => http.Response('{}', 200));
+    final api = ApiClient(
+      env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+      tokenStore: tokens,
+      httpClient: httpClient,
+    );
+    final history = _FrozenSalesHistory(SalesHistoryApi(api));
+
+    for (final size in _phones) {
+      _setSize(tester, size);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            salesHistoryProvider.overrideWith((ref) => history),
+          ],
+          child: const MaterialApp(home: SalesHistoryPage()),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await _expectNoOverflow(tester);
+      expect(find.text('Needs salesperson action'), findsWidgets);
+      expect(find.byKey(const Key('sale_row_1')), findsOneWidget);
+    }
+  });
+
+  testWidgets('POS proceed stays docked above the tab bar on phone sizes', (
+    tester,
+  ) async {
+    final sizes = <Size>[
+      const Size(320, 568),
+      const Size(375, 667),
+      const Size(568, 320),
+    ];
+    for (final size in sizes) {
+      _setSize(tester, size);
+      final tokens = InMemoryTokenStore();
+      final httpClient = MockClient((request) async {
+        return http.Response('{"count":0,"results":[]}', 200);
+      });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            tokenStoreProvider.overrideWithValue(tokens),
+            appEnvProvider.overrideWithValue(
+              const AppEnv(
+                flavor: AppFlavor.dev,
+                apiBaseUrl: 'http://example.com/api',
+              ),
+            ),
+            httpClientProvider.overrideWithValue(httpClient),
+            apiClientProvider.overrideWith((ref) {
+              return ApiClient(
+                env: ref.watch(appEnvProvider),
+                tokenStore: tokens,
+                httpClient: httpClient,
+              );
+            }),
+            outboxStoreProvider.overrideWithValue(MemoryOutboxStore()),
+            connectivityMonitorProvider.overrideWithValue(
+              FakeConnectivityMonitor(online: true),
+            ),
+            posSettingsProvider.overrideWith((ref) async => const PosSettings()),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: const PosPage(),
+              bottomNavigationBar: NavigationBar(
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    label: 'Home',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.point_of_sale_outlined),
+                    label: 'POS',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.takeException(), isNull);
+      final pay = tester.getRect(find.byKey(const Key('pos_pay')));
+      final nav = tester.getRect(find.byType(NavigationBar));
+      expect(pay.bottom, lessThanOrEqualTo(nav.top + 1));
+      expect(pay.top, greaterThan(0));
+    }
+  });
+}
+
+class _FrozenSalesHistory extends SalesHistoryController {
+  _FrozenSalesHistory(super.api) {
+    state = const SalesHistoryState(
+      loading: false,
+      items: [
+        SaleSummary(
+          id: 1,
+          saleNumber: 'SALE-VERY-LONG-NUMBER-12345',
+          total: 1234567.89,
+          amountPaid: 1234567.89,
+          customerName: 'Very Long Customer Name For Overflow Layout Check',
+          cashierName: 'Cashier With A Long Name',
+          status: 'holding',
+          needsSalespersonAction: true,
+          rejectionReason:
+              'Wrong prices and a very long manager comment that should wrap without overflowing the card',
+          occurredAt: '2026-01-02T07:15:00.000Z',
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<void> load({SalesHistoryFilters? filters}) async {}
 }

@@ -11,6 +11,7 @@ import '../../../sync/presentation/sync_failures_sheet.dart';
 import '../../../sync/presentation/sync_status_chip.dart';
 import '../../../sync/providers.dart';
 import '../../daily_notes/presentation/sticky_notes_gate.dart';
+import '../../appraisals/presentation/appraisal_greeting.dart';
 import '../../delivery/application/delivery_controllers.dart';
 import '../../delivery/domain/delivery_stop.dart';
 import '../../field_orders/domain/field_order.dart';
@@ -132,6 +133,7 @@ class StoreShellPage extends ConsumerWidget {
                 ),
         ),
         const StickyNotesGate(),
+        const AppraisalGreeting(),
       ],
     );
   }
@@ -490,6 +492,7 @@ class MorePage extends ConsumerWidget {
         );
     final canDebtors = session?.permissions.canViewDebtManagement ?? false;
     final canNotes = session?.permissions.canViewDailyNotes ?? false;
+    final canAppraisals = session?.permissions.canViewAppraisals ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -547,6 +550,13 @@ class MorePage extends ConsumerWidget {
                 title: 'Daily notes',
                 icon: Icons.sticky_note_2_outlined,
                 onTap: () => context.go(AppRoutes.dailyNotes),
+              ),
+            if (canAppraisals)
+              _MoreTile(
+                key: const Key('more_appraisals'),
+                title: 'Appraisals',
+                icon: Icons.star_outline,
+                onTap: () => context.go(AppRoutes.appraisals),
               ),
             _MoreTile(
               title: 'API health',

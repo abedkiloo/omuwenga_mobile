@@ -139,6 +139,7 @@ class PosCartSheet extends ConsumerWidget {
                     ),
             ),
             CbStickyActionBar(
+              safeArea: false,
               summary: cart.isEmpty
                   ? null
                   : '${cart.itemCount} packs · ${cart.lines.length} SKUs',

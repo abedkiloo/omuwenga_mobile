@@ -529,6 +529,7 @@ class _DeliveryStopPageState extends ConsumerState<DeliveryStopPage> {
         ],
       ),
       bottomNavigationBar: CbStickyActionBar(
+        safeArea: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,

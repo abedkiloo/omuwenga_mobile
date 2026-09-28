@@ -19,4 +19,38 @@ abstract final class AppColors {
 
   /// Legacy brand green — use for success/standing, not primary CTAs.
   static const Color brandGreen = Color(0xFF1E9E4B);
+
+  static Color starTone(String tone) {
+    switch (tone) {
+      case 'gold':
+        return const Color(0xFFF59E0B);
+      case 'teal':
+        return const Color(0xFF0D9488);
+      case 'emerald':
+        return const Color(0xFF059669);
+      case 'amber':
+        return const Color(0xFFD97706);
+      case 'orange':
+        return const Color(0xFFEA580C);
+      default:
+        return const Color(0xFFE11D48);
+    }
+  }
+
+  static List<Color> starGradient(String tone) {
+    switch (tone) {
+      case 'gold':
+        return const [Color(0xFFF59E0B), Color(0xFFFDE68A)];
+      case 'teal':
+        return const [Color(0xFF0D9488), Color(0xFF5EEAD4)];
+      case 'emerald':
+        return const [Color(0xFF059669), Color(0xFF6EE7B7)];
+      case 'amber':
+        return const [Color(0xFFD97706), Color(0xFFFCD34D)];
+      case 'orange':
+        return const [Color(0xFFEA580C), Color(0xFFFDBA74)];
+      default:
+        return const [Color(0xFFE11D48), Color(0xFFFB7185)];
+    }
+  }
 }

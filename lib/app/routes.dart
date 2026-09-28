@@ -17,6 +17,7 @@ abstract final class AppRoutes {
   static const dispatchQueue = '/dispatch';
   static const deliveryRoute = '/delivery';
   static const dailyNotes = '/daily-notes';
+  static const appraisals = '/appraisals';
 
   static String customerDetail(int id, {String? tab}) {
     final path = '/customers/$id';

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/daily_notes/presentation/daily_notes_page.dart';
+import '../features/appraisals/presentation/appraisals_page.dart';
 import '../features/dispatch/presentation/dispatch_queue_page.dart';
 import '../features/delivery/presentation/delivery_route_page.dart';
 import '../features/field_orders/presentation/google_map_pin_picker.dart';
@@ -291,6 +292,10 @@ GoRouter createAppRouter({
           GoRoute(
             path: AppRoutes.dailyNotes,
             builder: (context, state) => const DailyNotesPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.appraisals,
+            builder: (context, state) => const AppraisalsPage(),
           ),
         ],
       ),

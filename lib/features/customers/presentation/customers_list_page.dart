@@ -306,17 +306,21 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.person_add_alt_1, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Register New Customer',
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                      const Icon(Icons.person_add_alt_1, size: 20),
+                      const SizedBox(width: 8),
+                      const Flexible(
+                        child: Text(
+                          'Register New Customer',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ),
-                      SizedBox(width: 10),
-                      _FastAddBadge(),
+                      const SizedBox(width: 10),
+                      const _FastAddBadge(),
                     ],
                   ),
                 ),
