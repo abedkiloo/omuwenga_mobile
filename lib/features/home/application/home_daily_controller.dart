@@ -150,6 +150,8 @@ class HomeDailyController extends StateNotifier<HomeDailyState> {
               occurredAt: s.occurredAt,
               debtAmount: s.debtAmount,
               clientChannel: s.clientChannel,
+              status: s.status,
+              refundStatus: s.refundStatus,
             ),
         ];
         // List is server-scoped for non-admin users (own cashier/served_by only).

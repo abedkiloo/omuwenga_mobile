@@ -15,9 +15,9 @@ import '../../pos/presentation/receipt_share.dart';
 import '../../pos/presentation/thermal_receipt.dart';
 import '../../pos/domain/payment.dart';
 import '../application/sales_history_controllers.dart';
-import '../domain/payment_status.dart';
 import '../domain/sale.dart';
 import '../domain/sale_action_help.dart';
+import '../domain/sale_status_display.dart';
 import 'sale_action_help_icon.dart';
 
 class SaleDetailPage extends ConsumerStatefulWidget {
@@ -69,9 +69,19 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
           if (detail != null)
             Padding(
               padding: const EdgeInsets.only(right: 12),
-              child: CbStatusPill(
-                label: (detail.saleType ?? 'POS').toUpperCase(),
-                variant: CbStatusPillVariant.info,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CbStatusPill(
+                    label: detail.lifecycle.label,
+                    variant: detail.lifecycle.pillVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  CbStatusPill(
+                    label: (detail.saleType ?? 'POS').toUpperCase(),
+                    variant: CbStatusPillVariant.info,
+                  ),
+                ],
               ),
             ),
         ],
@@ -427,30 +437,50 @@ class _CompletionBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settled = detail.paymentStatus == PaymentStatusDisplay.paid;
+    final lifecycle = detail.lifecycle;
+    final Color background;
+    final Color iconColor;
+    final IconData icon;
+    switch (lifecycle.tone) {
+      case SaleLifecycleTone.success:
+        background = const Color(0xFFDCFCE7);
+        iconColor = AppColors.success;
+        icon = Icons.verified_outlined;
+      case SaleLifecycleTone.danger:
+        background = const Color(0xFFFEE2E2);
+        iconColor = AppColors.destructive;
+        icon = Icons.cancel_outlined;
+      case SaleLifecycleTone.warning:
+        background = const Color(0xFFFEF3C7);
+        iconColor = AppColors.warning;
+        icon = Icons.schedule_outlined;
+      case SaleLifecycleTone.info:
+        background = const Color(0xFFE0F2FE);
+        iconColor = AppColors.primary;
+        icon = Icons.hourglass_top_outlined;
+      case SaleLifecycleTone.neutral:
+        background = const Color(0xFFF1F5F9);
+        iconColor = AppColors.mutedForeground;
+        icon = Icons.info_outline;
+    }
     return Container(
       key: const Key('sale_status_hero'),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: settled ? const Color(0xFFDCFCE7) : const Color(0xFFFEF3C7),
+        color: background,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            settled ? Icons.verified_outlined : Icons.schedule_outlined,
-            color: settled ? AppColors.success : AppColors.warning,
-          ),
+          Icon(icon, color: iconColor),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  settled
-                      ? 'Completed & Settled'
-                      : paymentStatusLabel(detail.paymentStatus),
+                  lifecycle.label,
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
                 Text(
@@ -517,7 +547,7 @@ class _AccountCard extends StatelessWidget {
           ],
           if (detail.refundStatus != null && detail.refundStatus != 'none') ...[
             const SizedBox(height: 10),
-            _Meta(label: 'REFUND STATUS', value: detail.refundStatus!),
+            _Meta(label: 'REFUND STATUS', value: detail.lifecycle.label),
           ],
         ],
       ),

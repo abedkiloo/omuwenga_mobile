@@ -241,7 +241,7 @@ class DailySalesPage extends ConsumerWidget {
             [
               if (order.customerName != null && order.customerName!.isNotEmpty)
                 order.customerName,
-              paymentStatusLabel(order.paymentStatus),
+              order.lifecycle.label,
             ].whereType<String>().join(' · '),
           ),
           trailing: Text(order.total.toStringAsFixed(2)),

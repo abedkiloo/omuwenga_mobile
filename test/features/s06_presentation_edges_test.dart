@@ -87,7 +87,7 @@ void main() {
     await tester.tap(find.text('Retry'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('sale_refund')), findsOneWidget);
-    expect(find.text('partial'), findsOneWidget);
+    expect(find.text('Partial refund'), findsWidgets);
 
     await tester.tap(find.byKey(const Key('sale_refund')));
     await tester.pumpAndSettle();

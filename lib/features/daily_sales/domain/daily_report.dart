@@ -1,5 +1,6 @@
 import '../../customers/domain/debt_management.dart';
 import '../../sales_history/domain/payment_status.dart';
+import '../../sales_history/domain/sale_status_display.dart';
 
 double? _asDouble(Object? v) {
   if (v == null) return null;
@@ -63,6 +64,8 @@ class DailyOrder {
     this.cashierName,
     this.servedByName,
     this.clientChannel,
+    this.status,
+    this.refundStatus,
   });
 
   final int id;
@@ -78,6 +81,14 @@ class DailyOrder {
   final String? cashierName;
   final String? servedByName;
   final String? clientChannel;
+  final String? status;
+  final String? refundStatus;
+
+  SaleLifecycleDisplay get lifecycle => describeSaleLifecycle(
+    status: status,
+    refundStatus: refundStatus,
+    payment: paymentStatus,
+  );
 
   factory DailyOrder.fromJson(Map<String, dynamic> json) {
     final customer = json['customer'];
@@ -107,6 +118,8 @@ class DailyOrder {
       cashierName: json['cashier_name']?.toString(),
       servedByName: json['served_by_name']?.toString(),
       clientChannel: json['client_channel']?.toString(),
+      status: json['status']?.toString(),
+      refundStatus: json['refund_status']?.toString(),
     );
   }
 }

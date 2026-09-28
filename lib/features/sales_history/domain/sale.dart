@@ -1,4 +1,5 @@
 import 'payment_status.dart';
+import 'sale_status_display.dart';
 
 double? _asDouble(Object? v) {
   if (v == null) return null;
@@ -44,6 +45,12 @@ class SaleSummary {
 
   PaymentStatusDisplay get paymentStatus =>
       classifyPaymentStatus(total: total, amountPaid: amountPaid);
+
+  SaleLifecycleDisplay get lifecycle => describeSaleLifecycle(
+    status: status,
+    refundStatus: refundStatus,
+    payment: paymentStatus,
+  );
 
   double get debtAmount {
     final debt = total - amountPaid;
@@ -156,6 +163,12 @@ class SaleDetail {
 
   PaymentStatusDisplay get paymentStatus =>
       classifyPaymentStatus(total: total, amountPaid: amountPaid);
+
+  SaleLifecycleDisplay get lifecycle => describeSaleLifecycle(
+    status: status,
+    refundStatus: refundStatus,
+    payment: paymentStatus,
+  );
 
   factory SaleDetail.fromJson(Map<String, dynamic> json) {
     final items = <SaleLine>[];
