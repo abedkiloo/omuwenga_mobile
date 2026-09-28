@@ -115,15 +115,16 @@ class StoreHomeDashboard extends ConsumerWidget {
             ],
             if (home.summary != null && home.summary!.orders.isNotEmpty) ...[
               const SizedBox(height: 16),
-              Row(
+              const Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: CbSectionLabel(
                       label: 'Recent Completed Receipts',
                       icon: Icons.receipt_long_outlined,
                     ),
                   ),
-                  const CbStatusPill(
+                  SizedBox(width: 8),
+                  CbStatusPill(
                     label: 'Live',
                     variant: CbStatusPillVariant.online,
                     showOnlineDot: true,
@@ -405,34 +406,47 @@ class _SummarySection extends StatelessWidget {
           subtitle: '${summary.ordersCount} orders today',
         ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                label: 'Paid / Collected',
-                value: summary.totalPaid > 0
-                    ? summary.totalPaid
-                    : summary.totalCollected,
-                subtitle: '${summary.paidOrdersCount} paid',
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _MetricCard(
-                label: 'Credit Slips',
-                value: summary.totalDebtIncurred,
-                subtitle: summary.debtOrdersCount > 0
-                    ? '${summary.debtOrdersCount} pending'
-                    : 'None today',
-                trailing: summary.debtOrdersCount > 0
-                    ? CbStatusPill(
-                        label: '${summary.debtOrdersCount} Pending',
-                        variant: CbStatusPillVariant.warning,
-                      )
-                    : null,
-              ),
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final paid = _MetricCard(
+              label: 'Paid / Collected',
+              value: summary.totalPaid > 0
+                  ? summary.totalPaid
+                  : summary.totalCollected,
+              subtitle: '${summary.paidOrdersCount} paid',
+            );
+            final credit = _MetricCard(
+              label: 'Credit Slips',
+              value: summary.totalDebtIncurred,
+              subtitle: summary.debtOrdersCount > 0
+                  ? '${summary.debtOrdersCount} pending'
+                  : 'None today',
+              trailing: summary.debtOrdersCount > 0
+                  ? CbStatusPill(
+                      label: '${summary.debtOrdersCount} Pending',
+                      variant: CbStatusPillVariant.warning,
+                    )
+                  : null,
+            );
+            if (constraints.maxWidth < 360) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  paid,
+                  const SizedBox(height: 10),
+                  credit,
+                ],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: paid),
+                const SizedBox(width: 10),
+                Expanded(child: credit),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -459,25 +473,30 @@ class _MetricCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppColors.mutedForeground,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              ?trailing,
-            ],
-          ),
-          const SizedBox(height: 6),
           Text(
-            'KES ${value.toStringAsFixed(2)}',
+            label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.mutedForeground,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: trailing!,
+              ),
+            ),
+          ],
+          const SizedBox(height: 6),
+          CbFitMoney(
+            'KES ${value.toStringAsFixed(2)}',
+            alignment: Alignment.centerLeft,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: AppColors.primary,
@@ -579,11 +598,8 @@ class _OrderTile extends StatelessWidget {
           const SizedBox(width: 12),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 104),
-            child: Text(
+            child: CbFitMoney(
               'KES ${order.total.toStringAsFixed(2)}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
               ),

@@ -57,6 +57,8 @@ class DebtCollectionsPanel extends StatelessWidget {
                   children: [
                     Text(
                       'Collections',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -64,6 +66,8 @@ class DebtCollectionsPanel extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'Who paid, how much, and what remains on ${formatCollectionDateLabel(date)}.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.mutedForeground,
                       ),
@@ -75,6 +79,7 @@ class DebtCollectionsPanel extends StatelessWidget {
                 IconButton(
                   key: const Key('debt_collections_close'),
                   tooltip: 'Close collections',
+                  visualDensity: VisualDensity.compact,
                   onPressed: onClose,
                   icon: const Icon(Icons.close),
                 ),
@@ -87,6 +92,7 @@ class DebtCollectionsPanel extends StatelessWidget {
                 IconButton(
                   key: const Key('debt_collections_prev'),
                   tooltip: 'Previous day',
+                  visualDensity: VisualDensity.compact,
                   onPressed: loading ? null : onPreviousDay,
                   icon: const Icon(Icons.chevron_left),
                 ),
@@ -94,6 +100,8 @@ class DebtCollectionsPanel extends StatelessWidget {
                   child: Text(
                     key: const Key('debt_collections_date'),
                     formatCollectionDateLabel(date),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
@@ -103,20 +111,26 @@ class DebtCollectionsPanel extends StatelessWidget {
                 IconButton(
                   key: const Key('debt_collections_next'),
                   tooltip: 'Next day',
+                  visualDensity: VisualDensity.compact,
                   onPressed: loading || nextDisabled ? null : onNextDay,
                   icon: const Icon(Icons.chevron_right),
                 ),
-                if (date != today && onJumpToday != null)
-                  TextButton(
-                    key: const Key('debt_collections_today'),
-                    onPressed: loading ? null : onJumpToday,
-                    child: const Text('Today'),
-                  ),
               ],
             ),
+            if (date != today && onJumpToday != null)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  key: const Key('debt_collections_today'),
+                  onPressed: loading ? null : onJumpToday,
+                  child: const Text('Today'),
+                ),
+              ),
           ],
           Text(
             '$count payment${count == 1 ? '' : 's'} · ${_kes(total)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
@@ -197,21 +211,30 @@ class DebtCollectionTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                formatCollectionTime(row.createdAt),
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppColors.mutedForeground,
+              Flexible(
+                child: Text(
+                  formatCollectionTime(row.createdAt),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
                 ),
               ),
-              const Spacer(),
-              Text(
-                remainingText,
-                key: Key('collection_remaining_${row.id}'),
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: row.stillOwes
-                      ? AppColors.destructive
-                      : AppColors.mutedForeground,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  remainingText,
+                  key: Key('collection_remaining_${row.id}'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: row.stillOwes
+                        ? AppColors.destructive
+                        : AppColors.mutedForeground,
+                  ),
                 ),
               ),
             ],
@@ -236,6 +259,8 @@ class DebtCollectionTile extends StatelessWidget {
           if (row.subtitle.isNotEmpty)
             Text(
               row.subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
@@ -243,19 +268,25 @@ class DebtCollectionTile extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
-              Text(
-                'Amount paid',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.mutedForeground,
+              Expanded(
+                child: Text(
+                  'Amount paid',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
                 ),
               ),
-              const Spacer(),
-              Text(
-                key: Key('collection_amount_${row.id}'),
-                _kes(row.amount),
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.success,
+              const SizedBox(width: 8),
+              Flexible(
+                child: CbFitMoney(
+                  _kes(row.amount),
+                  key: Key('collection_amount_${row.id}'),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.success,
+                  ),
                 ),
               ),
             ],
@@ -264,6 +295,8 @@ class DebtCollectionTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Received by ${row.receivedBy}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),

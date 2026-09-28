@@ -10,21 +10,31 @@ class CbSectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        if (icon != null) ...[
-          Icon(icon, size: 16, color: AppColors.mutedForeground),
-          const SizedBox(width: 6),
-        ],
-        Text(
-          label.toUpperCase(),
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: AppColors.mutedForeground,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.6,
-          ),
-        ),
-      ],
+    final text = Text(
+      label.toUpperCase(),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: AppColors.mutedForeground,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.6,
+      ),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Row(
+          mainAxisSize: constraints.hasBoundedWidth
+              ? MainAxisSize.max
+              : MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 16, color: AppColors.mutedForeground),
+              const SizedBox(width: 6),
+            ],
+            if (constraints.hasBoundedWidth) Flexible(child: text) else text,
+          ],
+        );
+      },
     );
   }
 }
