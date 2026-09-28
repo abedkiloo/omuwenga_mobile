@@ -76,9 +76,12 @@ class PermissionSet {
   bool get canUpdateDelivery => has('delivery', 'update');
   bool get canViewDeliveryHistory => has('delivery', 'history');
 
-  bool get canViewDailyNotes => has('daily_notes', 'view');
-  bool get canCreateDailyNotes => has('daily_notes', 'create');
-  bool get canUpdateDailyNotes => has('daily_notes', 'update');
+  bool get canViewDailyNotes =>
+      has('daily_notes', 'view') || canViewSales || canAccessPos;
+  bool get canCreateDailyNotes =>
+      has('daily_notes', 'create') || canViewSales || canAccessPos;
+  bool get canUpdateDailyNotes =>
+      has('daily_notes', 'update') || canViewSales || canAccessPos;
   bool get canViewAllDailyNotes => has('daily_notes', 'view_all');
 
   bool get isEmpty => _keys.isEmpty;

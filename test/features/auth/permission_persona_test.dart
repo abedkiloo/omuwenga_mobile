@@ -124,6 +124,18 @@ void main() {
       expect(notes.canUpdateDailyNotes, isTrue);
       expect(notes.canViewAllDailyNotes, isTrue);
       expect(PermissionSet(const []).canViewDailyNotes, isFalse);
+      expect(
+        PermissionSet.fromJsonList([
+          {'module': 'sales', 'action': 'view'},
+        ]).canViewDailyNotes,
+        isTrue,
+      );
+      expect(
+        PermissionSet.fromJsonList([
+          {'module': 'pos', 'action': 'view'},
+        ]).canViewDailyNotes,
+        isTrue,
+      );
 
       final byName = PermissionSet.fromJsonList([
         {'module': '', 'action': '', 'name': 'dispatch.view'},
