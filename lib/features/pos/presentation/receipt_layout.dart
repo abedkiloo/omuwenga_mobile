@@ -98,14 +98,26 @@ double receiptSubtotal(SaleReceipt receipt) {
       receipt.items.fold<double>(0, (sum, line) => sum + line.lineTotal);
 }
 
+double receiptAppliedPaid(SaleReceipt receipt) {
+  final paid = receipt.amountPaid < 0 ? 0.0 : receipt.amountPaid;
+  final total = receipt.total < 0 ? 0.0 : receipt.total;
+  return paid > total ? total : paid;
+}
+
+double receiptChangeDue(SaleReceipt receipt) {
+  if (receipt.change > 0.005) return receipt.change;
+  final extra = receipt.amountPaid - receipt.total;
+  return extra > 0.005 ? extra : 0;
+}
+
 double receiptBalanceOwed(SaleReceipt receipt) {
-  final due = receipt.total - receipt.amountPaid;
+  final due = receipt.total - receiptAppliedPaid(receipt);
   return due < 0 ? 0 : due;
 }
 
 bool receiptShowsChange(SaleReceipt receipt) {
   final method = receipt.paymentMethod.trim().toLowerCase();
-  return (method == 'cash' || method == 'mpesa') && receipt.change > 0;
+  return (method == 'cash' || method == 'mpesa') && receiptChangeDue(receipt) > 0.005;
 }
 
 String receiptItemName(CartLine line) => line.name;
@@ -191,12 +203,12 @@ String buildThermalReceiptText(
   rule('=');
   pair(
     receiptPaymentLabel(receipt.paymentMethod),
-    formatReceiptMoney(receipt.amountPaid),
+    formatReceiptMoney(receiptAppliedPaid(receipt)),
   );
   final reference = receipt.paymentReference?.trim() ?? '';
   if (reference.isNotEmpty) pair('Ref', reference);
   if (receiptShowsChange(receipt)) {
-    pair('Change', formatReceiptMoney(receipt.change));
+    pair('Change', formatReceiptMoney(receiptChangeDue(receipt)));
   }
   final owed = receiptBalanceOwed(receipt);
   if (owed > 0.005) {

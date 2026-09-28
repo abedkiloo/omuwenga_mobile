@@ -137,14 +137,14 @@ class ThermalReceiptView extends StatelessWidget {
             const _DoubleRule(),
             _ReceiptRow(
               left: receiptPaymentLabel(receipt.paymentMethod),
-              right: formatReceiptMoney(receipt.amountPaid),
+              right: formatReceiptMoney(receiptAppliedPaid(receipt)),
             ),
             if (reference.isNotEmpty)
               _ReceiptRow(left: 'Ref', right: reference, price: false),
             if (receiptShowsChange(receipt))
               _ReceiptRow(
                 left: 'Change',
-                right: formatReceiptMoney(receipt.change),
+                right: formatReceiptMoney(receiptChangeDue(receipt)),
                 bold: true,
               ),
             if (owed > 0.005)

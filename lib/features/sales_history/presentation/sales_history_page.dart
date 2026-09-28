@@ -455,7 +455,12 @@ class _ShiftSummary extends StatelessWidget {
     final gross = items.fold<double>(0, (sum, sale) => sum + sale.total);
     double tender(String method) => items
         .where((sale) => sale.paymentMethod?.toLowerCase() == method)
-        .fold<double>(0, (sum, sale) => sum + sale.amountPaid);
+        .fold<double>(
+          0,
+          (sum, sale) =>
+              sum +
+              (sale.amountPaid > sale.total ? sale.total : sale.amountPaid),
+        );
 
     return CbSurfaceCard(
       padding: const EdgeInsets.all(12),

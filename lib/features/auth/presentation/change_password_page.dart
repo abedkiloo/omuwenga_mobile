@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/branding/brand_logo.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_password_field.dart';
 import '../application/auth_controller.dart';
 
 class ChangePasswordPage extends ConsumerStatefulWidget {
@@ -85,25 +86,20 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
-                      TextField(
+                      CbPasswordField(
+                        fieldKey: const Key('change_password_new'),
+                        toggleKey: const Key('change_password_new_toggle'),
                         controller: _password,
-                        key: const Key('change_password_new'),
-                        decoration: const InputDecoration(
-                          labelText: 'New password',
-                          border: OutlineInputBorder(),
-                        ),
-                        obscureText: true,
+                        labelText: 'New password',
                         enabled: !auth.busy,
+                        textInputAction: TextInputAction.next,
                       ),
                       const SizedBox(height: 12),
-                      TextField(
+                      CbPasswordField(
+                        fieldKey: const Key('change_password_confirm'),
+                        toggleKey: const Key('change_password_confirm_toggle'),
                         controller: _confirm,
-                        key: const Key('change_password_confirm'),
-                        decoration: const InputDecoration(
-                          labelText: 'Confirm password',
-                          border: OutlineInputBorder(),
-                        ),
-                        obscureText: true,
+                        labelText: 'Confirm password',
                         onSubmitted: (_) => _submit(),
                         enabled: !auth.busy,
                       ),

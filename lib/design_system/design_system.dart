@@ -4,6 +4,7 @@ export 'chrome/cb_collapsible_chrome.dart';
 export 'chrome/cb_commit_confirm.dart';
 export 'chrome/cb_filter_chip.dart';
 export 'chrome/cb_fit_text.dart';
+export 'chrome/cb_password_field.dart';
 export 'chrome/cb_flow_header.dart';
 export 'chrome/cb_search_field.dart';
 export 'chrome/cb_section_label.dart';

@@ -194,6 +194,7 @@ void main() {
                       'unit_price': '50',
                     },
                   ],
+                  'customer_name': 'Yard customer',
                 },
               ]),
               200,
@@ -256,8 +257,9 @@ void main() {
     expect(find.byKey(const Key('dispatch_error')), findsOneWidget);
     await tester.tap(find.byKey(const Key('dispatch_assign')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('dispatch_assign_confirm')));
+    await tester.tap(find.byKey(const Key('dispatch_blocked_confirm')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('dispatch_pack_confirm')), findsOneWidget);
   });
 
   testWidgets('dispatch empty refresh and missing order', (tester) async {

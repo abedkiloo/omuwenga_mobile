@@ -1006,7 +1006,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('settle_mpesa_capture_prompt')));
       await tester.pumpAndSettle();
-      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.text('Coming soon'), findsWidgets);
       expect(find.byKey(const Key('settle_reference')), findsOneWidget);
       expect(find.text('Proceed with this payment?'), findsNothing);
     });
@@ -1026,7 +1026,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('settle_mpesa_capture_prompt')));
       await tester.pumpAndSettle();
-      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.text('Coming soon'), findsWidgets);
       expect(find.byKey(const Key('stk_query')), findsNothing);
       expect(find.byKey(const Key('settle_reference')), findsOneWidget);
     });

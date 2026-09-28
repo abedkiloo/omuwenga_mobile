@@ -2,6 +2,7 @@ import 'package:completebyte_pos_mobile/core/theme/app_theme.dart';
 import 'package:completebyte_pos_mobile/core/theme/app_typography.dart';
 import 'package:completebyte_pos_mobile/design_system/buttons/cb_primary_button.dart';
 import 'package:completebyte_pos_mobile/design_system/chrome/cb_fit_text.dart';
+import 'package:completebyte_pos_mobile/design_system/chrome/cb_password_field.dart';
 import 'package:completebyte_pos_mobile/design_system/chrome/cb_status_pill.dart';
 import 'package:completebyte_pos_mobile/design_system/chrome/cb_sticky_action_bar.dart';
 import 'package:completebyte_pos_mobile/design_system/scaffold/cb_scaffold.dart';
@@ -120,5 +121,68 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.textContaining('Two line wrap'), findsOneWidget);
     expect(find.text('KES 1,234,567.89'), findsOneWidget);
+  });
+
+  testWidgets('CbPasswordField toggles visibility and stays inside 320px', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final controller = TextEditingController(text: 'secret12');
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(8),
+            child: CbPasswordField(
+              fieldKey: const Key('ds_password'),
+              toggleKey: const Key('ds_password_toggle'),
+              controller: controller,
+              labelText: 'Password',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('ds_password'))).obscureText,
+      isTrue,
+    );
+    await tester.tap(find.byKey(const Key('ds_password_toggle')));
+    await tester.pump();
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('ds_password'))).obscureText,
+      isFalse,
+    );
+
+    final disabled = TextEditingController(text: 'locked');
+    addTearDown(disabled.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CbPasswordField(
+            fieldKey: const Key('ds_password_disabled'),
+            toggleKey: const Key('ds_password_disabled_toggle'),
+            controller: disabled,
+            labelText: 'Password',
+            enabled: false,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(
+      tester.widget<IconButton>(find.byKey(const Key('ds_password_disabled_toggle'))).onPressed,
+      isNull,
+    );
   });
 }

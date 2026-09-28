@@ -410,9 +410,8 @@ class _SummarySection extends StatelessWidget {
           builder: (context, constraints) {
             final paid = _MetricCard(
               label: 'Paid / Collected',
-              value: summary.totalPaid > 0
-                  ? summary.totalPaid
-                  : summary.totalCollected,
+              value: (summary.totalSales - summary.totalDebtIncurred)
+                  .clamp(0, double.infinity),
               subtitle: '${summary.paidOrdersCount} paid',
             );
             final credit = _MetricCard(

@@ -669,8 +669,20 @@ class _FinancialAccounting extends StatelessWidget {
           ),
           _AmountRow(
             label: 'Outstanding Balance',
-            value: (detail.total - detail.amountPaid).clamp(0, double.infinity),
+            value: (detail.total -
+                    (detail.amountPaid > detail.total
+                        ? detail.total
+                        : detail.amountPaid))
+                .clamp(0, double.infinity),
           ),
+          if ((detail.change > 0.005) ||
+              (detail.amountPaid - detail.total) > 0.005)
+            _AmountRow(
+              label: 'Change given',
+              value: detail.change > 0.005
+                  ? detail.change
+                  : detail.amountPaid - detail.total,
+            ),
         ],
       ),
     );

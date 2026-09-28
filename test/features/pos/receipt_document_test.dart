@@ -177,6 +177,32 @@ void main() {
     expect(receiptPaymentLabel('bank_transfer'), 'Bank Transfer');
     expect(receiptPaymentLabel(''), 'Paid');
     expect(receiptPaymentLabel('voucher'), 'voucher');
+    expect(receiptAppliedPaid(_receipt(total: 5850, amountPaid: 6000)), 5850);
+    expect(receiptChangeDue(_receipt(total: 5850, amountPaid: 6000, change: 0)), 150);
+    expect(
+      receiptBalanceOwed(_receipt(total: 5850, amountPaid: 6000, change: 0)),
+      0,
+    );
+  });
+
+  test('receipt does not print tendered cash as the sale total', () {
+    final text = buildThermalReceiptText(
+      _receipt(
+        total: 5850,
+        amountPaid: 6000,
+        change: 0,
+        taxAmount: 0,
+        discountAmount: 0,
+        deliveryCost: 0,
+        paymentMethod: 'cash',
+        paymentReference: '',
+      ),
+    );
+    expect(text, contains('TOTAL'));
+    expect(text, contains('Ksh 5,850.00'));
+    expect(text, contains('Change'));
+    expect(text, contains('Ksh 150.00'));
+    expect(text, isNot(contains('Ksh 6,000.00')));
   });
 
   test('store info falls back to web defaults', () {

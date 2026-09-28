@@ -555,7 +555,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('settle_method_mpesa')));
     await tester.pumpAndSettle();
-    expect(find.text('Prompt payment'), findsOneWidget);
+    expect(find.textContaining('Prompt payment'), findsOneWidget);
     expect(find.text('Add M-Pesa code'), findsOneWidget);
     await tester.tap(find.byKey(const Key('settle_mpesa_capture_code')));
     await tester.pumpAndSettle();

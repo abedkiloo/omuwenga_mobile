@@ -36,7 +36,7 @@ class MpesaCapture extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final promptSelected = mode == MpesaCaptureMode.prompt;
+    final promptSelected = isLiveMpesaPrompt(mode);
     final phoneErr = phoneValidationMessage(
       phoneController.text,
       required: true,
@@ -56,12 +56,11 @@ class MpesaCapture extends StatelessWidget {
             Expanded(
               child: _ModeChip(
                 key: promptKey,
-                selected: promptSelected && !kMpesaPromptComingSoon,
+                selected: promptSelected,
                 enabled: enabled,
+                comingSoon: kMpesaPromptComingSoon,
                 icon: Icons.phone_android,
-                label: kMpesaPromptComingSoon
-                    ? 'Prompt payment (soon)'
-                    : 'Prompt payment',
+                label: 'Prompt payment',
                 onTap: () {
                   if (kMpesaPromptComingSoon) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -137,6 +136,7 @@ class _ModeChip extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.comingSoon = false,
   });
 
   final bool selected;
@@ -144,9 +144,11 @@ class _ModeChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool comingSoon;
 
   @override
   Widget build(BuildContext context) {
+    final muted = comingSoon;
     return Material(
       color: selected ? AppColors.accentSoft : Theme.of(context).cardColor,
       shape: RoundedRectangleBorder(
@@ -161,25 +163,48 @@ class _ModeChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 18,
-                color: selected ? AppColors.success : AppColors.primary,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 18,
+                    color: muted
+                        ? AppColors.mutedForeground
+                        : selected
+                        ? AppColors.success
+                        : AppColors.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: muted
+                            ? AppColors.mutedForeground
+                            : selected
+                            ? AppColors.success
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              if (comingSoon) ...[
+                const SizedBox(height: 4),
+                Text(
+                  kMpesaPromptComingSoonMessage,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.mutedForeground,
                     fontWeight: FontWeight.w600,
-                    color: selected ? AppColors.success : null,
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

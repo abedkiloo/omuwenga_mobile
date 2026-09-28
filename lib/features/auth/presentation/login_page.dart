@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/branding/brand_logo.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_password_field.dart';
 import '../application/auth_controller.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -84,14 +85,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         enabled: !auth.busy,
                       ),
                       const SizedBox(height: 12),
-                      TextField(
+                      CbPasswordField(
+                        fieldKey: const Key('login_password'),
+                        toggleKey: const Key('login_password_toggle'),
                         controller: _password,
-                        key: const Key('login_password'),
-                        decoration: const InputDecoration(
-                          labelText: 'Password',
-                          border: OutlineInputBorder(),
-                        ),
-                        obscureText: true,
+                        labelText: 'Password',
                         onSubmitted: (_) => _submit(),
                         enabled: !auth.busy,
                       ),

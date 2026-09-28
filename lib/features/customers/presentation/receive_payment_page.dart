@@ -73,7 +73,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
 
     var reference = _reference.text;
     if (_method == PosPaymentMethod.mpesa) {
-      if (_mpesaCapture == MpesaCaptureMode.prompt) {
+      if (isLiveMpesaPrompt(_mpesaCapture)) {
         final phoneErr = phoneValidationMessage(_phone.text, required: true);
         if (phoneErr != null) return;
       } else {
@@ -101,7 +101,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
         CommitSummaryRow(label: 'Amount', value: _kes(amount), emphasis: true),
         CommitSummaryRow(label: 'Method', value: _method.label),
         if (_method == PosPaymentMethod.mpesa &&
-            _mpesaCapture == MpesaCaptureMode.prompt)
+            isLiveMpesaPrompt(_mpesaCapture))
           CommitSummaryRow(label: 'Phone', value: _phone.text.trim())
         else if (reference.trim().isNotEmpty)
           CommitSummaryRow(
@@ -124,7 +124,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     if (!confirmed || !mounted) return;
 
     if (_method == PosPaymentMethod.mpesa &&
-        _mpesaCapture == MpesaCaptureMode.prompt) {
+        isLiveMpesaPrompt(_mpesaCapture)) {
       final paid = await showStkWaitSheet(
         context,
         amount: amount,

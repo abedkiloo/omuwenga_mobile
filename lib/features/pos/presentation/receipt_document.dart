@@ -161,14 +161,14 @@ Future<Uint8List> buildReceiptPdf(
             pw.SizedBox(height: 2),
             _pdfPair(
               receiptPaymentLabel(receipt.paymentMethod),
-              formatReceiptMoney(receipt.amountPaid),
+              formatReceiptMoney(receiptAppliedPaid(receipt)),
             ),
             if ((receipt.paymentReference?.trim() ?? '').isNotEmpty)
               _pdfPair('Ref', receipt.paymentReference!.trim()),
             if (receiptShowsChange(receipt))
               _pdfPair(
                 'Change',
-                formatReceiptMoney(receipt.change),
+                formatReceiptMoney(receiptChangeDue(receipt)),
                 bold: true,
               ),
             if (receiptBalanceOwed(receipt) > 0.005)

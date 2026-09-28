@@ -1327,9 +1327,9 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
             draft.method == PosPaymentMethod.mpesa);
     final collectNow = kind != CheckoutKind.payLater;
     final needsStk =
-        isMpesa && collectNow && _mpesaCapture == MpesaCaptureMode.prompt;
+        isMpesa && collectNow && isLiveMpesaPrompt(_mpesaCapture);
     final needsMpesaCode =
-        isMpesa && collectNow && _mpesaCapture == MpesaCaptureMode.code;
+        isMpesa && collectNow && !isLiveMpesaPrompt(_mpesaCapture);
 
     String confirmLabel;
     if (checkout.phase == CheckoutPhase.submitting) {
