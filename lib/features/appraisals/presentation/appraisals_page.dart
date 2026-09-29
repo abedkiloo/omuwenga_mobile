@@ -47,7 +47,7 @@ class _AppraisalsPageState extends ConsumerState<AppraisalsPage> {
             else if (state.snapshot == null)
               EmptyState(
                 title: 'No appraisal yet',
-                message: 'Closed sales will fill your daily stars, monthly bonus, and year-end progress.',
+                message: 'Closed sales fill your daily stars. Use today’s five moves to talk to makers and match the right hardware.',
                 primaryLabel: 'Refresh',
                 onPrimary: () => ref.read(appraisalsProvider.notifier).load(),
               )

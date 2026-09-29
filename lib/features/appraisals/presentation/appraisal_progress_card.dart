@@ -105,7 +105,7 @@ class AppraisalProgressCard extends StatelessWidget {
           SizedBox(height: emphasis ? 16 : 12),
           _Bar(
             label:
-                'Today KES ${snapshot.today.sales.round()} / ${snapshot.today.target.round()}',
+                'Today KES ${snapshot.today.sales.round()} of ${snapshot.today.target.round()} daily target',
             progress: snapshot.today.targetProgress,
             tone: snapshot.today.tone,
             thick: emphasis,
@@ -113,7 +113,7 @@ class AppraisalProgressCard extends StatelessWidget {
           const SizedBox(height: 10),
           _Bar(
             label:
-                'Month avg ${snapshot.month.officialAverage.toStringAsFixed(2)}/5 · bonus KES ${snapshot.month.bonus.round()}',
+                'This month ${snapshot.month.officialAverage.toStringAsFixed(2)}/5 toward a 4-star month',
             progress: snapshot.month.progressToFourStar,
             tone: snapshot.month.fourStarMonth ? 'emerald' : snapshot.month.tone,
             thick: emphasis,
@@ -126,6 +126,10 @@ class AppraisalProgressCard extends StatelessWidget {
             tone: snapshot.year.qualifies ? 'gold' : snapshot.year.tone,
             thick: emphasis,
           ),
+          if (snapshot.todayTips.tips.isNotEmpty) ...[
+            SizedBox(height: emphasis ? 16 : 12),
+            _DailyTips(pack: snapshot.todayTips, compact: compact, emphasis: emphasis),
+          ],
           if (compact) ...[
             const SizedBox(height: 12),
             Align(
@@ -217,6 +221,123 @@ class _Bar extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DailyTips extends StatelessWidget {
+  const _DailyTips({
+    required this.pack,
+    required this.compact,
+    required this.emphasis,
+  });
+
+  final AppraisalTipPack pack;
+  final bool compact;
+  final bool emphasis;
+
+  @override
+  Widget build(BuildContext context) {
+    if (compact) {
+      return Text.rich(
+        TextSpan(
+          children: [
+            const TextSpan(
+              text: 'Today’s move: ',
+              style: TextStyle(fontWeight: FontWeight.w800, color: Colors.white),
+            ),
+            TextSpan(
+              text: pack.tips.first,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.86),
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+        style: const TextStyle(fontSize: 13),
+      );
+    }
+
+    return Container(
+      key: const Key('appraisal_daily_tips'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'HOW TO HIT TODAY’S TARGET',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            pack.title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 14,
+            ),
+          ),
+          if (pack.why.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              pack.why,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.72),
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          for (var i = 0; i < pack.tips.length; i++) ...[
+            if (i > 0) const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: emphasis ? const Color(0xFFFBBF24) : Colors.white24,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '${i + 1}',
+                    style: TextStyle(
+                      color: emphasis ? const Color(0xFF0F172A) : Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    pack.tips[i],
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      fontSize: 13,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

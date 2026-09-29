@@ -13,8 +13,19 @@ Map<String, dynamic> _snapshotJson({double stars = 3, String tone = 'amber'}) {
     'policy': {'greet_when_no_sticky_notes': true, 'show_on_home': true},
     'greeting': {
       'headline': '3-Star day — KES 1,500 to hit the daily target',
-      'detail': 'Monthly average 3.00/5',
+      'detail': 'Close the gap with conversations.',
       'tone': tone,
+    },
+    'today_tips': {
+      'title': 'Help them choose the right sofa stand',
+      'why': 'Makers buy from the person who stops a wobbly sofa.',
+      'tips': [
+        'Measure with them. Finished seat height should land around 43–51 cm.',
+        'Load first, style second.',
+        'Sell a set of four.',
+        'Match the floor with felt pads.',
+        'Post a short how-to, not only a product picture.',
+      ],
     },
     'today': {
       'date': '2026-09-29',
@@ -59,6 +70,7 @@ void main() {
     expect(snap.today.stars, 3);
     expect(snap.today.amountToTarget, 1500);
     expect(snap.headline.contains('3-Star'), isTrue);
+    expect(snap.todayTips.tips, hasLength(5));
     expect(snap.showOnHome, isTrue);
   });
 
@@ -105,7 +117,9 @@ void main() {
     );
     expect(find.byKey(const Key('appraisal_progress_card')), findsOneWidget);
     expect(find.textContaining('Today KES'), findsOneWidget);
-    expect(find.textContaining('Month avg'), findsOneWidget);
+    expect(find.textContaining('This month'), findsOneWidget);
+    expect(find.byKey(const Key('appraisal_daily_tips')), findsOneWidget);
+    expect(find.textContaining('Help them choose the right sofa stand'), findsOneWidget);
     expect(find.text('★★★★☆'), findsOneWidget);
   });
 }

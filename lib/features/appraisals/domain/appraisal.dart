@@ -153,6 +153,30 @@ class AppraisalMonthSlice {
   }
 }
 
+class AppraisalTipPack {
+  const AppraisalTipPack({
+    this.title = '',
+    this.why = '',
+    this.tips = const [],
+  });
+
+  final String title;
+  final String why;
+  final List<String> tips;
+
+  factory AppraisalTipPack.fromJson(Map<String, dynamic>? json) {
+    final map = json ?? const <String, dynamic>{};
+    return AppraisalTipPack(
+      title: (map['title'] ?? '').toString(),
+      why: (map['why'] ?? '').toString(),
+      tips: [
+        for (final tip in map['tips'] as List? ?? const [])
+          if ('$tip'.trim().isNotEmpty) '$tip'.trim(),
+      ].take(5).toList(),
+    );
+  }
+}
+
 class AppraisalSnapshot {
   const AppraisalSnapshot({
     required this.today,
@@ -164,6 +188,7 @@ class AppraisalSnapshot {
     required this.showOnHome,
     this.staffName = '',
     this.todayDate = '',
+    this.todayTips = const AppraisalTipPack(),
   });
 
   final AppraisalBandProgress today;
@@ -175,6 +200,7 @@ class AppraisalSnapshot {
   final bool showOnHome;
   final String staffName;
   final String todayDate;
+  final AppraisalTipPack todayTips;
 
   factory AppraisalSnapshot.fromJson(Map<String, dynamic> json) {
     final greeting = json['greeting'] is Map
@@ -207,6 +233,11 @@ class AppraisalSnapshot {
       showOnHome: json['show_on_home'] != false && policy['show_on_home'] != false,
       staffName: (staff['name'] ?? '').toString(),
       todayDate: (today['date'] ?? '').toString(),
+      todayTips: AppraisalTipPack.fromJson(
+        json['today_tips'] is Map
+            ? Map<String, dynamic>.from(json['today_tips'] as Map)
+            : null,
+      ),
     );
   }
 }
