@@ -554,7 +554,7 @@ class MorePage extends ConsumerWidget {
             if (canAppraisals)
               _MoreTile(
                 key: const Key('more_appraisals'),
-                title: 'Appraisals',
+                title: 'Target delivery',
                 icon: Icons.star_outline,
                 onTap: () => context.go(AppRoutes.appraisals),
               ),

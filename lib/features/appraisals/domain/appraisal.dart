@@ -189,6 +189,7 @@ class AppraisalSnapshot {
     this.staffName = '',
     this.todayDate = '',
     this.todayTips = const AppraisalTipPack(),
+    this.showYearEndIncrement = false,
   });
 
   final AppraisalBandProgress today;
@@ -201,6 +202,7 @@ class AppraisalSnapshot {
   final String staffName;
   final String todayDate;
   final AppraisalTipPack todayTips;
+  final bool showYearEndIncrement;
 
   factory AppraisalSnapshot.fromJson(Map<String, dynamic> json) {
     final greeting = json['greeting'] is Map
@@ -238,6 +240,7 @@ class AppraisalSnapshot {
             ? Map<String, dynamic>.from(json['today_tips'] as Map)
             : null,
       ),
+      showYearEndIncrement: policy['show_year_end_increment'] == true,
     );
   }
 }

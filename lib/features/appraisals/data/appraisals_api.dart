@@ -21,13 +21,13 @@ class AppraisalsApi {
     final response = res.getOrThrow();
     if (response.statusCode < 200 || response.statusCode >= 300) {
       return Failure(
-        AppraisalsApiException('Load appraisal failed (${response.statusCode})'),
+        AppraisalsApiException('Load target delivery failed (${response.statusCode})'),
       );
     }
     try {
       final data = jsonDecode(response.body);
       if (data is! Map) {
-        return Failure(AppraisalsApiException('Invalid appraisal payload'));
+        return Failure(AppraisalsApiException('Invalid target delivery payload'));
       }
       return Success(AppraisalSnapshot.fromJson(Map<String, dynamic>.from(data)));
     } on Object catch (e, st) {

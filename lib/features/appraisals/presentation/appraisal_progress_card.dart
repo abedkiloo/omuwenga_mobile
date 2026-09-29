@@ -67,7 +67,7 @@ class AppraisalProgressCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   snapshot.headline.isEmpty
-                      ? '5-star progress'
+                      ? 'Target delivery'
                       : snapshot.headline,
                   style: TextStyle(
                     color: Colors.white,
@@ -118,14 +118,16 @@ class AppraisalProgressCard extends StatelessWidget {
             tone: snapshot.month.fourStarMonth ? 'emerald' : snapshot.month.tone,
             thick: emphasis,
           ),
-          const SizedBox(height: 10),
-          _Bar(
-            label:
-                'Year ${snapshot.year.fourStarMonths}/${snapshot.year.fourStarMonthsRequired} four-star months',
-            progress: snapshot.year.progressToIncrement,
-            tone: snapshot.year.qualifies ? 'gold' : snapshot.year.tone,
-            thick: emphasis,
-          ),
+          if (snapshot.showYearEndIncrement) ...[
+            const SizedBox(height: 10),
+            _Bar(
+              label:
+                  'Year ${snapshot.year.fourStarMonths}/${snapshot.year.fourStarMonthsRequired} four-star months',
+              progress: snapshot.year.progressToIncrement,
+              tone: snapshot.year.qualifies ? 'gold' : snapshot.year.tone,
+              thick: emphasis,
+            ),
+          ],
           if (snapshot.todayTips.tips.isNotEmpty) ...[
             SizedBox(height: emphasis ? 16 : 12),
             _DailyTips(pack: snapshot.todayTips, compact: compact, emphasis: emphasis),

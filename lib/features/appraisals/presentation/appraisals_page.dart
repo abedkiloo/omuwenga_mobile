@@ -33,7 +33,7 @@ class _AppraisalsPageState extends ConsumerState<AppraisalsPage> {
     final state = ref.watch(appraisalsProvider);
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Appraisals')),
+      appBar: AppBar(title: const Text('Target delivery')),
       body: RefreshIndicator(
         onRefresh: () => ref.read(appraisalsProvider.notifier).load(),
         child: ListView(
@@ -46,24 +46,26 @@ class _AppraisalsPageState extends ConsumerState<AppraisalsPage> {
               )
             else if (state.snapshot == null)
               EmptyState(
-                title: 'No appraisal yet',
-                message: 'Closed sales fill your daily stars. Use today’s five moves to talk to makers and match the right hardware.',
+                title: 'No target delivery yet',
+                message: 'Closed sales fill your daily stars. Use today’s five moves to follow up, talk well, and win more customers.',
                 primaryLabel: 'Refresh',
                 onPrimary: () => ref.read(appraisalsProvider.notifier).load(),
               )
             else ...[
               AppraisalProgressCard(snapshot: state.snapshot!, emphasis: true),
-              const SizedBox(height: 16),
-              const CbSectionLabel(label: 'This year', icon: Icons.calendar_month_outlined),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final month in state.snapshot!.year.months)
-                    _MonthChip(month: month, label: _months[(month.month - 1).clamp(0, 11)]),
-                ],
-              ),
+              if (state.snapshot!.showYearEndIncrement) ...[
+                const SizedBox(height: 16),
+                const CbSectionLabel(label: 'This year', icon: Icons.calendar_month_outlined),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final month in state.snapshot!.year.months)
+                      _MonthChip(month: month, label: _months[(month.month - 1).clamp(0, 11)]),
+                  ],
+                ),
+              ],
             ],
           ],
         ),
