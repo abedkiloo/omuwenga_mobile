@@ -114,6 +114,31 @@ class SalesHistoryApi {
     return const Success(null);
   }
 
+  Future<Result<void>> collect({
+    required int saleId,
+    required double amountPaid,
+    String paymentMethod = 'cash',
+    required String idempotencyKey,
+  }) async {
+    final response = await _client.post(
+      'sales/$saleId/collect/',
+      body: {
+        'payment_method': paymentMethod,
+        'amount_paid': amountPaid.toStringAsFixed(2),
+      },
+      idempotencyKey: idempotencyKey,
+    );
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(SalesHistoryApiException(_safeError(res.body)));
+    }
+    return const Success(null);
+  }
+
   static String _safeError(String body) {
     try {
       final decoded = jsonDecode(body);

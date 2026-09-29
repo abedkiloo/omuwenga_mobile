@@ -52,7 +52,7 @@ class _AppraisalsPageState extends ConsumerState<AppraisalsPage> {
                 onPrimary: () => ref.read(appraisalsProvider.notifier).load(),
               )
             else ...[
-              AppraisalProgressCard(snapshot: state.snapshot!),
+              AppraisalProgressCard(snapshot: state.snapshot!, emphasis: true),
               const SizedBox(height: 16),
               const CbSectionLabel(label: 'This year', icon: Icons.calendar_month_outlined),
               const SizedBox(height: 8),
@@ -85,23 +85,30 @@ class _MonthChip extends StatelessWidget {
       width: 72,
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: AppColors.starPanel(month.tone),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.7)),
       ),
       child: Column(
         children: [
-          Text(label, style: Theme.of(context).textTheme.labelSmall),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Colors.white70,
+            ),
+          ),
           Text(
             month.officialAverage.toStringAsFixed(1),
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
               color: color,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
             ),
           ),
           Text(
             month.fourStarMonth ? '4★' : '—',
-            style: Theme.of(context).textTheme.labelSmall,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Colors.white70,
+            ),
           ),
         ],
       ),

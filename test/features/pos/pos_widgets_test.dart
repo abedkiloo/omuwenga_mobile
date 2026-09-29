@@ -4,6 +4,8 @@ import 'package:completebyte_pos_mobile/app/providers.dart';
 import 'package:completebyte_pos_mobile/core/env/app_env.dart';
 import 'package:completebyte_pos_mobile/core/network/api_client.dart';
 import 'package:completebyte_pos_mobile/core/secure/token_store.dart';
+import 'package:completebyte_pos_mobile/features/auth/application/auth_controller.dart';
+import 'package:completebyte_pos_mobile/features/auth/domain/auth_session.dart';
 import 'package:completebyte_pos_mobile/features/pos/application/pos_controllers.dart';
 import 'package:completebyte_pos_mobile/features/pos/data/pos_api.dart';
 import 'package:completebyte_pos_mobile/features/pos/domain/cart.dart';
@@ -19,10 +21,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import '../auth/auth_fixtures.dart';
+
 List<Override> _posOverrides({
   required MockClient httpClient,
   FakeConnectivityMonitor? connectivity,
   MemoryOutboxStore? outbox,
+  AuthSession? session,
 }) {
   final tokens = InMemoryTokenStore();
   final net = connectivity ?? FakeConnectivityMonitor(online: true);
@@ -32,6 +37,7 @@ List<Override> _posOverrides({
     appEnvProvider.overrideWithValue(
       const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
     ),
+    if (session != null) authSessionSeedProvider.overrideWithValue(session),
     httpClientProvider.overrideWithValue(httpClient),
     apiClientProvider.overrideWith((ref) {
       return ApiClient(
@@ -162,6 +168,66 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('pos_checkout_error')), findsOneWidget);
     expect(find.textContaining('Insufficient'), findsOneWidget);
+  });
+
+  testWidgets('salesperson sends customer and products for approval', (
+    tester,
+  ) async {
+    var sent = false;
+    final client = MockClient((request) async {
+      if (request.url.path.contains('/products/') &&
+          !request.url.path.contains('/variants/')) {
+        return http.Response(
+          jsonEncode({
+            'count': 1,
+            'results': [
+              {
+                'id': 12,
+                'name': 'Cement 50kg',
+                'selling_price': 150,
+                'stock_quantity': 4,
+              },
+            ],
+          }),
+          200,
+        );
+      }
+      if (request.url.path.endsWith('/sales/')) {
+        sent = true;
+        return http.Response(
+          jsonEncode({
+            'id': 9,
+            'sale_number': 'S-9',
+            'status': 'pending_approval',
+            'total': '150.00',
+            'message':
+                'A manager will approve this sale. You collect payment after they approve.',
+          }),
+          201,
+        );
+      }
+      return http.Response('{}', 200);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _posOverrides(
+          httpClient: client,
+          session: cashierSession(),
+        ),
+        child: const MaterialApp(home: PosPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pos_product_12')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pos_pay')));
+    await tester.pumpAndSettle();
+    expect(find.text('Send this sale for approval?'), findsOneWidget);
+    expect(find.text('Checkout & Tender'), findsNothing);
+    await tester.tap(find.byKey(const Key('pos_send_approval_confirm')));
+    await tester.pumpAndSettle();
+    expect(sent, isTrue);
   });
 
   testWidgets('products without positive stock cannot enter cart', (

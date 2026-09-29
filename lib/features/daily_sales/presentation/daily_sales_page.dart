@@ -41,147 +41,155 @@ class DailySalesPage extends ConsumerWidget {
     final report = state.report;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         top: false,
         bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-              child: Text(
-                'Daily sales',
-                style: Theme.of(context).textTheme.titleLarge,
+        child: CbChromeListColumn(
+          hideChromeWhenKeyboardVisible: false,
+          chrome: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+                child: Text(
+                  'Daily sales',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-              child: CbSurfaceCard(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                child: CbSurfaceCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        key: const Key('daily_prev_day'),
+                        onPressed: state.loading
+                            ? null
+                            : () => ref
+                                  .read(dailySalesProvider.notifier)
+                                  .goToPreviousDay(),
+                        icon: const Icon(Icons.chevron_left),
+                        color: AppColors.primary,
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Text(
+                              'Day',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: AppColors.mutedForeground,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.3,
+                                  ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              key: const Key('daily_date_label'),
+                              _friendlyDayLabel(state.day),
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        key: const Key('daily_next_day'),
+                        onPressed: state.loading
+                            ? null
+                            : () => ref
+                                  .read(dailySalesProvider.notifier)
+                                  .goToNextDay(),
+                        icon: const Icon(Icons.chevron_right),
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
                 child: Row(
                   children: [
-                    IconButton(
-                      key: const Key('daily_prev_day'),
-                      onPressed: state.loading
-                          ? null
-                          : () => ref
-                                .read(dailySalesProvider.notifier)
-                                .goToPreviousDay(),
-                      icon: const Icon(Icons.chevron_left),
-                      color: AppColors.primary,
+                    _StatusChip(
+                      key: const Key('daily_tab_all'),
+                      label: 'All',
+                      selected:
+                          state.statusFilter == null &&
+                          !state.showingCollections,
+                      onSelected: () => ref
+                          .read(dailySalesProvider.notifier)
+                          .setStatusFilter(null),
                     ),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Text(
-                            'Day',
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: AppColors.mutedForeground,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.3,
-                                ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            key: const Key('daily_date_label'),
-                            _friendlyDayLabel(state.day),
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                          ),
-                        ],
-                      ),
+                    _StatusChip(
+                      key: const Key('daily_tab_paid'),
+                      label: 'Paid',
+                      selected:
+                          state.statusFilter == PaymentStatusDisplay.paid &&
+                          !state.showingCollections,
+                      onSelected: () => ref
+                          .read(dailySalesProvider.notifier)
+                          .setStatusFilter(PaymentStatusDisplay.paid),
                     ),
-                    IconButton(
-                      key: const Key('daily_next_day'),
-                      onPressed: state.loading
-                          ? null
-                          : () => ref
-                                .read(dailySalesProvider.notifier)
-                                .goToNextDay(),
-                      icon: const Icon(Icons.chevron_right),
-                      color: AppColors.primary,
+                    _StatusChip(
+                      key: const Key('daily_tab_debt'),
+                      label: 'Debt',
+                      selected:
+                          state.statusFilter == PaymentStatusDisplay.debt &&
+                          !state.showingCollections,
+                      onSelected: () => ref
+                          .read(dailySalesProvider.notifier)
+                          .setStatusFilter(PaymentStatusDisplay.debt),
+                    ),
+                    _StatusChip(
+                      key: const Key('daily_tab_partial'),
+                      label: 'Partial',
+                      selected:
+                          state.statusFilter == PaymentStatusDisplay.partial &&
+                          !state.showingCollections,
+                      onSelected: () => ref
+                          .read(dailySalesProvider.notifier)
+                          .setStatusFilter(PaymentStatusDisplay.partial),
+                    ),
+                    _StatusChip(
+                      key: const Key('daily_tab_collected'),
+                      label: 'Debt collected',
+                      selected: state.showingCollections,
+                      onSelected: () => ref
+                          .read(dailySalesProvider.notifier)
+                          .showCollectionsTab(),
                     ),
                   ],
                 ),
               ),
-            ),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-              child: Row(
-                children: [
-                  _StatusChip(
-                    key: const Key('daily_tab_all'),
-                    label: 'All',
-                    selected:
-                        state.statusFilter == null && !state.showingCollections,
-                    onSelected: () => ref
+              if (report != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                  child: _SummaryStrip(
+                    summary: report.summary,
+                    collectedSelected: state.showingCollections,
+                    onCollectedTap: () => ref
                         .read(dailySalesProvider.notifier)
-                        .setStatusFilter(null),
-                  ),
-                  _StatusChip(
-                    key: const Key('daily_tab_paid'),
-                    label: 'Paid',
-                    selected:
-                        state.statusFilter == PaymentStatusDisplay.paid &&
-                        !state.showingCollections,
-                    onSelected: () => ref
+                        .showCollectionsTab(),
+                    onDebtTap: () => ref
+                        .read(dailySalesProvider.notifier)
+                        .setStatusFilter(PaymentStatusDisplay.debt),
+                    onPaidTap: () => ref
                         .read(dailySalesProvider.notifier)
                         .setStatusFilter(PaymentStatusDisplay.paid),
                   ),
-                  _StatusChip(
-                    key: const Key('daily_tab_debt'),
-                    label: 'Debt',
-                    selected:
-                        state.statusFilter == PaymentStatusDisplay.debt &&
-                        !state.showingCollections,
-                    onSelected: () => ref
-                        .read(dailySalesProvider.notifier)
-                        .setStatusFilter(PaymentStatusDisplay.debt),
-                  ),
-                  _StatusChip(
-                    key: const Key('daily_tab_partial'),
-                    label: 'Partial',
-                    selected:
-                        state.statusFilter == PaymentStatusDisplay.partial &&
-                        !state.showingCollections,
-                    onSelected: () => ref
-                        .read(dailySalesProvider.notifier)
-                        .setStatusFilter(PaymentStatusDisplay.partial),
-                  ),
-                  _StatusChip(
-                    key: const Key('daily_tab_collected'),
-                    label: 'Debt collected',
-                    selected: state.showingCollections,
-                    onSelected: () => ref
-                        .read(dailySalesProvider.notifier)
-                        .showCollectionsTab(),
-                  ),
-                ],
-              ),
-            ),
-            if (state.loading) const LinearProgressIndicator(minHeight: 2),
-            if (report != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                child: _SummaryStrip(
-                  summary: report.summary,
-                  collectedSelected: state.showingCollections,
-                  onCollectedTap: () => ref
-                      .read(dailySalesProvider.notifier)
-                      .showCollectionsTab(),
-                  onDebtTap: () => ref
-                      .read(dailySalesProvider.notifier)
-                      .setStatusFilter(PaymentStatusDisplay.debt),
-                  onPaidTap: () => ref
-                      .read(dailySalesProvider.notifier)
-                      .setStatusFilter(PaymentStatusDisplay.paid),
                 ),
-              ),
-            Expanded(child: _body(context, ref, state)),
-          ],
+            ],
+          ),
+          filters: state.loading
+              ? const LinearProgressIndicator(minHeight: 2)
+              : null,
+          body: _body(context, ref, state),
         ),
       ),
     );

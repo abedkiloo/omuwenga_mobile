@@ -220,7 +220,7 @@ class StoreHomeDashboard extends ConsumerWidget {
         _HomeTool(
           key: const Key('home_visit_order'),
           icon: Icons.location_on_outlined,
-          label: 'Visit order',
+          label: 'Field sale',
           description: 'Order on site',
           onTap: () => context.go(AppRoutes.siteVisit),
         ),

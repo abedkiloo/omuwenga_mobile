@@ -45,6 +45,13 @@ void main() {
       );
       expect(
         describeSaleLifecycle(
+          status: 'awaiting_payment',
+          payment: PaymentStatusDisplay.debt,
+        ).label,
+        'Collect payment',
+      );
+      expect(
+        describeSaleLifecycle(
           status: 'holding',
           payment: PaymentStatusDisplay.debt,
         ).label,

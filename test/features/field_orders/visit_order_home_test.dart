@@ -25,7 +25,7 @@ void main() {
     expect(find.byKey(const Key('home_primary_cta')), findsOneWidget);
     expect(find.text('Start New Sale'), findsOneWidget);
     expect(find.byKey(const Key('home_visit_order')), findsOneWidget);
-    expect(find.text('Visit order'), findsOneWidget);
+    expect(find.text('Field sale'), findsOneWidget);
 
     final deliveryOnly = AuthSession(
       user: const AuthUser(

@@ -139,156 +139,171 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         top: false,
         bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            CbCollapsibleChrome(
-              collapsed: _chromeCollapsed,
-              onToggle: () =>
-                  setState(() => _chromeCollapsed = !_chromeCollapsed),
-              collapsedLabel: 'Customer directory summary',
-              collapsedSummary: state.items.isEmpty
-                  ? null
-                  : '${state.count > 0 ? state.count : state.items.length} customers · ${_kes(totalOutstanding)} outstanding',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                    child: Text(
-                      'Customer Directory',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+        child: CbChromeListColumn(
+          chrome: CbCollapsibleChrome(
+            collapsed: _chromeCollapsed,
+            onToggle: () =>
+                setState(() => _chromeCollapsed = !_chromeCollapsed),
+            collapsedLabel: 'Customer directory summary',
+            collapsedSummary: state.items.isEmpty
+                ? null
+                : '${state.count > 0 ? state.count : state.items.length} customers · ${_kes(totalOutstanding)} outstanding',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                  child: Text(
+                    'Customer Directory',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                  child: _DirectoryHeaderCard(
+                    userName: userName,
+                    roleLabel: roleLabel,
+                  ),
+                ),
+                if (state.items.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                    child: _DirectoryHeaderCard(
-                      userName: userName,
-                      roleLabel: roleLabel,
+                    child: _DirectorySummaryCard(
+                      totalOutstanding: totalOutstanding,
+                      debtorCount: debtorCount,
+                      shopCount: state.items.length,
                     ),
                   ),
-                  if (state.items.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                      child: _DirectorySummaryCard(
-                        totalOutstanding: totalOutstanding,
-                        debtorCount: debtorCount,
-                        shopCount: state.items.length,
-                      ),
-                    ),
-                ],
-              ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-              child: CbSearchField(
-                fieldKey: const Key('customers_search'),
-                controller: _search,
-                hintText: 'Search name, contact or tags…',
-                onSubmitted: (q) =>
-                    ref.read(customersListProvider.notifier).load(search: q),
-              ),
+          ),
+          stickyBelow: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+            child: CbSearchField(
+              fieldKey: const Key('customers_search'),
+              controller: _search,
+              hintText: 'Search name, contact or tags…',
+              onSubmitted: (q) =>
+                  ref.read(customersListProvider.notifier).load(search: q),
             ),
-            if (state.items.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: SizedBox(
-                  height: 36,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    children: [
-                      _FilterChip(
-                        label:
-                            'All (${state.count > 0 ? state.count : state.items.length})',
-                        selected: _filter == _CustomerFilter.all,
-                        onTap: () =>
-                            setState(() => _filter = _CustomerFilter.all),
+          ),
+          filters: (state.items.isNotEmpty || state.loading)
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (state.items.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: SizedBox(
+                          height: 36,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            children: [
+                              _FilterChip(
+                                label:
+                                    'All (${state.count > 0 ? state.count : state.items.length})',
+                                selected: _filter == _CustomerFilter.all,
+                                onTap: () => setState(
+                                  () => _filter = _CustomerFilter.all,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _FilterChip(
+                                label: 'All Debtors ($debtorCount)',
+                                selected: _filter == _CustomerFilter.debtors,
+                                onTap: () => setState(
+                                  () => _filter = _CustomerFilter.debtors,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _FilterChip(
+                                label: 'Credit ($creditCount)',
+                                selected: _filter == _CustomerFilter.credit,
+                                onTap: () => setState(
+                                  () => _filter = _CustomerFilter.credit,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _FilterChip(
+                                label: 'Good ($goodCount)',
+                                selected: _filter == _CustomerFilter.good,
+                                onTap: () => setState(
+                                  () => _filter = _CustomerFilter.good,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      _FilterChip(
-                        label: 'All Debtors ($debtorCount)',
-                        selected: _filter == _CustomerFilter.debtors,
-                        onTap: () =>
-                            setState(() => _filter = _CustomerFilter.debtors),
-                      ),
-                      const SizedBox(width: 8),
-                      _FilterChip(
-                        label: 'Credit ($creditCount)',
-                        selected: _filter == _CustomerFilter.credit,
-                        onTap: () =>
-                            setState(() => _filter = _CustomerFilter.credit),
-                      ),
-                      const SizedBox(width: 8),
-                      _FilterChip(
-                        label: 'Good ($goodCount)',
-                        selected: _filter == _CustomerFilter.good,
-                        onTap: () =>
-                            setState(() => _filter = _CustomerFilter.good),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+                        child: Row(
+                          children: [
+                            Text(
+                              'Sort by: ',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: AppColors.mutedForeground),
+                            ),
+                            Expanded(
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<_CustomerSort>(
+                                  value: _sort,
+                                  isDense: true,
+                                  isExpanded: true,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: _CustomerSort.highestDebt,
+                                      child: Text(
+                                        'Balance / Highest Debt',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: _CustomerSort.name,
+                                      child: Text('Name A–Z'),
+                                    ),
+                                  ],
+                                  onChanged: (v) {
+                                    if (v != null) setState(() => _sort = v);
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-                child: Row(
-                  children: [
-                    Text(
-                      'Sort by: ',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
-                    DropdownButtonHideUnderline(
-                      child: DropdownButton<_CustomerSort>(
-                        value: _sort,
-                        isDense: true,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        items: const [
-                          DropdownMenuItem(
-                            value: _CustomerSort.highestDebt,
-                            child: Text('Balance / Highest Debt'),
-                          ),
-                          DropdownMenuItem(
-                            value: _CustomerSort.name,
-                            child: Text('Name A–Z'),
-                          ),
-                        ],
-                        onChanged: (v) {
-                          if (v != null) setState(() => _sort = v);
-                        },
-                      ),
-                    ),
+                    if (state.loading)
+                      const LinearProgressIndicator(minHeight: 2),
                   ],
-                ),
-              ),
-            ],
-            if (state.loading) const LinearProgressIndicator(minHeight: 2),
-            Expanded(
-              child: NotificationListener<ScrollNotification>(
-                onNotification: _onListScroll,
-                child: _buildBody(
-                  context,
-                  state: state,
-                  visible: visible,
-                  maxDebt: maxDebt,
-                  canPos: canPos,
-                  canVisit: canVisit,
-                  settings: settings,
-                  auth: auth,
-                ),
-              ),
+                )
+              : null,
+          body: NotificationListener<ScrollNotification>(
+            onNotification: _onListScroll,
+            child: _buildBody(
+              context,
+              state: state,
+              visible: visible,
+              maxDebt: maxDebt,
+              canPos: canPos,
+              canVisit: canVisit,
+              settings: settings,
+              auth: auth,
             ),
-          ],
+          ),
         ),
       ),
       bottomNavigationBar: canCreate
@@ -552,16 +567,22 @@ class _DirectorySummaryCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Directory overview',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              if (debtorCount > 0)
-                CbStatusPill(
-                  label: '$debtorCount Overdue Accounts',
-                  variant: CbStatusPillVariant.info,
+              if (debtorCount > 0) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                  child: CbStatusPill(
+                    label: '$debtorCount Overdue Accounts',
+                    variant: CbStatusPillVariant.info,
+                  ),
                 ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
@@ -613,6 +634,8 @@ class _SummaryMetric extends StatelessWidget {
       children: [
         Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.labelSmall?.copyWith(
             color: AppColors.mutedForeground,
           ),
@@ -620,6 +643,8 @@ class _SummaryMetric extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w800,
             color: valueColor,
@@ -627,6 +652,8 @@ class _SummaryMetric extends StatelessWidget {
         ),
         Text(
           subtitle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.bodySmall?.copyWith(
             color: AppColors.mutedForeground,
           ),
@@ -769,7 +796,12 @@ class _CustomerExpandableCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          _StandingBadge(customer: customer),
+                          Flexible(
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: _StandingBadge(customer: customer),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 4),
@@ -795,6 +827,8 @@ class _CustomerExpandableCard extends StatelessWidget {
                               const TextSpan(text: 'No phone'),
                           ],
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -970,26 +1004,29 @@ class _StandingBadge extends StatelessWidget {
         AppColors.border,
       ),
     };
-    return Container(
-      key: Key('customer_standing_${customer.id}'),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: border.withValues(alpha: 0.45)),
-      ),
-      child: Text(
-        !customer.isActive
-            ? 'Inactive'
-            : customer.standing == CustomerStanding.good &&
-                  customer.debtAmount <= 0
-            ? 'Zero Balance'
-            : label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: fg,
-          fontWeight: FontWeight.w700,
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        key: Key('customer_standing_${customer.id}'),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: border.withValues(alpha: 0.45)),
+        ),
+        child: Text(
+          !customer.isActive
+              ? 'Inactive'
+              : customer.standing == CustomerStanding.good &&
+                    customer.debtAmount <= 0
+              ? 'Zero Balance'
+              : label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: fg,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );

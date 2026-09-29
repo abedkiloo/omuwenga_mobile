@@ -48,6 +48,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
         false;
     final detail = state.detail;
     final awaitingApproval = detail?.status == 'pending_approval';
+    final awaitingPayment = detail?.status == 'awaiting_payment';
     final showRefund =
         canRefundPerm &&
         detail != null &&
@@ -73,13 +74,15 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
               exporting: _exporting,
               showRefund: showRefund,
               showRollback: showRollback,
-              receiptReady: !awaitingApproval,
+              receiptReady: detail.status == 'completed',
               onPrint: () {
-                if (awaitingApproval) {
+                if (awaitingApproval || awaitingPayment) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text(
-                        'A manager will approve this sale so you can issue the receipt.',
+                        awaitingPayment
+                            ? 'Collect payment first, then you can issue the receipt.'
+                            : 'A manager will approve this sale. You collect payment after they approve.',
                       ),
                     ),
                   );
@@ -97,7 +100,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                        'A manager will approve this sale so you can issue the receipt.',
+                        'A manager will approve this sale. You collect payment after they approve.',
                       ),
                     ),
                   );
@@ -166,10 +169,51 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
         ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
           children: [
+            if (detail.status == 'awaiting_payment') ...[
+              CbSurfaceCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'This sale is approved. Collect payment to complete it.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 10),
+                    FilledButton(
+                      key: const Key('sale_collect_payment'),
+                      onPressed: state.refunding
+                          ? null
+                          : () async {
+                              final ok = await ref
+                                  .read(saleDetailProvider(detail.id).notifier)
+                                  .collect(amountPaid: detail.total);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    ok
+                                        ? 'Payment collected. Sale is complete.'
+                                        : (ref.read(saleDetailProvider(detail.id)).error ??
+                                            'Could not collect payment'),
+                                  ),
+                                ),
+                              );
+                            },
+                      child: Text(
+                        state.refunding
+                            ? 'Collecting…'
+                            : 'Collect payment',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             if (detail.status == 'pending_approval') ...[
               CbSurfaceCard(
                 child: Text(
-                  'A manager will approve this sale so you can issue the receipt.',
+                  'A manager will approve this sale. You collect payment after they approve.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),

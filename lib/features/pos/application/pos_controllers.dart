@@ -118,7 +118,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     state = state.copyWith(draft: draft, clearMessage: true);
   }
 
-  Future<bool> submit() async {
+  Future<bool> submit({bool deferPayment = false}) async {
     final cart = _ref.read(cartControllerProvider);
     final settings = _ref
         .read(posSettingsProvider)
@@ -127,6 +127,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       cart: cart,
       settings: settings,
       draft: state.draft,
+      deferPayment: deferPayment,
     );
     if (reason != null) {
       state = state.copyWith(phase: CheckoutPhase.error, message: reason);
@@ -168,6 +169,15 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       state = state.copyWith(phase: CheckoutPhase.queued, receipt: queued);
       _ref.read(cartControllerProvider.notifier).clear();
       return true;
+    }
+
+    if (deferPayment) {
+      state = state.copyWith(
+        draft: state.draft.copyWith(
+          amountPaid: 0,
+          method: PosPaymentMethod.cash,
+        ),
+      );
     }
 
     final result = await _api.createSale(

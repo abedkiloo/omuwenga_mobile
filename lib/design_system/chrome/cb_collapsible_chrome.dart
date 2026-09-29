@@ -1,6 +1,75 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+
+/// True when the software keyboard (or a test view inset) is covering the page.
+///
+/// Reads both the inherited [MediaQuery] and the raw view so it still works
+/// inside a [Scaffold] that already consumed `viewInsets` by resizing.
+bool cbKeyboardInsetOpen(BuildContext context, {double threshold = 24}) {
+  final inherited = MediaQuery.maybeViewInsetsOf(context)?.bottom ?? 0;
+  final view = View.maybeOf(context);
+  final fromView = view == null
+      ? 0.0
+      : view.viewInsets.bottom / view.devicePixelRatio;
+  return inherited > threshold || fromView > threshold;
+}
+
+/// Column layout for list pages whose chrome (filters/summaries) would
+/// otherwise overflow on short phones, landscape, or when the keyboard is open.
+///
+/// Chrome is height-capped and scrolls. Search stays visible. Filter chips
+/// hide while the keyboard is up so the field and list keep the remaining room.
+class CbChromeListColumn extends StatelessWidget {
+  const CbChromeListColumn({
+    super.key,
+    required this.chrome,
+    required this.body,
+    this.stickyBelow,
+    this.filters,
+    this.hideChromeWhenKeyboardVisible = true,
+  });
+
+  final Widget chrome;
+  final Widget body;
+  final Widget? stickyBelow;
+  final Widget? filters;
+  final bool hideChromeWhenKeyboardVisible;
+
+  @override
+  Widget build(BuildContext context) {
+    final keyboardOpen = cbKeyboardInsetOpen(context);
+    final hideChrome = hideChromeWhenKeyboardVisible && keyboardOpen;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final chromeCap = math.max(72.0, constraints.maxHeight - 168);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (!hideChrome)
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: chromeCap),
+                child: ListView(
+                  key: const Key('chrome_list_scroll'),
+                  primary: false,
+                  shrinkWrap: true,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  children: [chrome],
+                ),
+              ),
+            if (stickyBelow != null) stickyBelow!,
+            if (filters != null && !keyboardOpen) filters!,
+            Expanded(child: body),
+          ],
+        );
+      },
+    );
+  }
+}
 
 /// Scroll-aware chrome that collapses to a thin bar with a caret so list
 /// content gets more vertical room. Tap the caret to restore filters/summaries.

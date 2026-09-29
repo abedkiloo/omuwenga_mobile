@@ -73,6 +73,13 @@ void main() {
       ]);
       expect(set.canViewSales, isTrue);
       expect(
+        PermissionSet.fromJsonList([
+          {'module': 'sales', 'action': 'approve'},
+        ]).canApproveSales,
+        isTrue,
+      );
+      expect(PermissionSet.fromJsonList(null).canApproveSales, isFalse);
+      expect(
         PermissionGrant.fromJson({'module': 'a', 'action': 'b'}).key,
         'a.b',
       );

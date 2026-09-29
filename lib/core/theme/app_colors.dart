@@ -37,6 +37,34 @@ abstract final class AppColors {
     }
   }
 
+  /// Dark tinted panel so star progress reads on the light app chrome.
+  static Color starPanel(String tone) {
+    switch (tone) {
+      case 'gold':
+        return const Color(0xFF1A1406);
+      case 'teal':
+        return const Color(0xFF041916);
+      case 'emerald':
+        return const Color(0xFF041A12);
+      case 'amber':
+        return const Color(0xFF1A1204);
+      case 'orange':
+        return const Color(0xFF1A0C04);
+      default:
+        return const Color(0xFF16060C);
+    }
+  }
+
+  static Color onStar(String tone) {
+    switch (tone) {
+      case 'gold':
+      case 'amber':
+        return const Color(0xFF1A1200);
+      default:
+        return const Color(0xFFFFFFFF);
+    }
+  }
+
   static List<Color> starGradient(String tone) {
     switch (tone) {
       case 'gold':

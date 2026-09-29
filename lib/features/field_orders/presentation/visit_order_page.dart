@@ -174,7 +174,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
     }
     final confirmed = await showCommitConfirm(
       context: context,
-      title: 'Place this visit order?',
+      title: 'Place this field sale?',
       description:
           'The office will pack it and mark it ready for pickup. Nothing is sent until you confirm.',
       rows: visitOrderCommitRows(
@@ -243,7 +243,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: CbFlowHeader(
-          title: 'Field Visit Order',
+          title: 'Field sale',
           leadingIcon: Icons.assignment_outlined,
           subtitle: 'Sales visit',
           onBack: _handleBack,

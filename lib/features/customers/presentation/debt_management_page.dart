@@ -73,95 +73,93 @@ class _DebtManagementPageState extends ConsumerState<DebtManagementPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         top: false,
         bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            CbCollapsibleChrome(
-              collapsed: _chromeCollapsed,
-              onToggle: () =>
-                  setState(() => _chromeCollapsed = !_chromeCollapsed),
-              collapsedLabel: 'Debtors',
-              collapsedSummary: state.summary == null
-                  ? null
-                  : '${state.summary!.customersWithDebt} · ${_kes(state.summary!.totalDebt)}',
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Debtors',
-                      style: Theme.of(context).textTheme.titleLarge,
+        child: CbChromeListColumn(
+          chrome: CbCollapsibleChrome(
+            collapsed: _chromeCollapsed,
+            onToggle: () =>
+                setState(() => _chromeCollapsed = !_chromeCollapsed),
+            collapsedLabel: 'Debtors',
+            collapsedSummary: state.summary == null
+                ? null
+                : '${state.summary!.customersWithDebt} · ${_kes(state.summary!.totalDebt)}',
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Debtors',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Collect payments from customers who owe money.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.mutedForeground,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Collect payments from customers who owe money.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    if (state.summary != null)
-                      _SummaryStrip(
-                        summary: state.summary!,
-                        collectedSelected: state.showCollections,
-                        onCollectedTap: () {
-                          if (state.showCollections) {
-                            ref
-                                .read(debtManagementControllerProvider.notifier)
-                                .closeCollections();
-                          } else {
-                            ref
-                                .read(debtManagementControllerProvider.notifier)
-                                .openCollections(date: localDateString());
-                          }
-                        },
-                      ),
-                    if (state.summary != null) ...[
-                      const SizedBox(height: 8),
-                      _AgingChips(
-                        summary: state.summary!,
-                        selected: state.agingBucket,
-                        onSelect: (key) {
-                          final next = state.agingBucket == key ? '' : key;
+                  ),
+                  const SizedBox(height: 10),
+                  if (state.summary != null)
+                    _SummaryStrip(
+                      summary: state.summary!,
+                      collectedSelected: state.showCollections,
+                      onCollectedTap: () {
+                        if (state.showCollections) {
                           ref
                               .read(debtManagementControllerProvider.notifier)
-                              .setAgingBucket(next);
-                        },
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    CbSearchField(
-                      controller: _search,
-                      hintText: 'Name, phone, or code…',
-                      fieldKey: const Key('debt_search'),
-                      searchButtonKey: const Key('debt_search_go'),
-                      onSubmitted: (q) => ref
-                          .read(debtManagementControllerProvider.notifier)
-                          .setSearch(q),
-                      onSearchTap: () => ref
-                          .read(debtManagementControllerProvider.notifier)
-                          .setSearch(_search.text),
+                              .closeCollections();
+                        } else {
+                          ref
+                              .read(debtManagementControllerProvider.notifier)
+                              .openCollections(date: localDateString());
+                        }
+                      },
                     ),
-                    const SizedBox(height: 6),
+                  if (state.summary != null) ...[
+                    const SizedBox(height: 8),
+                    _AgingChips(
+                      summary: state.summary!,
+                      selected: state.agingBucket,
+                      onSelect: (key) {
+                        final next = state.agingBucket == key ? '' : key;
+                        ref
+                            .read(debtManagementControllerProvider.notifier)
+                            .setAgingBucket(next);
+                      },
+                    ),
                   ],
-                ),
+                  const SizedBox(height: 6),
+                ],
               ),
             ),
-            Expanded(
-              child: NotificationListener<ScrollNotification>(
-                onNotification: _onListScroll,
-                child: RefreshIndicator(
-                  onRefresh: () =>
-                      ref.read(debtManagementControllerProvider.notifier).load(),
-                  child: _body(state: state, canCollect: canCollect),
-                ),
-              ),
+          ),
+          stickyBelow: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+            child: CbSearchField(
+              controller: _search,
+              hintText: 'Name, phone, or code…',
+              fieldKey: const Key('debt_search'),
+              searchButtonKey: const Key('debt_search_go'),
+              onSubmitted: (q) => ref
+                  .read(debtManagementControllerProvider.notifier)
+                  .setSearch(q),
+              onSearchTap: () => ref
+                  .read(debtManagementControllerProvider.notifier)
+                  .setSearch(_search.text),
             ),
-          ],
+          ),
+          body: NotificationListener<ScrollNotification>(
+            onNotification: _onListScroll,
+            child: RefreshIndicator(
+              onRefresh: () =>
+                  ref.read(debtManagementControllerProvider.notifier).load(),
+              child: _body(state: state, canCollect: canCollect),
+            ),
+          ),
         ),
       ),
     );
@@ -342,6 +340,8 @@ class _StatTile extends StatelessWidget {
         children: [
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: selected ? AppColors.primary : AppColors.mutedForeground,
               fontWeight: selected ? FontWeight.w700 : null,
@@ -448,6 +448,8 @@ class _DebtorCard extends StatelessWidget {
                   children: [
                     Text(
                       row.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -456,6 +458,8 @@ class _DebtorCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.mutedForeground,
                         ),
@@ -464,12 +468,19 @@ class _DebtorCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Text(
-                key: Key('debtor_amount_${row.id}'),
-                _kes(row.debtAmount),
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.destructive,
+              const SizedBox(width: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: Text(
+                  key: Key('debtor_amount_${row.id}'),
+                  _kes(row.debtAmount),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.destructive,
+                  ),
                 ),
               ),
             ],
@@ -477,11 +488,12 @@ class _DebtorCard extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              CbStatusPill(
-                label: '${row.debtAgeDays}d · ${row.agingLabel}',
-                variant: CbStatusPillVariant.warning,
+              Flexible(
+                child: CbStatusPill(
+                  label: '${row.debtAgeDays}d · ${row.agingLabel}',
+                  variant: CbStatusPillVariant.warning,
+                ),
               ),
-              const Spacer(),
               TextButton(
                 key: Key('debtor_history_${row.id}'),
                 onPressed: onOpen,

@@ -51,6 +51,12 @@ SaleLifecycleDisplay describeSaleLifecycle({
       tone: SaleLifecycleTone.info,
     );
   }
+  if (saleStatus == 'awaiting_payment') {
+    return const SaleLifecycleDisplay(
+      label: 'Collect payment',
+      tone: SaleLifecycleTone.warning,
+    );
+  }
   if (saleStatus == 'holding') {
     return const SaleLifecycleDisplay(
       label: 'On hold',

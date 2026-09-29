@@ -2,10 +2,18 @@ import 'package:completebyte_pos_mobile/app/providers.dart';
 import 'package:completebyte_pos_mobile/core/env/app_env.dart';
 import 'package:completebyte_pos_mobile/core/network/api_client.dart';
 import 'package:completebyte_pos_mobile/core/secure/token_store.dart';
+import 'package:completebyte_pos_mobile/features/customers/application/customers_controllers.dart';
+import 'package:completebyte_pos_mobile/features/customers/application/debt_management_controller.dart';
+import 'package:completebyte_pos_mobile/features/customers/data/customers_api.dart';
+import 'package:completebyte_pos_mobile/features/customers/domain/customer.dart';
 import 'package:completebyte_pos_mobile/features/customers/domain/debt_management.dart';
+import 'package:completebyte_pos_mobile/features/customers/presentation/customers_list_page.dart';
 import 'package:completebyte_pos_mobile/features/customers/presentation/debt_collection_list.dart';
+import 'package:completebyte_pos_mobile/features/customers/presentation/debt_management_page.dart';
+import 'package:completebyte_pos_mobile/features/daily_sales/application/daily_sales_controllers.dart';
 import 'package:completebyte_pos_mobile/features/daily_sales/data/daily_sales_api.dart';
 import 'package:completebyte_pos_mobile/features/daily_sales/domain/daily_report.dart';
+import 'package:completebyte_pos_mobile/features/daily_sales/presentation/daily_sales_page.dart';
 import 'package:completebyte_pos_mobile/features/home/application/home_daily_controller.dart';
 import 'package:completebyte_pos_mobile/features/home/presentation/store_home_dashboard.dart';
 import 'package:completebyte_pos_mobile/features/pos/application/pos_controllers.dart';
@@ -36,6 +44,48 @@ void _setSize(WidgetTester tester, Size size) {
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+void _setKeyboard(WidgetTester tester, double bottom) {
+  tester.view.viewInsets = FakeViewPadding(bottom: bottom);
+  addTearDown(tester.view.resetViewInsets);
+}
+
+Widget _tillShell({required Widget page}) {
+  return MaterialApp(
+    home: Scaffold(
+      resizeToAvoidBottomInset: false,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            Expanded(child: page),
+          ],
+        ),
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 1,
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            label: 'History',
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+ApiClient _dummyApi() {
+  final tokens = InMemoryTokenStore();
+  final httpClient = MockClient((request) async => http.Response('{}', 200));
+  return ApiClient(
+    env: const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
+    tokenStore: tokens,
+    httpClient: httpClient,
+  );
 }
 
 Future<void> _expectNoOverflow(WidgetTester tester) async {
@@ -232,6 +282,93 @@ void main() {
     }
   });
 
+  testWidgets('list pages stay inside phone, landscape, and keyboard heights', (
+    tester,
+  ) async {
+    final api = _dummyApi();
+    final cases = <(Size, double)>[
+      (const Size(320, 568), 0),
+      (const Size(320, 568), 300),
+      (const Size(375, 667), 336),
+      (const Size(414, 896), 0),
+      (const Size(568, 320), 0),
+    ];
+
+    for (final (size, inset) in cases) {
+      _setSize(tester, size);
+      _setKeyboard(tester, inset);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          key: ValueKey('sales-$size-$inset'),
+          overrides: [
+            salesHistoryProvider.overrideWith(
+              (ref) => _FrozenSalesHistory(SalesHistoryApi(api)),
+            ),
+          ],
+          child: _tillShell(page: const SalesHistoryPage()),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await _expectNoOverflow(tester);
+      expect(find.byKey(const Key('sales_search')), findsOneWidget);
+      expect(find.byKey(const Key('sale_row_1')), findsOneWidget);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          key: ValueKey('customers-$size-$inset'),
+          overrides: [
+            customersListProvider.overrideWith(
+              (ref) => _FrozenCustomers(CustomersApi(api)),
+            ),
+            customersSettingsProvider.overrideWith(
+              (ref) async => const CustomersModuleSettings(),
+            ),
+          ],
+          child: _tillShell(page: const CustomersListPage()),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await _expectNoOverflow(tester);
+      expect(find.byKey(const Key('customers_search')), findsOneWidget);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          key: ValueKey('debt-$size-$inset'),
+          overrides: [
+            debtManagementControllerProvider.overrideWith(_FrozenDebt.new),
+            customersSettingsProvider.overrideWith(
+              (ref) async => const CustomersModuleSettings(),
+            ),
+          ],
+          child: _tillShell(page: const DebtManagementPage()),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await _expectNoOverflow(tester);
+      expect(find.byKey(const Key('debt_search')), findsOneWidget);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          key: ValueKey('daily-$size-$inset'),
+          overrides: [
+            dailySalesProvider.overrideWith(
+              (ref) => _FrozenDailySales(DailySalesApi(api)),
+            ),
+          ],
+          child: _tillShell(page: const DailySalesPage()),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      await _expectNoOverflow(tester);
+      expect(find.byKey(const Key('daily_date_label')), findsOneWidget);
+    }
+  });
+
   testWidgets('POS proceed stays docked above the tab bar on phone sizes', (
     tester,
   ) async {
@@ -313,6 +450,7 @@ class _FrozenSalesHistory extends SalesHistoryController {
           customerName: 'Very Long Customer Name For Overflow Layout Check',
           cashierName: 'Cashier With A Long Name',
           status: 'holding',
+          paymentMethod: 'mpesa',
           needsSalespersonAction: true,
           rejectionReason:
               'Wrong prices and a very long manager comment that should wrap without overflowing the card',
@@ -324,4 +462,97 @@ class _FrozenSalesHistory extends SalesHistoryController {
 
   @override
   Future<void> load({SalesHistoryFilters? filters}) async {}
+}
+
+class _FrozenCustomers extends CustomersListController {
+  _FrozenCustomers(super.api) {
+    state = const CustomersListState(
+      loading: false,
+      count: 1,
+      items: [
+        CustomerSummary(
+          id: 7,
+          name: 'Very Long Customer Name For Overflow Layout Check',
+          phone: '070012345678901',
+          customerCode: 'CUST-CODE-OVERFLOW',
+          walletBalance: -9876543.21,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<void> load({String? search}) async {}
+
+  @override
+  Future<void> loadMore() async {}
+}
+
+class _FrozenDebt extends DebtManagementController {
+  @override
+  DebtManagementState build() {
+    return const DebtManagementState(
+      loading: false,
+      summary: DebtSummary(
+        customersWithDebt: 3,
+        totalDebt: 1234567.89,
+        collectedToday: 40,
+        aging: {
+          '0_7': DebtAgingBucket(count: 1, amount: 10),
+          '8_30': DebtAgingBucket(count: 1, amount: 20),
+          '31_60': DebtAgingBucket(count: 1, amount: 30),
+          '60_plus': DebtAgingBucket(count: 0, amount: 0),
+        },
+      ),
+      debtors: [
+        DebtorRow(
+          id: 7,
+          name: 'Very Long Customer Name For Overflow Layout Check',
+          debtAmount: 9876543.21,
+          phone: '070012345678901',
+          customerCode: 'CUST-CODE-OVERFLOW',
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<void> load({bool quiet = false}) async {}
+}
+
+class _FrozenDailySales extends DailySalesController {
+  _FrozenDailySales(super.api) {
+    state = DailySalesState(
+      loading: false,
+      day: DateTime(2026, 1, 2),
+      report: const DailySalesReport(
+        date: '2026-01-02',
+        summary: DailySummary(
+          totalSales: 9999999.99,
+          ordersCount: 12,
+          totalPaid: 8888888.88,
+          paidOrdersCount: 9,
+          totalDebtIncurred: 1111111.11,
+          debtOrdersCount: 3,
+          partialOrdersCount: 0,
+          totalDebtCollected: 40,
+          totalCollected: 8888888.88,
+        ),
+        orders: [
+          DailyOrder(
+            id: 1,
+            saleNumber: 'SALE-VERY-LONG-NUMBER-12345',
+            total: 1234567.89,
+            amountPaid: 100,
+            paymentStatus: PaymentStatusDisplay.debt,
+            customerName: 'Very Long Customer Name For Overflow Check',
+            paymentMethod: 'M-PESA',
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Future<void> load() async {}
 }

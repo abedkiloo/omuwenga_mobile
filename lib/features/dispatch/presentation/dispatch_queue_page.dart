@@ -63,7 +63,7 @@ class _DispatchQueuePageState extends ConsumerState<DispatchQueuePage> {
           : state.orders.isEmpty
           ? EmptyState(
               title: 'Queue clear',
-              message: 'No visit orders waiting to be packed.',
+              message: 'No field sales waiting to be packed.',
               primaryLabel: 'Refresh',
               onPrimary: () => ref.read(dispatchQueueProvider.notifier).load(),
             )

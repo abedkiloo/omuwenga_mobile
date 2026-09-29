@@ -95,6 +95,7 @@ AuthSession managerSession({bool dailySales = false}) {
       const PermissionGrant(module: 'debt_management', action: 'view'),
       const PermissionGrant(module: 'debt_management', action: 'update'),
       const PermissionGrant(module: 'sales', action: 'view'),
+      const PermissionGrant(module: 'sales', action: 'approve'),
       const PermissionGrant(module: 'sales', action: 'refund'),
       const PermissionGrant(module: 'dispatch', action: 'view'),
       const PermissionGrant(module: 'dispatch', action: 'update'),
@@ -119,7 +120,19 @@ List<Override> seedOverrides(
     ),
     authSessionSeedProvider.overrideWithValue(session),
     httpClientProvider.overrideWithValue(
-      MockClient((_) async => http.Response('{"status":"ok"}', 200)),
+      MockClient((request) async {
+        final path = request.url.path;
+        if (path.contains('appraisals')) {
+          return http.Response(
+            '{"show_on_home":false,"policy":{"greet_when_no_sticky_notes":false,"show_on_home":false}}',
+            200,
+          );
+        }
+        if (path.contains('daily-notes')) {
+          return http.Response('[]', 200);
+        }
+        return http.Response('{"status":"ok"}', 200);
+      }),
     ),
     apiClientProvider.overrideWith((ref) {
       return ApiClient(

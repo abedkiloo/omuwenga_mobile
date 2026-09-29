@@ -84,137 +84,164 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         top: false,
         bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            CbCollapsibleChrome(
-              collapsed: _chromeCollapsed,
-              onToggle: () =>
-                  setState(() => _chromeCollapsed = !_chromeCollapsed),
-              collapsedLabel: 'Sales filters & summary',
-              collapsedSummary: state.items.isEmpty
-                  ? null
-                  : '${state.items.length} sales · ${_money(gross)}',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(12, 6, 12, 0),
-                    child: _HistoryHeader(),
+        child: CbChromeListColumn(
+          chrome: CbCollapsibleChrome(
+            collapsed: _chromeCollapsed,
+            onToggle: () =>
+                setState(() => _chromeCollapsed = !_chromeCollapsed),
+            collapsedLabel: 'Sales filters & summary',
+            collapsedSummary: state.items.isEmpty
+                ? null
+                : '${state.items.length} sales · ${_money(gross)}',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(12, 6, 12, 0),
+                  child: _HistoryHeader(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                  child: _RangeSelector(
+                    filters: filters,
+                    onToday: () => _setRange(0),
+                    onYesterday: () => _setRange(1),
+                    onWeek: () => _setRange(7),
+                    onFrom: () => _pickDate(from: true),
+                    onTo: () => _pickDate(from: false),
                   ),
+                ),
+                if (state.items.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                    child: _RangeSelector(
-                      filters: filters,
-                      onToday: () => _setRange(0),
-                      onYesterday: () => _setRange(1),
-                      onWeek: () => _setRange(7),
-                      onFrom: () => _pickDate(from: true),
-                      onTo: () => _pickDate(from: false),
-                    ),
+                    child: _ShiftSummary(items: state.items),
                   ),
-                  if (state.items.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                      child: _ShiftSummary(items: state.items),
-                    ),
-                ],
-              ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      key: const Key('sales_search'),
-                      controller: _search,
-                      textInputAction: TextInputAction.search,
-                      decoration: const InputDecoration(
-                        hintText: 'Search receipt #, customer, till…',
-                        isDense: true,
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.search),
-                      ),
-                      onSubmitted: (q) => ref
-                          .read(salesHistoryProvider.notifier)
-                          .load(filters: filters.copyWith(search: q)),
+          ),
+          stickyBelow: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const Key('sales_search'),
+                    controller: _search,
+                    textInputAction: TextInputAction.search,
+                    decoration: const InputDecoration(
+                      hintText: 'Search receipt #, customer, till…',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onSubmitted: (q) => ref
+                        .read(salesHistoryProvider.notifier)
+                        .load(filters: filters.copyWith(search: q)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  key: const Key('sales_scan'),
+                  tooltip: 'Scan receipt',
+                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Receipt scanner is not available yet.'),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton.filledTonal(
-                    key: const Key('sales_scan'),
-                    tooltip: 'Scan receipt',
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Receipt scanner is not available yet.'),
-                      ),
-                    ),
-                    icon: const Icon(Icons.qr_code_scanner),
-                  ),
-                ],
-              ),
+                  icon: const Icon(Icons.qr_code_scanner),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0, 6, 0, 0),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-                child: Row(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: CbFilterChip(
-                        key: const Key('sales_filter_awaiting'),
-                        label: 'Awaiting approval',
-                        selected: filters.status == 'pending_approval',
-                        compact: true,
-                        onTap: () {
-                          final selected = filters.status == 'pending_approval';
-                          ref.read(salesHistoryProvider.notifier).load(
-                            filters: selected
-                                ? filters.copyWith(clearStatus: true)
-                                : filters.copyWith(status: 'pending_approval'),
-                          );
-                        },
-                      ),
-                    ),
-                    for (final method in const ['', 'mpesa', 'cash'])
+          ),
+          filters: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 6, 0, 0),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+                  child: Row(
+                    children: [
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: CbFilterChip(
-                          key: Key(
-                            'sales_method_${method.isEmpty ? 'all' : method}',
-                          ),
-                          label: method.isEmpty
-                              ? 'All (${state.items.length})'
-                              : method == 'mpesa'
-                              ? 'M-Pesa'
-                              : 'Cash',
-                          selected: filters.paymentMethod == method,
+                          key: const Key('sales_filter_awaiting'),
+                          label: 'Awaiting approval',
+                          selected: filters.status == 'pending_approval',
                           compact: true,
-                          onTap: () => ref
-                              .read(salesHistoryProvider.notifier)
-                              .load(
-                                filters: filters.copyWith(paymentMethod: method),
-                              ),
+                          onTap: () {
+                            final selected =
+                                filters.status == 'pending_approval';
+                            ref.read(salesHistoryProvider.notifier).load(
+                              filters: selected
+                                  ? filters.copyWith(clearStatus: true)
+                                  : filters.copyWith(
+                                      status: 'pending_approval',
+                                    ),
+                            );
+                          },
                         ),
                       ),
-                  ],
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: CbFilterChip(
+                          key: const Key('sales_filter_collect'),
+                          label: 'Collect payment',
+                          selected: filters.status == 'awaiting_payment',
+                          compact: true,
+                          onTap: () {
+                            final selected =
+                                filters.status == 'awaiting_payment';
+                            ref.read(salesHistoryProvider.notifier).load(
+                              filters: selected
+                                  ? filters.copyWith(clearStatus: true)
+                                  : filters.copyWith(
+                                      status: 'awaiting_payment',
+                                    ),
+                            );
+                          },
+                        ),
+                      ),
+                      for (final method in const ['', 'mpesa', 'cash'])
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: CbFilterChip(
+                            key: Key(
+                              'sales_method_${method.isEmpty ? 'all' : method}',
+                            ),
+                            label: method.isEmpty
+                                ? 'All (${state.items.length})'
+                                : method == 'mpesa'
+                                ? 'M-Pesa'
+                                : 'Cash',
+                            selected: filters.paymentMethod == method,
+                            compact: true,
+                            onTap: () => ref
+                                .read(salesHistoryProvider.notifier)
+                                .load(
+                                  filters: filters.copyWith(
+                                    paymentMethod: method,
+                                  ),
+                                ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            if (state.loading) const LinearProgressIndicator(minHeight: 2),
-            Expanded(
-              child: NotificationListener<ScrollNotification>(
-                onNotification: _onListScroll,
-                child: _body(state),
-              ),
-            ),
-          ],
+              if (state.loading) const LinearProgressIndicator(minHeight: 2),
+            ],
+          ),
+          body: NotificationListener<ScrollNotification>(
+            onNotification: _onListScroll,
+            child: _body(state),
+          ),
         ),
       ),
     );

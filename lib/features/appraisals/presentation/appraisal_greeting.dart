@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
-import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../daily_notes/application/daily_notes_controllers.dart';
 import '../application/appraisals_controller.dart';
@@ -47,43 +47,57 @@ class _AppraisalGreetingState extends ConsumerState<AppraisalGreeting> {
     }
     final snapshot = appraisals.snapshot;
     if (snapshot == null) return const SizedBox.shrink();
+    final tone = snapshot.today.tone;
+    final accent = AppColors.starTone(tone);
 
-    return SizedBox.expand(
+    return Positioned.fill(
       child: Material(
-        color: Colors.black.withValues(alpha: 0.55),
+        color: const Color(0xF2080C14),
         child: SafeArea(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Padding(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AppraisalProgressCard(key: const Key('appraisal_greeting'), snapshot: snapshot),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () =>
-                                ref.read(appraisalsProvider.notifier).dismissGreeting(),
-                            child: const Text('Continue'),
+                child: AppraisalProgressCard(
+                  key: const Key('appraisal_greeting'),
+                  snapshot: snapshot,
+                  emphasis: true,
+                  footer: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () =>
+                              ref.read(appraisalsProvider.notifier).dismissGreeting(),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white70, width: 1.6),
+                            minimumSize: const Size(0, 48),
+                          ),
+                          child: const Text('Continue'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: () {
+                            ref.read(appraisalsProvider.notifier).dismissGreeting();
+                            context.push(AppRoutes.appraisals);
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: accent,
+                            foregroundColor: AppColors.onStar(tone),
+                            minimumSize: const Size(0, 48),
+                          ),
+                          child: const Text(
+                            'Open my progress',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: CbPrimaryButton(
-                            label: 'Open my progress',
-                            onPressed: () {
-                              ref.read(appraisalsProvider.notifier).dismissGreeting();
-                              context.push(AppRoutes.appraisals);
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

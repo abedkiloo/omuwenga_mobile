@@ -505,7 +505,7 @@ class MorePage extends ConsumerWidget {
             if (canPlaceVisit)
               _MoreTile(
                 key: const Key('more_visit_order'),
-                title: 'New visit order',
+                title: 'New field sale',
                 icon: Icons.shopping_bag_outlined,
                 onTap: () => context.go(AppRoutes.siteVisit),
               ),

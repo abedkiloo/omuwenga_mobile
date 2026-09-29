@@ -217,5 +217,20 @@ void main() {
         contains('disabled'),
       );
     });
+
+    test('deferPayment skips collecting money', () {
+      expect(
+        validateCheckout(
+          cart: const PosCart().addProduct(product),
+          settings: const PosSettings(),
+          draft: const CheckoutDraft(
+            method: PosPaymentMethod.cash,
+            amountPaid: 0,
+          ),
+          deferPayment: true,
+        ),
+        isNull,
+      );
+    });
   });
 }

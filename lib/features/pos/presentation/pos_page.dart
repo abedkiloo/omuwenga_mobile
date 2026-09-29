@@ -212,6 +212,36 @@ class _PosPageState extends ConsumerState<PosPage> {
         .maybeWhen(data: (s) => s, orElse: () => const PosSettings());
     if (cart.isEmpty) return;
 
+    final session = ref.read(authControllerProvider).session;
+    final sendForApproval =
+        session != null && !session.permissions.canApproveSales;
+    if (sendForApproval) {
+      final confirmed = await showCommitConfirm(
+        context: context,
+        title: 'Send this sale for approval?',
+        description:
+            'Confirm the customer and products. A manager will approve this sale, then you collect payment.',
+        rows: posCloseSaleRows(
+          cart: cart,
+          kind: CheckoutKind.payLater,
+          paid: 0,
+        ),
+        confirmLabel: 'Send for approval',
+        cancelLabel: 'Back to sale',
+        confirmKey: const Key('pos_send_approval_confirm'),
+      );
+      if (confirmed != true || !mounted) return;
+      ref
+          .read(checkoutControllerProvider.notifier)
+          .setDraft(
+            const CheckoutDraft(method: PosPaymentMethod.cash, amountPaid: 0),
+          );
+      await ref
+          .read(checkoutControllerProvider.notifier)
+          .submit(deferPayment: true);
+      return;
+    }
+
     final methods = settings.enabledPaymentMethods;
     final method = methods.isEmpty ? PosPaymentMethod.cash : methods.first;
     ref
@@ -234,7 +264,7 @@ class _PosPageState extends ConsumerState<PosPage> {
           title: const Text('Waiting for manager approval'),
           content: Text(
             receipt?.message ??
-                'A manager will approve this sale so you can issue the receipt.',
+                'A manager will approve this sale. You collect payment after they approve.',
           ),
           actions: [
             TextButton(

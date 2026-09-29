@@ -184,11 +184,13 @@ String? validateCheckout({
   required PosCart cart,
   required PosSettings settings,
   required CheckoutDraft draft,
+  bool deferPayment = false,
 }) {
   if (cart.isEmpty) return 'Add at least one product.';
   if (settings.requireCustomer && cart.customerId == null) {
     return 'Customer is required.';
   }
+  if (deferPayment) return null;
   if (!settings.enabledPaymentMethods.contains(draft.method)) {
     return 'Payment method is not enabled.';
   }
@@ -221,4 +223,11 @@ bool canSubmitCheckout({
   required PosCart cart,
   required PosSettings settings,
   required CheckoutDraft draft,
-}) => validateCheckout(cart: cart, settings: settings, draft: draft) == null;
+  bool deferPayment = false,
+}) =>
+    validateCheckout(
+      cart: cart,
+      settings: settings,
+      draft: draft,
+      deferPayment: deferPayment,
+    ) == null;
