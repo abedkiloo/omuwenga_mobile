@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
@@ -9,6 +10,7 @@ import '../../../design_system/states/async_states.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/domain/auth_session.dart';
 import '../application/daily_notes_controllers.dart';
+import '../domain/approval_return.dart';
 import '../domain/daily_note.dart';
 
 bool _canAssign(AuthSession? session) {
@@ -129,26 +131,55 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
                     child: Text('No tasks for this day.'),
                   ),
                 for (final task in state.tasks)
-                  CheckboxListTile(
-                    key: Key('daily_task_${task.id}'),
-                    contentPadding: EdgeInsets.zero,
-                    value: task.isDone,
-                    title: Text(
-                      task.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                  if (task.requiresSaleFix)
+                    ListTile(
+                      key: Key('daily_task_${task.id}'),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        task.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: task.description.isEmpty
+                          ? null
+                          : Text(
+                              task.description,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                      trailing: FilledButton(
+                        key: Key('daily_task_open_sale_${task.id}'),
+                        onPressed: () {
+                          final path = rejectedSaleFixPath(
+                            content: task.description,
+                            title: task.title,
+                          );
+                          if (path != null) context.go(path);
+                        },
+                        child: const Text('Open sale'),
+                      ),
+                    )
+                  else
+                    CheckboxListTile(
+                      key: Key('daily_task_${task.id}'),
+                      contentPadding: EdgeInsets.zero,
+                      value: task.isDone,
+                      title: Text(
+                        task.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: task.description.isEmpty
+                          ? null
+                          : Text(
+                              task.description,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                      onChanged: (_) => ref
+                          .read(dailyNotesProvider.notifier)
+                          .toggleTask(task.id),
                     ),
-                    subtitle: task.description.isEmpty
-                        ? null
-                        : Text(
-                            task.description,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                    onChanged: (_) => ref
-                        .read(dailyNotesProvider.notifier)
-                        .toggleTask(task.id),
-                  ),
                 const SizedBox(height: 16),
                 Text('Notes', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 8),
@@ -261,22 +292,23 @@ class _NoteBoardColumn extends ConsumerWidget {
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Checkbox(
-                                      key: Key('daily_note_tick_${note.id}'),
-                                      value: note.isDone,
-                                      onChanged:
-                                          canToggleDailyNote(
-                                            note,
-                                            userId,
-                                            viewAll: viewAll,
-                                          )
-                                          ? (_) => ref
+                                    if (!note.requiresSaleFix)
+                                      Checkbox(
+                                        key: Key('daily_note_tick_${note.id}'),
+                                        value: note.isDone,
+                                        onChanged:
+                                            canToggleDailyNote(
+                                              note,
+                                              userId,
+                                              viewAll: viewAll,
+                                            )
+                                            ? (_) => ref
                                                 .read(
                                                   dailyNotesProvider.notifier,
                                                 )
                                                 .toggleNote(note.id)
-                                          : null,
-                                    ),
+                                            : null,
+                                      ),
                                     Expanded(
                                       child: Text(
                                         note.title.isEmpty
@@ -363,7 +395,22 @@ class _NoteDetailSheet extends ConsumerWidget {
           ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
         ),
         const SizedBox(height: 16),
-        if (canToggle)
+        if (note.requiresSaleFix)
+          CbPrimaryButton(
+            key: const Key('daily_note_open_sale'),
+            label: 'Open sale',
+            onPressed: () {
+              final path = rejectedSaleFixPath(
+                content: note.content,
+                title: note.title,
+              );
+              if (path != null) {
+                Navigator.pop(context);
+                context.go(path);
+              }
+            },
+          )
+        else if (canToggle)
           CbPrimaryButton(
             key: const Key('daily_note_complete'),
             label: note.isDone ? 'Mark as open' : 'Complete note',

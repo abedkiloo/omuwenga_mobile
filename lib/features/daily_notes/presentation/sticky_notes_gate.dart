@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/daily_notes_controllers.dart';
+import '../domain/approval_return.dart';
 
 class StickyNotesGate extends ConsumerStatefulWidget {
   const StickyNotesGate({super.key});
@@ -43,6 +45,7 @@ class _StickyNotesGateState extends ConsumerState<StickyNotesGate> {
     final maxHeight = MediaQuery.sizeOf(context).height * 0.9;
     final notes = state.openNotes;
     final blocking = state.isBlocking;
+    final returnedSaleOpen = notes.any((n) => n.requiresSaleFix);
 
     return Positioned.fill(
       child: Material(
@@ -65,14 +68,18 @@ class _StickyNotesGateState extends ConsumerState<StickyNotesGate> {
                         children: [
                           Text(
                             blocking
-                                ? 'Notes that must be ticked'
+                                ? (returnedSaleOpen
+                                    ? 'Returned sale — open and send back'
+                                    : 'Notes that must be ticked')
                                 : 'Notes for you',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 8),
                           Text(
                             blocking
-                                ? 'Tick each must-tick note before you continue. You cannot use the rest of the system until these are sorted.'
+                                ? (returnedSaleOpen
+                                    ? 'The manager left a comment. Open that sale, update it, then send it back for approval. Ticking this note is not enough.'
+                                    : 'Tick each must-tick note before you continue. You cannot use the rest of the system until these are sorted.')
                                 : 'These notes were assigned to you. Read them, tick them if you are done, or continue.',
                           ),
                         ],
@@ -84,28 +91,55 @@ class _StickyNotesGateState extends ConsumerState<StickyNotesGate> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         children: [
                           for (final note in notes)
-                            CheckboxListTile(
-                              key: Key('sticky_gate_tick_${note.id}'),
-                              contentPadding: EdgeInsets.zero,
-                              value: note.isDone,
-                              title: Text(
-                                note.title.isEmpty
-                                    ? (note.isSticky ? 'Sticky note' : 'Note')
-                                    : note.title,
+                            if (note.requiresSaleFix)
+                              ListTile(
+                                key: Key('sticky_gate_open_sale_${note.id}'),
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                  note.title.isEmpty
+                                      ? note.kindLabel
+                                      : note.title,
+                                ),
+                                subtitle: Text(note.content),
+                                trailing: FilledButton(
+                                  onPressed: () {
+                                    final path = rejectedSaleFixPath(
+                                      content: note.content,
+                                      title: note.title,
+                                    );
+                                    ref
+                                        .read(stickyNotesGateProvider.notifier)
+                                        .releaseForFix(note.id);
+                                    if (path != null) context.go(path);
+                                  },
+                                  child: const Text('Open sale'),
+                                ),
+                              )
+                            else
+                              CheckboxListTile(
+                                key: Key('sticky_gate_tick_${note.id}'),
+                                contentPadding: EdgeInsets.zero,
+                                value: note.isDone,
+                                title: Text(
+                                  note.title.isEmpty
+                                      ? (note.isSticky ? 'Sticky note' : 'Note')
+                                      : note.title,
+                                ),
+                                subtitle: Text(note.content),
+                                onChanged: state.acting
+                                    ? null
+                                    : (_) => ref
+                                        .read(stickyNotesGateProvider.notifier)
+                                        .tick(note.id),
                               ),
-                              subtitle: Text(note.content),
-                              onChanged: state.acting
-                                  ? null
-                                  : (_) => ref
-                                      .read(stickyNotesGateProvider.notifier)
-                                      .tick(note.id),
-                            ),
                           if (state.error != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
                               child: Text(
                                 state.error!,
-                                style: const TextStyle(color: AppColors.destructive),
+                                style: const TextStyle(
+                                  color: AppColors.destructive,
+                                ),
                               ),
                             ),
                         ],

@@ -19,6 +19,8 @@ abstract final class AppRoutes {
   static const dailyNotes = '/daily-notes';
   static const appraisals = '/appraisals';
 
+  static String posForSale(int saleId) => '$pos?sale=$saleId';
+
   static String customerDetail(int id, {String? tab}) {
     final path = '/customers/$id';
     if (tab == null || tab.isEmpty) return path;

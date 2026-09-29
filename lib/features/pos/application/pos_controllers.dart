@@ -51,7 +51,27 @@ class CartController extends StateNotifier<PosCart> {
   }
 
   void clear() {
-    state = state.clear();
+    state = const PosCart();
+  }
+
+  void loadReturnedSale({
+    required int holdingId,
+    required List<CartLine> lines,
+    int? customerId,
+    String? customerName,
+    double taxAmount = 0,
+    double discountAmount = 0,
+    String? returnComment,
+  }) {
+    state = PosCart(
+      lines: lines,
+      customerId: customerId,
+      customerName: customerName,
+      taxAmount: taxAmount,
+      discountAmount: discountAmount,
+      holdingId: holdingId,
+      returnComment: returnComment,
+    );
   }
 }
 

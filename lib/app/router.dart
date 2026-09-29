@@ -185,7 +185,12 @@ GoRouter createAppRouter({
           ),
           GoRoute(
             path: AppRoutes.pos,
-            builder: (context, state) => const PosPage(),
+            builder: (context, state) {
+              final saleId = int.tryParse(
+                state.uri.queryParameters['sale'] ?? '',
+              );
+              return PosPage(resumeSaleId: saleId);
+            },
           ),
           GoRoute(
             path: AppRoutes.customers,

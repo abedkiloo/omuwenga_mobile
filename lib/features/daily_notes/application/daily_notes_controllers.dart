@@ -252,6 +252,7 @@ class StickyNotesGateState {
     this.loading = false,
     this.acting = false,
     this.dismissedGeneral = false,
+    this.releasedIds = const {},
     this.error,
   });
 
@@ -259,9 +260,13 @@ class StickyNotesGateState {
   final bool loading;
   final bool acting;
   final bool dismissedGeneral;
+  final Set<int> releasedIds;
   final String? error;
 
-  List<DailyNote> get openNotes => unresolvedInboxNotes(notes);
+  List<DailyNote> get openNotes => [
+        for (final n in unresolvedInboxNotes(notes))
+          if (!releasedIds.contains(n.id)) n,
+      ];
 
   bool get isBlocking => hasBlockingStickyNotes(openNotes);
 
@@ -276,6 +281,7 @@ class StickyNotesGateState {
     bool? loading,
     bool? acting,
     bool? dismissedGeneral,
+    Set<int>? releasedIds,
     String? error,
     bool clearError = false,
   }) {
@@ -284,6 +290,7 @@ class StickyNotesGateState {
       loading: loading ?? this.loading,
       acting: acting ?? this.acting,
       dismissedGeneral: dismissedGeneral ?? this.dismissedGeneral,
+      releasedIds: releasedIds ?? this.releasedIds,
       error: clearError ? null : (error ?? this.error),
     );
   }
@@ -309,11 +316,26 @@ class StickyNotesGateController extends StateNotifier<StickyNotesGateState> {
       loading: false,
       notes: result.getOrThrow(),
       dismissedGeneral: false,
+      releasedIds: const {},
       clearError: true,
     );
   }
 
   Future<bool> tick(int id) async {
+    DailyNote? note;
+    for (final n in state.notes) {
+      if (n.id == id) {
+        note = n;
+        break;
+      }
+    }
+    if (note != null && note.requiresSaleFix) {
+      state = state.copyWith(
+        error:
+            'Open this sale, resolve the manager comment, then send it back for approval.',
+      );
+      return false;
+    }
     state = state.copyWith(acting: true, clearError: true);
     final result = await _api.toggleNote(id);
     if (result.isFailure) {
@@ -336,6 +358,10 @@ class StickyNotesGateController extends StateNotifier<StickyNotesGateState> {
 
   void dismissGeneral() {
     state = state.copyWith(dismissedGeneral: true);
+  }
+
+  void releaseForFix(int id) {
+    state = state.copyWith(releasedIds: {...state.releasedIds, id});
   }
 
   void reset() {

@@ -15,6 +15,8 @@ import '../application/product_catalog_paging.dart';
 import '../data/pos_api.dart';
 import '../domain/cart.dart';
 import '../domain/payment.dart';
+import '../domain/product_variant.dart';
+import '../../sales_history/application/sales_history_controllers.dart';
 import '../../../core/validation/field_types.dart';
 import '../domain/pos_commit.dart';
 import 'receipt_layout.dart';
@@ -25,7 +27,9 @@ import 'variant_picker_sheet.dart';
 String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 class PosPage extends ConsumerStatefulWidget {
-  const PosPage({super.key});
+  const PosPage({super.key, this.resumeSaleId});
+
+  final int? resumeSaleId;
 
   @override
   ConsumerState<PosPage> createState() => _PosPageState();
@@ -44,6 +48,7 @@ class _PosPageState extends ConsumerState<PosPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Future.wait([_loadCatalog(), _loadCategories()]);
+      await _loadReturnedSale();
     });
   }
 
@@ -53,6 +58,53 @@ class _PosPageState extends ConsumerState<PosPage> {
     _searchFocus.dispose();
     _catalogScroll.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadReturnedSale() async {
+    final saleId = widget.resumeSaleId;
+    if (saleId == null) return;
+    final result = await ref.read(salesHistoryApiProvider).detail(saleId);
+    if (!mounted) return;
+    result.when(
+      success: (detail) {
+        final holding =
+            detail.status == 'holding' || detail.needsSalespersonAction;
+        if (!holding) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('This sale is not waiting for a fix on POS.')),
+          );
+          return;
+        }
+        final comment = (detail.rejectionReason ?? '').trim();
+        ref.read(cartControllerProvider.notifier).loadReturnedSale(
+          holdingId: detail.id,
+          lines: [
+            for (final line in detail.items)
+              if ((line.productId ?? 0) > 0)
+                CartLine(
+                  productId: line.productId!,
+                  name: line.productName,
+                  sku: line.sku,
+                  unitPrice: line.unitPrice,
+                  quantity: line.quantity,
+                  variantLabel: line.variantName,
+                ),
+          ],
+          customerId: detail.customerId,
+          customerName: detail.customerName,
+          taxAmount: detail.taxAmount,
+          discountAmount: detail.discountAmount,
+          returnComment: comment.isEmpty
+              ? 'Update this sale, then send it back for approval.'
+              : comment,
+        );
+      },
+      failure: (error, _) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open this sale: $error')),
+        );
+      },
+    );
   }
 
   Future<void> _loadCategories() async {
@@ -388,6 +440,21 @@ class _PosPageState extends ConsumerState<PosPage> {
                                     .clearCustomer(),
                               ),
                             ),
+                            if ((cart.returnComment ?? '').trim().isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                                child: Material(
+                                  key: const Key('returned_sale_banner'),
+                                  color: const Color(0xFFFFF7ED),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(10),
+                                    child: Text(
+                                      'Manager comment: ${cart.returnComment!.trim()}\nUpdate this sale, then send it back for approval.',
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),

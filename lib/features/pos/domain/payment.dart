@@ -174,6 +174,7 @@ Map<String, dynamic> posSaleRequestBody({
     'allow_partial_payment': draft.paymentOnAccount && underpaid,
     'excess_payment_choice': 'change',
     if (cart.customerId != null) 'customer_id': cart.customerId,
+    if (cart.holdingId != null) 'holding_id': cart.holdingId,
     if (draft.paymentReference.trim().isNotEmpty)
       'payment_reference': draft.paymentReference.trim(),
   };

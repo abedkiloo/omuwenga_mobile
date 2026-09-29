@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
@@ -232,7 +234,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'This sale was returned. Fix it on POS and send it again. A sticky Daily note was also sent.',
+                      'This sale was returned. Open it on POS, resolve the manager comment, then send it back for approval.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     if ((detail.rejectionReason ?? '').trim().isNotEmpty) ...[
@@ -242,6 +244,12 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
+                    const SizedBox(height: 8),
+                    FilledButton(
+                      key: const Key('sale_detail_open_pos'),
+                      onPressed: () => context.go(AppRoutes.posForSale(detail.id)),
+                      child: const Text('Open sale'),
+                    ),
                   ],
                 ),
               ),

@@ -116,6 +116,8 @@ class PosCart {
     this.customerName,
     this.taxAmount = 0,
     this.discountAmount = 0,
+    this.holdingId,
+    this.returnComment,
   });
 
   final List<CartLine> lines;
@@ -123,6 +125,8 @@ class PosCart {
   final String? customerName;
   final double taxAmount;
   final double discountAmount;
+  final int? holdingId;
+  final String? returnComment;
 
   bool get isEmpty => lines.isEmpty;
   bool get isDirty => lines.isNotEmpty || customerId != null;
@@ -205,7 +209,10 @@ class PosCart {
     String? customerName,
     double? taxAmount,
     double? discountAmount,
+    int? holdingId,
+    String? returnComment,
     bool clearCustomer = false,
+    bool clearHolding = false,
   }) {
     return PosCart(
       lines: lines ?? this.lines,
@@ -213,6 +220,8 @@ class PosCart {
       customerName: clearCustomer ? null : (customerName ?? this.customerName),
       taxAmount: taxAmount ?? this.taxAmount,
       discountAmount: discountAmount ?? this.discountAmount,
+      holdingId: clearHolding ? null : (holdingId ?? this.holdingId),
+      returnComment: clearHolding ? null : (returnComment ?? this.returnComment),
     );
   }
 

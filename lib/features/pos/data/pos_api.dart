@@ -383,11 +383,82 @@ class PosApi {
     required CheckoutDraft draft,
     required String idempotencyKey,
   }) async {
+    if (cart.holdingId != null) {
+      final saved = await _saveHolding(cart);
+      if (saved.isFailure) {
+        final f = saved as Failure;
+        return Failure(f.error, f.stackTrace);
+      }
+      return _checkoutHolding(
+        holdingId: cart.holdingId!,
+        draft: draft,
+        idempotencyKey: idempotencyKey,
+      );
+    }
     final body = posSaleRequestBody(cart: cart, draft: draft);
 
     final response = await _client.post(
       'sales/',
       body: body,
+      idempotencyKey: idempotencyKey,
+    );
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode == 400 || res.statusCode == 422) {
+      return Failure(PosApiException(_safeError(res.body)));
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(PosApiException(_safeError(res.body)));
+    }
+    final decoded = jsonDecode(res.body);
+    if (decoded is! Map) {
+      return Failure(PosApiException('Unexpected sale response.'));
+    }
+    return Success(SaleReceipt.fromJson(Map<String, dynamic>.from(decoded)));
+  }
+
+  Future<Result<void>> _saveHolding(PosCart cart) async {
+    final response = await _client.post(
+      'sales/holding/',
+      body: {
+        'holding_id': cart.holdingId,
+        'items': cart.toSaleItemsJson(),
+        'tax_amount': cart.taxAmount,
+        'discount_amount': cart.discountAmount,
+        'client_channel': 'mobile',
+        if (cart.customerId != null) 'customer_id': cart.customerId,
+      },
+    );
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(PosApiException(_safeError(res.body)));
+    }
+    return const Success(null);
+  }
+
+  Future<Result<SaleReceipt>> _checkoutHolding({
+    required int holdingId,
+    required CheckoutDraft draft,
+    required String idempotencyKey,
+  }) async {
+    final response = await _client.post(
+      'sales/$holdingId/checkout/',
+      body: {
+        'payment_method': draft.method.apiValue,
+        'amount_paid': draft.amountPaid,
+        'allow_partial_payment': draft.paymentOnAccount && draft.amountPaid >= 0,
+        'excess_payment_choice': 'change',
+        'client_channel': 'mobile',
+        if (draft.paymentReference.trim().isNotEmpty)
+          'payment_reference': draft.paymentReference.trim(),
+      },
       idempotencyKey: idempotencyKey,
     );
     if (response.isFailure) {

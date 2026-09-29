@@ -1,3 +1,5 @@
+import 'approval_return.dart';
+
 class DailyNote {
   const DailyNote({
     required this.id,
@@ -34,7 +36,12 @@ class DailyNote {
   final String assignedRoleName;
 
   bool get isGeneral => !isSticky;
-  String get kindLabel => isSticky ? 'Must tick' : 'Note';
+  bool get requiresSaleFix =>
+      noticeRequiresSaleFix(content: content, title: title);
+  String get kindLabel {
+    if (requiresSaleFix) return 'Fix sale';
+    return isSticky ? 'Must tick' : 'Note';
+  }
 
   factory DailyNote.fromJson(Map<String, dynamic> json) {
     return DailyNote(
@@ -80,6 +87,9 @@ class DailyTaskItem {
   final int? authorId;
   final int? assignedToId;
   final String assignedToName;
+
+  bool get requiresSaleFix =>
+      noticeRequiresSaleFix(content: description, title: title);
 
   factory DailyTaskItem.fromJson(Map<String, dynamic> json) {
     return DailyTaskItem(
@@ -176,6 +186,7 @@ bool hasBlockingStickyNotes(Iterable<DailyNote> notes) {
 }
 
 bool canToggleDailyNote(DailyNote note, int? userId, {bool viewAll = false}) {
+  if (note.requiresSaleFix) return false;
   if (viewAll) return true;
   if (userId == null) return false;
   return note.authorId == userId || note.assignedToId == userId;

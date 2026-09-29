@@ -9,6 +9,7 @@ import 'package:completebyte_pos_mobile/features/auth/domain/permission_set.dart
 import 'package:completebyte_pos_mobile/features/auth/domain/persona.dart';
 import 'package:completebyte_pos_mobile/features/daily_notes/application/daily_notes_controllers.dart';
 import 'package:completebyte_pos_mobile/features/daily_notes/data/daily_notes_api.dart';
+import 'package:completebyte_pos_mobile/features/daily_notes/domain/approval_return.dart';
 import 'package:completebyte_pos_mobile/features/daily_notes/domain/daily_note.dart';
 import 'package:completebyte_pos_mobile/features/daily_notes/presentation/daily_notes_page.dart';
 import 'package:completebyte_pos_mobile/features/daily_notes/presentation/sticky_notes_gate.dart';
@@ -139,6 +140,20 @@ void main() {
       expect(canToggleDailyNote(sticky, 9), isTrue);
       expect(canToggleDailyNote(sticky, 99), isFalse);
       expect(canToggleDailyNote(sticky, 99, viewAll: true), isTrue);
+      final returned = DailyNote.fromJson({
+        ..._noteJson(),
+        'title': 'Approval rejected: sale completion',
+        'content':
+            'Bea returned sale S-1.\n---\nsource: pending_change\nid: 51\nsale_id: 99\nref: reject/sale/99/',
+      });
+      expect(returned.requiresSaleFix, isTrue);
+      expect(returned.kindLabel, 'Fix sale');
+      expect(canToggleDailyNote(returned, 20), isFalse);
+      expect(canToggleDailyNote(returned, 20, viewAll: true), isFalse);
+      expect(
+        rejectedSaleFixPath(content: returned.content, title: returned.title),
+        '/pos?sale=99',
+      );
       expect(todayIsoDate(DateTime(2026, 9, 24)), '2026-09-24');
       expect(
         createNotePayload(
