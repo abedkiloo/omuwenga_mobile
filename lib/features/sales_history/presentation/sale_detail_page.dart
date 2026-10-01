@@ -162,6 +162,11 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
     final subtotal = detail.subtotal > 0
         ? detail.subtotal
         : detail.items.fold<double>(0, (sum, item) => sum + item.lineTotal);
+    final session = ref.watch(authControllerProvider).session;
+    final canCorrectDate =
+        detail.status != 'cancelled' &&
+        (detail.canCorrectDate ||
+            (session?.permissions.canApproveSales ?? false));
 
     return Stack(
       children: [
@@ -286,6 +291,8 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
             ],
             _CompletionBanner(detail: detail),
             const SizedBox(height: 12),
+            if (canCorrectDate) _SaleDateEditor(detail: detail, saleId: widget.saleId),
+            if (canCorrectDate) const SizedBox(height: 12),
             _AccountCard(detail: detail),
             const SizedBox(height: 16),
             Row(
@@ -637,6 +644,75 @@ class _CompletionBanner extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SaleDateEditor extends ConsumerWidget {
+  const _SaleDateEditor({required this.detail, required this.saleId});
+
+  final SaleDetail detail;
+  final int saleId;
+
+  DateTime? _parsed() {
+    final raw = detail.occurredAt;
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw)?.toLocal();
+  }
+
+  String _label(DateTime value) {
+    final y = value.year.toString().padLeft(4, '0');
+    final m = value.month.toString().padLeft(2, '0');
+    final d = value.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = _parsed() ?? DateTime.now();
+    return CbSurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'SALE DATE',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Daily sales, reports, and the books use this date.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            key: const Key('sale_detail_change_date'),
+            onPressed: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: current,
+                firstDate: DateTime(current.year - 10),
+                lastDate: DateTime.now().add(const Duration(days: 1)),
+              );
+              if (picked == null) return;
+              final ok = await ref
+                  .read(saleDetailProvider(saleId).notifier)
+                  .correctDate(occurredOn: picked);
+              if (!context.mounted) return;
+              final error = ref.read(saleDetailProvider(saleId)).error;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    ok
+                        ? 'Sale date updated. Daily sales, reports, and books follow the new date.'
+                        : (error ?? 'Could not change the sale date'),
+                  ),
+                ),
+              );
+            },
+            child: Text('Change date · ${_label(current)}'),
           ),
         ],
       ),

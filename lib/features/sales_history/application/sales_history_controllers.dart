@@ -186,6 +186,27 @@ class SaleDetailController extends StateNotifier<SaleDetailState> {
     state = state.copyWith(refunding: false);
     return true;
   }
+
+  Future<bool> correctDate({required DateTime occurredOn}) async {
+    final detail = state.detail;
+    if (detail == null) return false;
+    state = state.copyWith(refunding: true, clearError: true);
+    final y = occurredOn.year.toString().padLeft(4, '0');
+    final m = occurredOn.month.toString().padLeft(2, '0');
+    final d = occurredOn.day.toString().padLeft(2, '0');
+    final result = await _api.correctDate(
+      saleId: detail.id,
+      occurredOn: '$y-$m-$d',
+    );
+    if (result.isFailure) {
+      final f = result as Failure;
+      state = state.copyWith(refunding: false, error: f.error.toString());
+      return false;
+    }
+    await load(detail.id);
+    state = state.copyWith(refunding: false);
+    return true;
+  }
 }
 
 final saleDetailProvider = StateNotifierProvider.autoDispose

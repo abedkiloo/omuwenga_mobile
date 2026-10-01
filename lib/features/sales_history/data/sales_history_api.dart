@@ -160,6 +160,36 @@ class SalesHistoryApi {
     return const Success(null);
   }
 
+  Future<Result<SaleDetail>> correctDate({
+    required int saleId,
+    required String occurredOn,
+  }) async {
+    final response = await _client.post(
+      'sales/$saleId/correct-date/',
+      body: {'occurred_on': occurredOn},
+    );
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(SalesHistoryApiException(_safeError(res.body)));
+    }
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) {
+        return Failure(SalesHistoryApiException('Unexpected sale detail.'));
+      }
+      return Success(SaleDetail.fromJson(Map<String, dynamic>.from(decoded)));
+    } on Object catch (error, stackTrace) {
+      return Failure(
+        SalesHistoryApiException('Unable to read sale detail: $error'),
+        stackTrace,
+      );
+    }
+  }
+
   static String _safeError(String body) {
     try {
       final decoded = jsonDecode(body);

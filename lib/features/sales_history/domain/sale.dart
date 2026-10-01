@@ -152,6 +152,7 @@ class SaleDetail {
     this.clientChannel,
     this.needsSalespersonAction = false,
     this.rejectionReason,
+    this.canCorrectDate = false,
   });
 
   final int id;
@@ -180,6 +181,7 @@ class SaleDetail {
   final String? clientChannel;
   final bool needsSalespersonAction;
   final String? rejectionReason;
+  final bool canCorrectDate;
 
   PaymentStatusDisplay get paymentStatus =>
       classifyPaymentStatus(total: total, amountPaid: amountPaid);
@@ -229,6 +231,7 @@ class SaleDetail {
       clientChannel: json['client_channel']?.toString(),
       needsSalespersonAction: _asBool(json['needs_salesperson_action']),
       rejectionReason: json['rejection_reason']?.toString(),
+      canCorrectDate: json['can_correct_date'] == true,
     );
   }
 }

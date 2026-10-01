@@ -120,6 +120,30 @@ void main() {
     expect(n, 3);
   });
 
+  test('correctDate posts occurred_on', () async {
+    final api = apiWith(
+      MockClient((request) async {
+        expect(request.url.path, contains('/sales/9/correct-date/'));
+        final body = jsonDecode(request.body) as Map;
+        expect(body['occurred_on'], '2026-10-01');
+        return http.Response(
+          jsonEncode({
+            'id': 9,
+            'sale_number': 'S-9',
+            'total': '100',
+            'amount_paid': '100',
+            'occurred_at': '2026-10-01T10:00:00Z',
+            'can_correct_date': true,
+          }),
+          200,
+        );
+      }),
+    );
+    final result = await api.correctDate(saleId: 9, occurredOn: '2026-10-01');
+    expect(result.isSuccess, isTrue);
+    expect(result.getOrThrow().canCorrectDate, isTrue);
+  });
+
   test('rejectComplete posts a return reason', () async {
     final api = apiWith(
       MockClient((request) async {
