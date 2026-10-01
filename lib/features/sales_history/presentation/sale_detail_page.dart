@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../auth/domain/persona.dart';
 import '../../pos/data/pos_api.dart';
 import '../../pos/domain/cart.dart';
 import '../../pos/application/pos_controllers.dart';
@@ -48,6 +49,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
             ?.permissions
             .canRollbackSales ??
         false;
+    final session = ref.watch(authControllerProvider).session;
     final detail = state.detail;
     final awaitingApproval = detail?.status == 'pending_approval';
     final awaitingPayment = detail?.status == 'awaiting_payment';
@@ -61,6 +63,16 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
         detail != null &&
         detail.canRollback &&
         detail.status == 'completed';
+    final refundNone =
+        detail?.refundStatus == null || detail?.refundStatus == 'none';
+    final showReturnForCorrection =
+        session != null &&
+        sessionCanAdminReturnSale(
+          profile: session.profile,
+          isSuperuser: session.user.isSuperuser,
+        ) &&
+        detail != null &&
+        (awaitingPayment || (detail.status == 'completed' && refundNone));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -76,6 +88,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
               exporting: _exporting,
               showRefund: showRefund,
               showRollback: showRollback,
+              showReturnForCorrection: showReturnForCorrection,
               receiptReady: detail.status == 'completed',
               onPrint: () {
                 if (awaitingApproval || awaitingPayment) {
@@ -84,7 +97,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
                       content: Text(
                         awaitingPayment
                             ? 'Collect payment first, then you can issue the receipt.'
-                            : 'A manager will approve this sale. You collect payment after they approve.',
+                            : 'A manager will approve this sale. Stock, books, and the receipt update after they approve.',
                       ),
                     ),
                   );
@@ -102,7 +115,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                        'A manager will approve this sale. You collect payment after they approve.',
+                        'A manager will approve this sale. Stock, books, and the receipt update after they approve.',
                       ),
                     ),
                   );
@@ -119,6 +132,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
               },
               onRefund: () => _openRefund(context, ref),
               onRollback: () => _openRollback(context, ref),
+              onReturnForCorrection: () => _openReturnForCorrection(context, ref),
             ),
     );
   }
@@ -215,7 +229,7 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
             if (detail.status == 'pending_approval') ...[
               CbSurfaceCard(
                 child: Text(
-                  'A manager will approve this sale. You collect payment after they approve.',
+                  'A manager will approve this sale. Stock, books, and the receipt update after they approve.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
@@ -485,6 +499,80 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
               : applied
               ? 'Sale rolled back.'
               : 'Could not roll back this sale.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openReturnForCorrection(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    var reason = '';
+    final posted =
+        ref.read(saleDetailProvider(widget.saleId)).detail?.status ==
+        'completed';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Return sale for correction'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(SaleActionHelp.returnForCorrection.body),
+                const SizedBox(height: 8),
+                Text(
+                  posted
+                      ? 'Stock, journal, and accounting will be reversed first.'
+                      : SaleActionHelp.returnForCorrection.contrast,
+                  style: const TextStyle(color: AppColors.warning),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  key: const Key('return_correction_reason'),
+                  onChanged: (value) => reason = value,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Reason (required)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              key: const Key('return_correction_confirm'),
+              onPressed: () {
+                if (reason.trim().isEmpty) return;
+                Navigator.pop(context, true);
+              },
+              child: const Text('Return for correction'),
+            ),
+          ],
+        );
+      },
+    );
+    if (ok != true || !context.mounted) {
+      return;
+    }
+    final applied = await ref
+        .read(saleDetailProvider(widget.saleId).notifier)
+        .returnForCorrection(reason: reason);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          applied
+              ? 'Sale returned to the salesperson for correction.'
+              : 'Could not return this sale.',
         ),
       ),
     );
@@ -897,20 +985,24 @@ class _SaleActions extends StatelessWidget {
     required this.exporting,
     required this.showRefund,
     required this.showRollback,
+    required this.showReturnForCorrection,
     required this.receiptReady,
     required this.onPrint,
     required this.onShare,
     required this.onRefund,
     required this.onRollback,
+    required this.onReturnForCorrection,
   });
   final bool exporting;
   final bool showRefund;
   final bool showRollback;
+  final bool showReturnForCorrection;
   final bool receiptReady;
   final VoidCallback onPrint;
   final VoidCallback onShare;
   final VoidCallback onRefund;
   final VoidCallback onRollback;
+  final VoidCallback onReturnForCorrection;
 
   @override
   Widget build(BuildContext context) {
@@ -1012,6 +1104,30 @@ class _SaleActions extends StatelessWidget {
                         ),
                       ),
                       SaleActionHelpIcon(help: SaleActionHelp.rollback),
+                    ],
+                  ),
+                ),
+              ],
+              if (showReturnForCorrection) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          key: const Key('sale_return_correction'),
+                          onPressed: onReturnForCorrection,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.destructive,
+                          ),
+                          icon: const Icon(Icons.assignment_return_outlined),
+                          label: const Text('Return for correction'),
+                        ),
+                      ),
+                      SaleActionHelpIcon(
+                        help: SaleActionHelp.returnForCorrection,
+                      ),
                     ],
                   ),
                 ),

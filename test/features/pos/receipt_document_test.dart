@@ -479,8 +479,12 @@ void main() {
     expect(params.files, isNotNull);
     expect(params.files!.single.mimeType, 'image/png');
     expect(params.files!.single.name, 'receipt-SALE-7.png');
-    expect(params.text, contains('TEST DUKA'));
-    expect(params.text, contains('SALE-7'));
+    expect(
+      params.text,
+      'Thank you for doing business with us. Here is your receipt.',
+    );
+    expect(params.text, isNot(contains('TEST DUKA')));
+    expect(params.text, isNot(contains('SALE-7')));
     expect(params.subject, 'Receipt SALE-7');
   });
 

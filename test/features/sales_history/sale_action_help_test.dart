@@ -8,5 +8,6 @@ void main() {
     expect(SaleActionHelp.refund.contrast, contains('Roll back'));
     expect(SaleActionHelp.rollback.body, contains('should never have been recorded'));
     expect(SaleActionHelp.rollback.contrast, contains('Void / refund'));
+    expect(SaleActionHelp.returnForCorrection.body, contains('reversed'));
   });
 }

@@ -201,7 +201,7 @@ void main() {
             'status': 'pending_approval',
             'total': '150.00',
             'message':
-                'A manager will approve this sale. You collect payment after they approve.',
+                'A manager will approve this sale. Stock, books, and the receipt update after they approve.',
           }),
           201,
         );
@@ -223,9 +223,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_pay')));
     await tester.pumpAndSettle();
+    expect(find.text('Checkout & Tender'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('pos_confirm_pay')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pos_confirm_pay')));
+    await tester.pumpAndSettle();
     expect(find.text('Send this sale for approval?'), findsOneWidget);
-    expect(find.text('Checkout & Tender'), findsNothing);
-    await tester.tap(find.byKey(const Key('pos_send_approval_confirm')));
+    await tester.tap(find.byKey(const Key('pos_close_sale_confirm')));
     await tester.pumpAndSettle();
     expect(sent, isTrue);
   });

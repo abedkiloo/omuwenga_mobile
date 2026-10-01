@@ -140,11 +140,11 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      subtitle: task.description.isEmpty
+                      subtitle: _taskSubtitle(task).isEmpty
                           ? null
                           : Text(
-                              task.description,
-                              maxLines: 3,
+                              _taskSubtitle(task),
+                              maxLines: 4,
                               overflow: TextOverflow.ellipsis,
                             ),
                       trailing: FilledButton(
@@ -169,11 +169,11 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      subtitle: task.description.isEmpty
+                      subtitle: _taskSubtitle(task).isEmpty
                           ? null
                           : Text(
-                              task.description,
-                              maxLines: 3,
+                              _taskSubtitle(task),
+                              maxLines: 4,
                               overflow: TextOverflow.ellipsis,
                             ),
                       onChanged: (_) => ref
@@ -209,8 +209,19 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
 
 String _noteMeta(DailyNote note) {
   final audience = noteAudienceLabel(note);
-  if (audience.isEmpty) return note.kindLabel;
-  return '${note.kindLabel} · $audience';
+  final carry = carriedOverLabel(note.daysCarriedOver);
+  final parts = <String>[
+    if (audience.isEmpty) note.kindLabel else '${note.kindLabel} · $audience',
+    if (carry.isNotEmpty) carry,
+  ];
+  return parts.join(' · ');
+}
+
+String _taskSubtitle(DailyTaskItem task) {
+  final carry = carriedOverLabel(task.daysCarriedOver);
+  if (task.description.isEmpty) return carry;
+  if (carry.isEmpty) return task.description;
+  return '${task.description}\n$carry';
 }
 
 class _NoteBoardColumn extends ConsumerWidget {
@@ -336,6 +347,18 @@ class _NoteBoardColumn extends ConsumerWidget {
                                   spacing: 6,
                                   runSpacing: 4,
                                   children: [
+                                    if (carriedOverLabel(note.daysCarriedOver)
+                                        .isNotEmpty)
+                                      Chip(
+                                        label: Text(
+                                          carriedOverLabel(
+                                            note.daysCarriedOver,
+                                          ),
+                                        ),
+                                        visualDensity: VisualDensity.compact,
+                                        materialTapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
+                                      ),
                                     for (final column in kNoteBoardColumns)
                                       if (column.id != columnId)
                                         ActionChip(

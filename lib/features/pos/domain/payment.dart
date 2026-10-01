@@ -191,7 +191,6 @@ String? validateCheckout({
   if (settings.requireCustomer && cart.customerId == null) {
     return 'Customer is required.';
   }
-  if (deferPayment) return null;
   if (!settings.enabledPaymentMethods.contains(draft.method)) {
     return 'Payment method is not enabled.';
   }

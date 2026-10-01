@@ -135,3 +135,12 @@ bool sessionCanViewDeliveryHistory({
   if (profile.role == 'super_admin' || profile.role == 'admin') return true;
   return false;
 }
+
+bool sessionCanAdminReturnSale({
+  required UserProfileSnapshot profile,
+  bool isSuperuser = false,
+}) {
+  if (isSuperuser || profile.isSuperAdmin || profile.isAdmin) return true;
+  final role = profile.role;
+  return role == 'admin' || role == 'super_admin';
+}

@@ -140,6 +140,27 @@ void main() {
       expect(canToggleDailyNote(sticky, 9), isTrue);
       expect(canToggleDailyNote(sticky, 99), isFalse);
       expect(canToggleDailyNote(sticky, 99, viewAll: true), isTrue);
+      expect(parseDaysCarriedOver(3), 3);
+      expect(parseDaysCarriedOver('2'), 2);
+      expect(parseDaysCarriedOver(0), 0);
+      expect(parseDaysCarriedOver(-4), 0);
+      expect(carriedOverLabel(0), '');
+      expect(carriedOverLabel(1), 'Carried over 1 day');
+      expect(carriedOverLabel(4), 'Carried over 4 days');
+      expect(
+        DailyNote.fromJson({
+          ..._noteJson(),
+          'days_carried_over': 2,
+        }).daysCarriedOver,
+        2,
+      );
+      expect(
+        DailyTaskItem.fromJson({
+          ..._taskJson(),
+          'days_carried_over': 1,
+        }).daysCarriedOver,
+        1,
+      );
       final returned = DailyNote.fromJson({
         ..._noteJson(),
         'title': 'Approval rejected: sale completion',

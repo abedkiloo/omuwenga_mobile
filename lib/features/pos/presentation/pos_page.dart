@@ -76,20 +76,21 @@ class _PosPageState extends ConsumerState<PosPage> {
           return;
         }
         final comment = (detail.rejectionReason ?? '').trim();
+        final lines = [
+          for (final line in detail.items)
+            if ((line.productId ?? 0) > 0)
+              CartLine(
+                productId: line.productId!,
+                name: line.productName,
+                sku: line.sku,
+                unitPrice: line.unitPrice,
+                quantity: line.quantity < 1 ? 1 : line.quantity,
+                variantLabel: line.variantName,
+              ),
+        ];
         ref.read(cartControllerProvider.notifier).loadReturnedSale(
           holdingId: detail.id,
-          lines: [
-            for (final line in detail.items)
-              if ((line.productId ?? 0) > 0)
-                CartLine(
-                  productId: line.productId!,
-                  name: line.productName,
-                  sku: line.sku,
-                  unitPrice: line.unitPrice,
-                  quantity: line.quantity,
-                  variantLabel: line.variantName,
-                ),
-          ],
+          lines: lines,
           customerId: detail.customerId,
           customerName: detail.customerName,
           taxAmount: detail.taxAmount,
@@ -98,6 +99,28 @@ class _PosPageState extends ConsumerState<PosPage> {
               ? 'Update this sale, then send it back for approval.'
               : comment,
         );
+        final method =
+            PosPaymentMethodX.tryParse(detail.paymentMethod ?? '') ??
+            PosPaymentMethod.cash;
+        final paid = detail.amountPaid < 0 ? 0.0 : detail.amountPaid;
+        ref.read(checkoutControllerProvider.notifier).setDraft(
+          CheckoutDraft(
+            method: method,
+            amountPaid: paid,
+            paymentReference: detail.paymentReference ?? '',
+            paymentOnAccount:
+                paid + 1e-9 < detail.total && detail.customerId != null,
+          ),
+        );
+        if (detail.items.isNotEmpty && lines.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'This sale opened, but line products could not be loaded. Add the items again.',
+              ),
+            ),
+          );
+        }
       },
       failure: (error, _) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -264,41 +287,21 @@ class _PosPageState extends ConsumerState<PosPage> {
         .maybeWhen(data: (s) => s, orElse: () => const PosSettings());
     if (cart.isEmpty) return;
 
-    final session = ref.read(authControllerProvider).session;
-    final sendForApproval =
-        session != null && !session.permissions.canApproveSales;
-    if (sendForApproval) {
-      final confirmed = await showCommitConfirm(
-        context: context,
-        title: 'Send this sale for approval?',
-        description:
-            'Confirm the customer and products. A manager will approve this sale, then you collect payment.',
-        rows: posCloseSaleRows(
-          cart: cart,
-          kind: CheckoutKind.payLater,
-          paid: 0,
-        ),
-        confirmLabel: 'Send for approval',
-        cancelLabel: 'Back to sale',
-        confirmKey: const Key('pos_send_approval_confirm'),
-      );
-      if (confirmed != true || !mounted) return;
-      ref
-          .read(checkoutControllerProvider.notifier)
-          .setDraft(
-            const CheckoutDraft(method: PosPaymentMethod.cash, amountPaid: 0),
-          );
-      await ref
-          .read(checkoutControllerProvider.notifier)
-          .submit(deferPayment: true);
-      return;
-    }
-
     final methods = settings.enabledPaymentMethods;
-    final method = methods.isEmpty ? PosPaymentMethod.cash : methods.first;
-    ref
-        .read(checkoutControllerProvider.notifier)
-        .setDraft(CheckoutDraft(method: method, amountPaid: cart.total));
+    final fallback = methods.isEmpty ? PosPaymentMethod.cash : methods.first;
+    final existing = ref.read(checkoutControllerProvider).draft;
+    final keepReturnedTender = cart.holdingId != null;
+    final method = keepReturnedTender && methods.contains(existing.method)
+        ? existing.method
+        : fallback;
+    ref.read(checkoutControllerProvider.notifier).setDraft(
+      CheckoutDraft(
+        method: method,
+        amountPaid: keepReturnedTender ? existing.amountPaid : cart.total,
+        paymentReference: keepReturnedTender ? existing.paymentReference : '',
+        paymentOnAccount: keepReturnedTender && existing.paymentOnAccount,
+      ),
+    );
 
     await showCbBoundedSheet<void>(
       context: context,
@@ -316,7 +319,7 @@ class _PosPageState extends ConsumerState<PosPage> {
           title: const Text('Waiting for manager approval'),
           content: Text(
             receipt?.message ??
-                'A manager will approve this sale. You collect payment after they approve.',
+                'A manager will approve this sale. Stock, books, and the receipt update after they approve.',
           ),
           actions: [
             TextButton(
@@ -1323,10 +1326,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
   @override
   void initState() {
     super.initState();
-    final cart = ref.read(cartControllerProvider);
     final draft = ref.read(checkoutControllerProvider).draft;
-    final initial = draft.amountPaid > 0 ? draft.amountPaid : cart.total;
-    _amount = TextEditingController(text: initial.toStringAsFixed(2));
+    _amount = TextEditingController(text: draft.amountPaid.toStringAsFixed(2));
     _reference = TextEditingController(text: draft.paymentReference);
     _phone = TextEditingController();
   }
@@ -1370,19 +1371,26 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     required PosCart cart,
     required CheckoutKind kind,
     required double paid,
+    required bool sendForApproval,
   }) {
     final balance = accountBalanceDue(cart.total, paid);
-    final title = switch (kind) {
-      CheckoutKind.payLater => 'Record full amount as pay later?',
-      CheckoutKind.partial => 'Record balance as debt?',
-      CheckoutKind.full => 'Confirm and close sale?',
-    };
-    final confirm = switch (kind) {
-      CheckoutKind.payLater => 'Record sale — pay later',
-      CheckoutKind.partial => 'Record sale & debt',
-      CheckoutKind.full => 'Confirm & close sale',
-    };
-    final body = switch (kind) {
+    final title = sendForApproval
+        ? 'Send this sale for approval?'
+        : switch (kind) {
+            CheckoutKind.payLater => 'Record full amount as pay later?',
+            CheckoutKind.partial => 'Record balance as debt?',
+            CheckoutKind.full => 'Confirm and close sale?',
+          };
+    final confirm = sendForApproval
+        ? 'Send for approval'
+        : switch (kind) {
+            CheckoutKind.payLater => 'Record sale — pay later',
+            CheckoutKind.partial => 'Record sale & debt',
+            CheckoutKind.full => 'Confirm & close sale',
+          };
+    final body = sendForApproval
+        ? 'Record payment and any remaining debt. A manager will approve before stock, books, and the receipt go live.'
+        : switch (kind) {
       CheckoutKind.payLater =>
         'No payment is collected now. The full ${_kes(cart.total)} will be added to ${cart.customerName ?? 'the customer'}\'s account.',
       CheckoutKind.partial =>
@@ -1411,6 +1419,9 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
         .watch(posSettingsProvider)
         .maybeWhen(data: (s) => s, orElse: () => const PosSettings());
     final draft = checkout.draft;
+    final session = ref.watch(authControllerProvider).session;
+    final sendForApproval =
+        session != null && !session.permissions.canApproveSales;
     final valid = canSubmitCheckout(
       cart: cart,
       settings: settings,
@@ -1450,6 +1461,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     String confirmLabel;
     if (checkout.phase == CheckoutPhase.submitting) {
       confirmLabel = 'Processing…';
+    } else if (sendForApproval) {
+      confirmLabel = 'Send for approval · ${_kes(cart.total)}';
     } else if (kind == CheckoutKind.payLater) {
       confirmLabel = 'Pay later — ${_kes(cart.total)}';
     } else if (kind == CheckoutKind.partial) {
@@ -1799,6 +1812,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                         cart: cart,
                         kind: kind,
                         paid: amountPaid,
+                        sendForApproval: sendForApproval,
                       );
                       if (!context.mounted) return;
                       if (closeSale == false) {

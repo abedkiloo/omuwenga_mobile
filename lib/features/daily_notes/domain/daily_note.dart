@@ -17,6 +17,7 @@ class DailyNote {
     this.assignedToName = '',
     this.assignedRoleId,
     this.assignedRoleName = '',
+    this.daysCarriedOver = 0,
   });
 
   final int id;
@@ -34,6 +35,7 @@ class DailyNote {
   final String assignedToName;
   final int? assignedRoleId;
   final String assignedRoleName;
+  final int daysCarriedOver;
 
   bool get isGeneral => !isSticky;
   bool get requiresSaleFix =>
@@ -63,6 +65,7 @@ class DailyNote {
               .toString(),
       assignedRoleId: (json['assigned_role'] as num?)?.toInt(),
       assignedRoleName: (json['assigned_role_name'] ?? '').toString(),
+      daysCarriedOver: parseDaysCarriedOver(json['days_carried_over']),
     );
   }
 }
@@ -77,6 +80,7 @@ class DailyTaskItem {
     this.authorId,
     this.assignedToId,
     this.assignedToName = '',
+    this.daysCarriedOver = 0,
   });
 
   final int id;
@@ -87,6 +91,7 @@ class DailyTaskItem {
   final int? authorId;
   final int? assignedToId;
   final String assignedToName;
+  final int daysCarriedOver;
 
   bool get requiresSaleFix =>
       noticeRequiresSaleFix(content: description, title: title);
@@ -103,6 +108,7 @@ class DailyTaskItem {
       assignedToName:
           (json['assigned_to_name'] ?? json['assigned_to_username'] ?? '')
               .toString(),
+      daysCarriedOver: parseDaysCarriedOver(json['days_carried_over']),
     );
   }
 }
@@ -175,6 +181,22 @@ String noteAudienceLabel(DailyNote note) {
   if (role.isNotEmpty) return role;
   if (person.isNotEmpty) return person;
   return '';
+}
+
+int parseDaysCarriedOver(dynamic value) {
+  if (value is num) {
+    final days = value.toInt();
+    return days > 0 ? days : 0;
+  }
+  final parsed = int.tryParse(value?.toString() ?? '');
+  if (parsed == null || parsed <= 0) return 0;
+  return parsed;
+}
+
+String carriedOverLabel(int days) {
+  if (days <= 0) return '';
+  if (days == 1) return 'Carried over 1 day';
+  return 'Carried over $days days';
 }
 
 List<DailyNote> unresolvedStickyNotes(Iterable<DailyNote> notes) {

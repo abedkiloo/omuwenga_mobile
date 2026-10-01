@@ -11,7 +11,9 @@ import 'package:share_plus/share_plus.dart';
 
 import '../data/pos_api.dart';
 import 'receipt_document.dart';
-import 'receipt_layout.dart';
+
+const kReceiptShareCaption =
+    'Thank you for doing business with us. Here is your receipt.';
 
 const _pngMagic = [0x89, 0x50, 0x4E, 0x47];
 
@@ -30,7 +32,7 @@ ShareParams receiptImageShareParams({
 }) {
   return ShareParams(
     subject: 'Receipt ${receipt.saleNumber}',
-    text: buildThermalReceiptText(receipt, store: store),
+    text: kReceiptShareCaption,
     files: [
       XFile(filePath, mimeType: 'image/png', name: receiptPngFileName(receipt)),
     ],

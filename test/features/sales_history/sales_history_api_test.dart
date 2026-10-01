@@ -120,6 +120,29 @@ void main() {
     expect(n, 3);
   });
 
+  test('rejectComplete posts a return reason', () async {
+    final api = apiWith(
+      MockClient((request) async {
+        expect(request.url.path, contains('/sales/4/reject-complete/'));
+        expect(request.headers['Idempotency-Key'], 'k-return');
+        final body = jsonDecode(request.body) as Map;
+        expect(body['rejection_reason'], 'Wrong customer');
+        return http.Response(
+          jsonEncode({'id': 4, 'status': 'holding'}),
+          200,
+        );
+      }),
+    );
+    expect(
+      (await api.rejectComplete(
+        saleId: 4,
+        reason: 'Wrong customer',
+        idempotencyKey: 'k-return',
+      )).isSuccess,
+      isTrue,
+    );
+  });
+
   test('collect posts amount after approval', () async {
     final api = apiWith(
       MockClient((request) async {

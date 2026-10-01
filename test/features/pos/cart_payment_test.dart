@@ -218,7 +218,7 @@ void main() {
       );
     });
 
-    test('deferPayment skips collecting money', () {
+    test('queued sales still require a recorded payment', () {
       expect(
         validateCheckout(
           cart: const PosCart().addProduct(product),
@@ -229,7 +229,7 @@ void main() {
           ),
           deferPayment: true,
         ),
-        isNull,
+        isNotNull,
       );
     });
   });

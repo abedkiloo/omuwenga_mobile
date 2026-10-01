@@ -29,4 +29,13 @@ class SaleActionHelp {
     contrast:
         'Not for a customer return. Void / refund is for goods coming back.',
   );
+
+  static const returnForCorrection = SaleActionHelp(
+    shortLabel: 'Return for correction',
+    title: 'Return sale for correction',
+    body:
+        'Admin only. Send an approved sale back to the salesperson to edit. If it already hit stock and books, those effects are reversed first. After they edit, the sale goes through approval again.',
+    contrast:
+        'Not a customer refund. Use Void / refund when goods come back.',
+  );
 }

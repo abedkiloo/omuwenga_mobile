@@ -7,6 +7,7 @@ import '../../../design_system/buttons/cb_primary_button.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/daily_notes_controllers.dart';
 import '../domain/approval_return.dart';
+import '../domain/daily_note.dart';
 
 class StickyNotesGate extends ConsumerStatefulWidget {
   const StickyNotesGate({super.key});
@@ -100,7 +101,15 @@ class _StickyNotesGateState extends ConsumerState<StickyNotesGate> {
                                       ? note.kindLabel
                                       : note.title,
                                 ),
-                                subtitle: Text(note.content),
+                                subtitle: Text(
+                                  [
+                                    note.content,
+                                    if (carriedOverLabel(
+                                      note.daysCarriedOver,
+                                    ).isNotEmpty)
+                                      carriedOverLabel(note.daysCarriedOver),
+                                  ].join('\n'),
+                                ),
                                 trailing: FilledButton(
                                   onPressed: () {
                                     final path = rejectedSaleFixPath(
@@ -125,7 +134,15 @@ class _StickyNotesGateState extends ConsumerState<StickyNotesGate> {
                                       ? (note.isSticky ? 'Sticky note' : 'Note')
                                       : note.title,
                                 ),
-                                subtitle: Text(note.content),
+                                subtitle: Text(
+                                  [
+                                    note.content,
+                                    if (carriedOverLabel(
+                                      note.daysCarriedOver,
+                                    ).isNotEmpty)
+                                      carriedOverLabel(note.daysCarriedOver),
+                                  ].join('\n'),
+                                ),
                                 onChanged: state.acting
                                     ? null
                                     : (_) => ref

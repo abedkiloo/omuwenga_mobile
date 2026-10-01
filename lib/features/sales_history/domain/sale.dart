@@ -111,7 +111,9 @@ class SaleLine {
 
   factory SaleLine.fromJson(Map<String, dynamic> json) {
     return SaleLine(
-      productId: _asInt(json['product_id']) ?? _asInt(json['product']),
+      productId: _asInt(json['product_id']) ??
+          _asInt(json['product']) ??
+          _asInt((json['product'] is Map) ? json['product']['id'] : null),
       productName: (json['product_name'] ?? json['name'] ?? 'Item').toString(),
       quantity: _asDouble(json['quantity']) ?? 0,
       unitPrice: _asDouble(json['unit_price']) ?? 0,

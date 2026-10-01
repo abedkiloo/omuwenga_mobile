@@ -191,15 +191,6 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       return true;
     }
 
-    if (deferPayment) {
-      state = state.copyWith(
-        draft: state.draft.copyWith(
-          amountPaid: 0,
-          method: PosPaymentMethod.cash,
-        ),
-      );
-    }
-
     final result = await _api.createSale(
       cart: cart,
       draft: state.draft,

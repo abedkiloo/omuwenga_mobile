@@ -149,6 +149,25 @@ class SaleDetailController extends StateNotifier<SaleDetailState> {
     return true;
   }
 
+  Future<bool> returnForCorrection({required String reason}) async {
+    final detail = state.detail;
+    if (detail == null) return false;
+    state = state.copyWith(refunding: true, clearError: true);
+    final result = await _api.rejectComplete(
+      saleId: detail.id,
+      reason: reason,
+      idempotencyKey: _ids.next(),
+    );
+    if (result.isFailure) {
+      final f = result as Failure;
+      state = state.copyWith(refunding: false, error: f.error.toString());
+      return false;
+    }
+    await load(detail.id);
+    state = state.copyWith(refunding: false);
+    return true;
+  }
+
   Future<bool> collect({required double amountPaid}) async {
     final detail = state.detail;
     if (detail == null) return false;
