@@ -48,7 +48,9 @@ class PermissionSet {
   /// Same as FE: `module.action` name or module+action pair.
   bool has(String module, String action) => _keys.contains('$module.$action');
 
-  bool get canViewDailySales => has('sales', 'daily_sales');
+  /// Anyone who can view sales opens a day (own sales); admins see the store.
+  bool get canViewDailySales =>
+      has('sales', 'view') || has('sales', 'daily_sales');
   bool get canAccessPos => has('pos', 'view') || has('pos', 'create');
   bool get canViewCustomers => has('customers', 'view');
   bool get canCreateCustomers => has('customers', 'create');

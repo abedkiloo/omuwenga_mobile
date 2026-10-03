@@ -52,7 +52,6 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
     final session = ref.watch(authControllerProvider).session;
     final detail = state.detail;
     final awaitingApproval = detail?.status == 'pending_approval';
-    final awaitingPayment = detail?.status == 'awaiting_payment';
     final showRefund =
         canRefundPerm &&
         detail != null &&
@@ -72,7 +71,8 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
           isSuperuser: session.user.isSuperuser,
         ) &&
         detail != null &&
-        (awaitingPayment || (detail.status == 'completed' && refundNone));
+        detail.status == 'completed' &&
+        refundNone;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -91,13 +91,11 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
               showReturnForCorrection: showReturnForCorrection,
               receiptReady: detail.status == 'completed',
               onPrint: () {
-                if (awaitingApproval || awaitingPayment) {
+                if (awaitingApproval) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
+                    const SnackBar(
                       content: Text(
-                        awaitingPayment
-                            ? 'Collect payment first, then you can issue the receipt.'
-                            : 'A manager will approve this sale. Stock, books, and the receipt update after they approve.',
+                        'A manager will approve this sale. Stock, books, and the receipt update after they approve.',
                       ),
                     ),
                   );
@@ -190,47 +188,6 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
         ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
           children: [
-            if (detail.status == 'awaiting_payment') ...[
-              CbSurfaceCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'This sale is approved. Collect payment to complete it.',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 10),
-                    FilledButton(
-                      key: const Key('sale_collect_payment'),
-                      onPressed: state.refunding
-                          ? null
-                          : () async {
-                              final ok = await ref
-                                  .read(saleDetailProvider(detail.id).notifier)
-                                  .collect(amountPaid: detail.total);
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    ok
-                                        ? 'Payment collected. Sale is complete.'
-                                        : (ref.read(saleDetailProvider(detail.id)).error ??
-                                            'Could not collect payment'),
-                                  ),
-                                ),
-                              );
-                            },
-                      child: Text(
-                        state.refunding
-                            ? 'Collecting…'
-                            : 'Collect payment',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-            ],
             if (detail.status == 'pending_approval') ...[
               CbSurfaceCard(
                 child: Text(

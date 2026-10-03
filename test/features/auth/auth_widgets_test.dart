@@ -161,7 +161,8 @@ void main() {
     await pumpManager(managerSession(dailySales: false));
     expect(find.text('Open debtors'), findsNothing);
     expect(find.text('Start New Sale'), findsOneWidget);
-    expect(find.byKey(const Key('home_daily_sales')), findsNothing);
+    // sales.view alone opens Daily sales (own sales only).
+    expect(find.byKey(const Key('home_daily_sales')), findsOneWidget);
 
     await pumpManager(managerSession(dailySales: true));
     expect(
@@ -172,7 +173,7 @@ void main() {
     expect(find.byKey(const Key('home_daily_sales')), findsOneWidget);
   });
 
-  testWidgets('More page hides daily sales without permission and logs out', (
+  testWidgets('More page shows own daily sales for cashier and logs out', (
     tester,
   ) async {
     final tokens = InMemoryTokenStore();
@@ -184,7 +185,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('more_daily_sales')), findsNothing);
+    expect(find.byKey(const Key('more_daily_sales')), findsOneWidget);
     expect(find.text('Sign out'), findsOneWidget);
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();

@@ -167,27 +167,6 @@ void main() {
     );
   });
 
-  test('collect posts amount after approval', () async {
-    final api = apiWith(
-      MockClient((request) async {
-        expect(request.url.path, contains('/sales/1/collect/'));
-        expect(request.headers['Idempotency-Key'], 'k-collect');
-        final body = jsonDecode(request.body) as Map;
-        expect(body['payment_method'], 'cash');
-        expect(body['amount_paid'], '100.00');
-        return http.Response(jsonEncode({'id': 1, 'status': 'completed'}), 200);
-      }),
-    );
-    expect(
-      (await api.collect(
-        saleId: 1,
-        amountPaid: 100,
-        idempotencyKey: 'k-collect',
-      )).isSuccess,
-      isTrue,
-    );
-  });
-
   test('api errors', () async {
     final api = apiWith(
       MockClient(

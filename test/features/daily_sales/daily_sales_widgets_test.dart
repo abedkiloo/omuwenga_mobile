@@ -27,7 +27,11 @@ import 'package:http/testing.dart';
 
 import '../auth/auth_fixtures.dart';
 
-AuthSession _manager({required bool dailySales, bool refund = false}) {
+AuthSession _manager({
+  required bool dailySales,
+  bool refund = false,
+  bool salesView = true,
+}) {
   return AuthSession(
     user: const AuthUser(
       id: 2,
@@ -42,7 +46,7 @@ AuthSession _manager({required bool dailySales, bool refund = false}) {
       isManager: true,
     ),
     permissions: PermissionSet([
-      const PermissionGrant(module: 'sales', action: 'view'),
+      if (salesView) const PermissionGrant(module: 'sales', action: 'view'),
       const PermissionGrant(module: 'customers', action: 'view'),
       if (refund) const PermissionGrant(module: 'sales', action: 'refund'),
       if (dailySales)
@@ -130,7 +134,24 @@ Map<String, dynamic> _report({required String date, String status = 'debt'}) {
 }
 
 void main() {
-  testWidgets('daily sales hidden on More without permission', (tester) async {
+  testWidgets('daily sales hidden on More without sales access', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: seedOverrides(
+          _manager(dailySales: false, salesView: false),
+        ),
+        child: const MaterialApp(home: MorePage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('more_daily_sales')), findsNothing);
+  });
+
+  testWidgets('daily sales shown with sales.view only (own sales)', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: seedOverrides(_manager(dailySales: false)),
@@ -138,7 +159,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('more_daily_sales')), findsNothing);
+    expect(find.byKey(const Key('more_daily_sales')), findsOneWidget);
     expect(find.byKey(const Key('more_sales_history')), findsOneWidget);
   });
 
@@ -153,11 +174,11 @@ void main() {
     expect(find.byKey(const Key('more_daily_sales')), findsOneWidget);
   });
 
-  testWidgets('router redirects away from daily sales without permission', (
+  testWidgets('router redirects away from daily sales without sales access', (
     tester,
   ) async {
     final container = ProviderContainer(
-      overrides: seedOverrides(_manager(dailySales: false)),
+      overrides: seedOverrides(_manager(dailySales: false, salesView: false)),
     );
     addTearDown(container.dispose);
     final router = createAppRouter(

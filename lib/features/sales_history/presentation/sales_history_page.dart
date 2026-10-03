@@ -188,26 +188,6 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
                           },
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: CbFilterChip(
-                          key: const Key('sales_filter_collect'),
-                          label: 'Collect payment',
-                          selected: filters.status == 'awaiting_payment',
-                          compact: true,
-                          onTap: () {
-                            final selected =
-                                filters.status == 'awaiting_payment';
-                            ref.read(salesHistoryProvider.notifier).load(
-                              filters: selected
-                                  ? filters.copyWith(clearStatus: true)
-                                  : filters.copyWith(
-                                      status: 'awaiting_payment',
-                                    ),
-                            );
-                          },
-                        ),
-                      ),
                       for (final method in const ['', 'mpesa', 'cash'])
                         Padding(
                           padding: const EdgeInsets.only(right: 8),

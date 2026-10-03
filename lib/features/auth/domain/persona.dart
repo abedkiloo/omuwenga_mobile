@@ -92,7 +92,8 @@ AppPersona resolvePersona({
     return AppPersona.cashier;
   }
   // Permission heuristic for custom roles.
-  if (permissions.canViewDailySales || permissions.has('reports', 'view')) {
+  if (permissions.has('sales', 'daily_sales') ||
+      permissions.has('reports', 'view')) {
     return AppPersona.manager;
   }
   if (permissions.canDispatch) {

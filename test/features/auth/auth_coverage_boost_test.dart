@@ -487,8 +487,8 @@ void main() {
 
     router.go(AppRoutes.dailySales);
     await tester.pumpAndSettle();
-    // Cashier lacks sales.daily_sales — router redirects home.
-    expect(router.state.uri.toString(), AppRoutes.home);
+    // Cashier with sales.view opens their own daily sales.
+    expect(router.state.uri.toString(), AppRoutes.dailySales);
   });
 
   testWidgets('createAppRouter health route', (tester) async {
