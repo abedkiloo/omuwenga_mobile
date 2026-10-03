@@ -47,7 +47,7 @@ class HomeDailyState {
   }
 }
 
-/// Store-wide today totals: admin / superuser, or roles with sales.view_all.
+/// Store-wide today totals: admin / manager / superuser, or roles with sales.view_all.
 bool homeShowsAllSales(AuthSession session) {
   if (session.user.isSuperuser || session.profile.isSuperAdmin) {
     return true;
@@ -66,10 +66,12 @@ bool homeShowsAllSales(AuthSession session) {
   final display = (session.profile.roleDisplay ?? '').trim();
   if (display == 'Super Admin' ||
       display == 'Admin' ||
-      display == 'Administrator') {
+      display == 'Administrator' ||
+      display == 'Manager') {
     return true;
   }
-  return false;
+  // Legacy manager only when no custom role name overrides it.
+  return role == 'manager' && display.isEmpty;
 }
 
 class HomeDailyController extends StateNotifier<HomeDailyState> {
