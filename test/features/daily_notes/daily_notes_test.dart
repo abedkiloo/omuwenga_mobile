@@ -175,6 +175,20 @@ void main() {
         rejectedSaleFixPath(content: returned.content, title: returned.title),
         '/pos?sale=99',
       );
+      final pastSale = DailyNote.fromJson({
+        ..._noteJson(),
+        'title': 'Approval rejected: past sale entry',
+        'content':
+            'Bea returned your past sale entry.\n---\nsource: pending_change\nid: 7\nref: reject/backfill/7/',
+      });
+      expect(pastSale.requiresSaleFix, isTrue);
+      expect(canToggleDailyNote(pastSale, 20), isFalse);
+      final expense = DailyNote.fromJson({
+        ..._noteJson(),
+        'title': 'Approval rejected: expense',
+        'content': 'Returned.\n---\nsource: expense\nid: 4\nref: reject/expense/4/',
+      });
+      expect(expense.requiresSaleFix, isFalse);
       expect(todayIsoDate(DateTime(2026, 9, 24)), '2026-09-24');
       expect(
         createNotePayload(

@@ -14,7 +14,7 @@ class ApprovalRejectionNotice {
 final _sourceRe = RegExp(r'^source:\s*(\S+)', multiLine: true);
 final _idRe = RegExp(r'^id:\s*(\d+)', multiLine: true);
 final _saleIdRe = RegExp(r'^sale_id:\s*(\d+)', multiLine: true);
-final _saleRefRe = RegExp(r'ref:\s*reject/sale/', caseSensitive: false);
+final _saleRefRe = RegExp(r'ref:\s*reject/(sale|backfill)/', caseSensitive: false);
 
 ApprovalRejectionNotice? parseApprovalRejectionNotice(String? text) {
   final raw = text ?? '';
