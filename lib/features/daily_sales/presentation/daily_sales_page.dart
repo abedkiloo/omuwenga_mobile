@@ -107,6 +107,15 @@ class DailySalesPage extends ConsumerWidget {
                         icon: const Icon(Icons.chevron_right),
                         color: AppColors.primary,
                       ),
+                      IconButton(
+                        key: const Key('daily_refresh'),
+                        tooltip: 'Refresh',
+                        onPressed: state.loading
+                            ? null
+                            : () => ref.read(dailySalesProvider.notifier).load(),
+                        icon: const Icon(Icons.refresh),
+                        color: AppColors.primary,
+                      ),
                     ],
                   ),
                 ),
@@ -196,67 +205,103 @@ class DailySalesPage extends ConsumerWidget {
   }
 
   Widget _body(BuildContext context, WidgetRef ref, DailySalesState state) {
+    Future<void> refresh() => ref.read(dailySalesProvider.notifier).load();
     if (state.loading && state.report == null) {
       return const LoadingState(label: 'Loading daily sales…');
     }
     if (state.error != null && state.report == null) {
       return ErrorState(
         message: state.error!,
-        onRetry: () => ref.read(dailySalesProvider.notifier).load(),
+        onRetry: refresh,
       );
     }
     if (state.showingCollections) {
-      return ListView(
-        padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-        children: [
-          DebtCollectionsPanel(
-            date: state.dateApi,
-            collections: state.report?.collections,
-            loading: state.loading,
-            showDateNav: false,
-            onOpenCustomer: (row) => context.push(
-              AppRoutes.customerDetail(row.customerId, tab: 'ledger'),
+      return RefreshIndicator(
+        onRefresh: refresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+          children: [
+            DebtCollectionsPanel(
+              date: state.dateApi,
+              collections: state.report?.collections,
+              loading: state.loading,
+              showDateNav: false,
+              onOpenCustomer: (row) => context.push(
+                AppRoutes.customerDetail(row.customerId, tab: 'ledger'),
+              ),
+              onRetry: refresh,
             ),
-            onRetry: () => ref.read(dailySalesProvider.notifier).load(),
-          ),
-        ],
+          ],
+        ),
       );
     }
     final orders = state.report?.orders ?? const [];
     if (orders.isEmpty) {
-      return EmptyState(
-        key: const Key('daily_empty'),
-        title: 'No orders',
-        message: 'Nothing for this day and filter.',
-        primaryLabel: 'Refresh',
-        onPrimary: () => ref.read(dailySalesProvider.notifier).load(),
+      return RefreshIndicator(
+        onRefresh: refresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.45,
+              child: EmptyState(
+                key: const Key('daily_empty'),
+                title: 'No orders',
+                message: 'Nothing for this day and filter.',
+                primaryLabel: 'Refresh',
+                onPrimary: refresh,
+              ),
+            ),
+          ],
+        ),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-      itemCount: orders.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, i) {
-        final order = orders[i];
-        return ListTile(
-          key: Key('daily_order_${order.id}'),
-          contentPadding: EdgeInsets.zero,
-          title: SaleNumberLabel(
-            saleNumber: order.saleNumber,
-            channel: order.clientChannel,
-          ),
-          subtitle: Text(
-            [
-              if (order.customerName != null && order.customerName!.isNotEmpty)
-                order.customerName,
-              order.lifecycle.label,
-            ].whereType<String>().join(' · '),
-          ),
-          trailing: Text(order.total.toStringAsFixed(2)),
-          onTap: () =>
-              context.push(dailyOrderRoute(order, date: state.dateApi)),
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: refresh,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+        itemCount: orders.length,
+        separatorBuilder: (_, _) => const Divider(height: 1),
+        itemBuilder: (context, i) {
+          final order = orders[i];
+          return ListTile(
+            key: Key('daily_order_${order.id}'),
+            contentPadding: EdgeInsets.zero,
+            title: Row(
+              children: [
+                Expanded(
+                  child: SaleNumberLabel(
+                    saleNumber: order.saleNumber,
+                    channel: order.clientChannel,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  order.isFieldSale ? 'Field' : 'Shop',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: order.isFieldSale
+                        ? AppColors.primary
+                        : AppColors.mutedForeground,
+                  ),
+                ),
+              ],
+            ),
+            subtitle: Text(
+              [
+                if (order.customerName != null && order.customerName!.isNotEmpty)
+                  order.customerName,
+                order.lifecycle.label,
+              ].whereType<String>().join(' · '),
+            ),
+            trailing: Text(order.total.toStringAsFixed(2)),
+            onTap: () =>
+                context.push(dailyOrderRoute(order, date: state.dateApi)),
+          );
+        },
+      ),
     );
   }
 }

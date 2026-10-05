@@ -35,6 +35,9 @@ class SaleSummary {
     this.cashierName,
     this.itemCount = 0,
     this.clientChannel,
+    this.entrySource,
+    this.isFieldSale = false,
+    this.saleOrigin = 'shop',
     this.needsSalespersonAction = false,
     this.rejectionReason,
   });
@@ -51,6 +54,9 @@ class SaleSummary {
   final String? cashierName;
   final int itemCount;
   final String? clientChannel;
+  final String? entrySource;
+  final bool isFieldSale;
+  final String saleOrigin;
   final bool needsSalespersonAction;
   final String? rejectionReason;
 
@@ -70,6 +76,11 @@ class SaleSummary {
   }
 
   factory SaleSummary.fromJson(Map<String, dynamic> json) {
+    final entrySource = json['entry_source']?.toString();
+    final origin = (json['sale_origin']?.toString() ??
+            (entrySource == 'field' ? 'field' : 'shop'))
+        .toLowerCase();
+    final field = _asBool(json['is_field_sale']) || origin == 'field';
     return SaleSummary(
       id: _asInt(json['id']) ?? 0,
       saleNumber: (json['sale_number'] ?? json['id'] ?? '').toString(),
@@ -84,6 +95,9 @@ class SaleSummary {
       cashierName: json['cashier_name']?.toString(),
       itemCount: (json['item_count'] as num?)?.toInt() ?? 0,
       clientChannel: json['client_channel']?.toString(),
+      entrySource: entrySource,
+      isFieldSale: field,
+      saleOrigin: field ? 'field' : 'shop',
       needsSalespersonAction: _asBool(json['needs_salesperson_action']),
       rejectionReason: json['rejection_reason']?.toString(),
     );
@@ -150,6 +164,8 @@ class SaleDetail {
     this.saleType,
     this.items = const [],
     this.clientChannel,
+    this.isFieldSale = false,
+    this.saleOrigin = 'shop',
     this.needsSalespersonAction = false,
     this.rejectionReason,
     this.canCorrectDate = false,
@@ -179,6 +195,8 @@ class SaleDetail {
   final String? saleType;
   final List<SaleLine> items;
   final String? clientChannel;
+  final bool isFieldSale;
+  final String saleOrigin;
   final bool needsSalespersonAction;
   final String? rejectionReason;
   final bool canCorrectDate;
@@ -203,6 +221,11 @@ class SaleDetail {
         }
       }
     }
+    final entrySource = json['entry_source']?.toString();
+    final origin = (json['sale_origin']?.toString() ??
+            (entrySource == 'field' ? 'field' : 'shop'))
+        .toLowerCase();
+    final field = _asBool(json['is_field_sale']) || origin == 'field';
     return SaleDetail(
       id: _asInt(json['id']) ?? 0,
       saleNumber: (json['sale_number'] ?? json['id'] ?? '').toString(),
@@ -229,6 +252,8 @@ class SaleDetail {
       saleType: json['sale_type']?.toString(),
       items: items,
       clientChannel: json['client_channel']?.toString(),
+      isFieldSale: field,
+      saleOrigin: field ? 'field' : 'shop',
       needsSalespersonAction: _asBool(json['needs_salesperson_action']),
       rejectionReason: json['rejection_reason']?.toString(),
       canCorrectDate: json['can_correct_date'] == true,

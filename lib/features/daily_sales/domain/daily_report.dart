@@ -64,6 +64,8 @@ class DailyOrder {
     this.cashierName,
     this.servedByName,
     this.clientChannel,
+    this.isFieldSale = false,
+    this.saleOrigin = 'shop',
     this.status,
     this.refundStatus,
   });
@@ -81,6 +83,8 @@ class DailyOrder {
   final String? cashierName;
   final String? servedByName;
   final String? clientChannel;
+  final bool isFieldSale;
+  final String saleOrigin;
   final String? status;
   final String? refundStatus;
 
@@ -104,6 +108,11 @@ class DailyOrder {
           total: _asDouble(json['total']) ?? 0,
           amountPaid: _asDouble(json['amount_paid']) ?? 0,
         );
+    final entrySource = json['entry_source']?.toString();
+    final origin = (json['sale_origin']?.toString() ??
+            (entrySource == 'field' ? 'field' : 'shop'))
+        .toLowerCase();
+    final field = json['is_field_sale'] == true || origin == 'field';
     return DailyOrder(
       id: (json['id'] as num).toInt(),
       saleNumber: (json['sale_number'] ?? '').toString(),
@@ -118,6 +127,8 @@ class DailyOrder {
       cashierName: json['cashier_name']?.toString(),
       servedByName: json['served_by_name']?.toString(),
       clientChannel: json['client_channel']?.toString(),
+      isFieldSale: field,
+      saleOrigin: field ? 'field' : 'shop',
       status: json['status']?.toString(),
       refundStatus: json['refund_status']?.toString(),
     );

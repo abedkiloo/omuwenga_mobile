@@ -145,6 +145,14 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
                 ),
                 const SizedBox(width: 8),
                 IconButton.filledTonal(
+                  key: const Key('sales_refresh'),
+                  tooltip: 'Refresh',
+                  onPressed: () =>
+                      ref.read(salesHistoryProvider.notifier).load(),
+                  icon: const Icon(Icons.refresh),
+                ),
+                const SizedBox(width: 4),
+                IconButton.filledTonal(
                   key: const Key('sales_scan'),
                   tooltip: 'Scan receipt',
                   onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
@@ -228,36 +236,52 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
   }
 
   Widget _body(SalesHistoryState state) {
+    Future<void> refresh() => ref.read(salesHistoryProvider.notifier).load();
     if (state.loading && state.items.isEmpty) {
       return const LoadingState(label: 'Loading sales…');
     }
     if (state.error != null && state.items.isEmpty) {
       return ErrorState(
         message: state.error!,
-        onRetry: () => ref.read(salesHistoryProvider.notifier).load(),
+        onRetry: refresh,
       );
     }
     if (state.items.isEmpty) {
-      return EmptyState(
-        key: const Key('sales_empty'),
-        title: 'No sales',
-        message: 'Try a different day or search.',
-        primaryLabel: 'Refresh',
-        onPrimary: () => ref.read(salesHistoryProvider.notifier).load(),
+      return RefreshIndicator(
+        onRefresh: refresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.45,
+              child: EmptyState(
+                key: const Key('sales_empty'),
+                title: 'No sales',
+                message: 'Try a different day or search.',
+                primaryLabel: 'Refresh',
+                onPrimary: refresh,
+              ),
+            ),
+          ],
+        ),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-      itemCount: state.items.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, i) {
-        final sale = state.items[i];
-        return _SaleHistoryCard(
-          key: Key('sale_row_${sale.id}'),
-          sale: sale,
-          onTap: () => context.push(AppRoutes.saleDetail(sale.id)),
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: refresh,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+        itemCount: state.items.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (context, i) {
+          final sale = state.items[i];
+          return _SaleHistoryCard(
+            key: Key('sale_row_${sale.id}'),
+            sale: sale,
+            onTap: () => context.push(AppRoutes.saleDetail(sale.id)),
+          );
+        },
+      ),
     );
   }
 }
@@ -602,12 +626,39 @@ class _SaleHistoryCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: SaleNumberLabel(
-                    saleNumber: '#${sale.saleNumber}',
-                    channel: sale.clientChannel,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.mutedForeground,
-                    ),
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    children: [
+                      SaleNumberLabel(
+                        saleNumber: '#${sale.saleNumber}',
+                        channel: sale.clientChannel,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: sale.isFieldSale
+                              ? AppColors.warning.withValues(alpha: 0.15)
+                              : AppColors.mutedForeground.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          sale.isFieldSale ? 'Field sale' : 'Shop sale',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: sale.isFieldSale
+                                ? AppColors.warning
+                                : AppColors.mutedForeground,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Text(
