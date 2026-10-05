@@ -335,6 +335,11 @@ void main() {
     expect(find.byKey(const Key('sale_refund')), findsOneWidget);
     expect(find.byKey(const Key('sale_print_receipt')), findsOneWidget);
     expect(find.byKey(const Key('sale_share_receipt')), findsOneWidget);
+    await tester.dragUntilVisible(
+      find.text('Financial Accounting'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
     expect(find.text('Financial Accounting'), findsOneWidget);
     await tester.drag(find.byType(ListView), const Offset(0, -500));
     await tester.pumpAndSettle();

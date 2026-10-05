@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/branding/brand_assets.dart';
 import '../../../core/theme/app_colors.dart';
 import '../data/pos_api.dart';
 import '../domain/cart.dart';
@@ -41,6 +42,10 @@ class ThermalReceiptView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (store.showLogo) ...[
+              Center(child: ReceiptLogo(url: store.logoUrl)),
+              const SizedBox(height: 4),
+            ],
             Text(
               store.storeName.toUpperCase(),
               textAlign: TextAlign.center,
@@ -221,6 +226,32 @@ class ThermalReceiptView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Uploaded store logo, or the packaged mark when none is set or it fails.
+class ReceiptLogo extends StatelessWidget {
+  const ReceiptLogo({super.key, this.url = '', this.height = 48});
+
+  final String url;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = Image.asset(
+      BrandAssets.logo,
+      key: const Key('receipt_logo_default'),
+      height: height,
+      fit: BoxFit.contain,
+    );
+    if (url.trim().isEmpty) return fallback;
+    return Image.network(
+      url,
+      key: const Key('receipt_logo_uploaded'),
+      height: height,
+      fit: BoxFit.contain,
+      errorBuilder: (_, _, _) => fallback,
     );
   }
 }

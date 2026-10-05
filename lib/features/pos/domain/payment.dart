@@ -50,6 +50,8 @@ class PosSettings {
     this.receiptHeader = '',
     this.receiptFooter = 'Thank you for your business!',
     this.showSku = false,
+    this.receiptLogoUrl = '',
+    this.showLogo = true,
   });
 
   final bool requireCustomer;
@@ -66,9 +68,14 @@ class PosSettings {
   final String receiptFooter;
   final bool showSku;
 
+  /// Absolute URL of the uploaded store logo; empty means use the packaged one.
+  final String receiptLogoUrl;
+  final bool showLogo;
+
   factory PosSettings.fromApis({
     Map<String, dynamic>? sales,
     Map<String, dynamic>? store,
+    String apiBaseUrl = '',
   }) {
     final requireCustomer = sales?['require_customer'] == true;
     final showTax = sales?['show_tax'] == true;
@@ -108,8 +115,25 @@ class PosSettings {
       receiptHeader: text(store?['receipt_header_text']),
       receiptFooter: footer.isEmpty ? 'Thank you for your business!' : footer,
       showSku: store?['receipt_show_sku'] == true,
+      receiptLogoUrl: resolveMediaUrl(
+        text(store?['receipt_logo_url']),
+        apiBaseUrl,
+      ),
+      showLogo: store?['receipt_show_logo'] != false,
     );
   }
+}
+
+/// Turns a server media path like `/media/receipt/logo.png` into a full URL.
+String resolveMediaUrl(String raw, String apiBaseUrl) {
+  final value = raw.trim();
+  if (value.isEmpty) return '';
+  final parsed = Uri.tryParse(value);
+  if (parsed == null) return '';
+  if (parsed.hasScheme) return value;
+  final base = Uri.tryParse(apiBaseUrl.trim());
+  if (base == null || !base.hasScheme) return '';
+  return base.resolve(value).toString();
 }
 
 class CheckoutDraft {

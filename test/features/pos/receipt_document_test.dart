@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -12,6 +13,8 @@ import 'package:completebyte_pos_mobile/features/pos/presentation/receipt_share.
 import 'package:completebyte_pos_mobile/features/pos/presentation/thermal_receipt.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:pdf/pdf.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -711,5 +714,153 @@ void main() {
       ),
     );
     expect(String.fromCharCodes(change.take(4)), '%PDF');
+  });
+
+  group('store logo', () {
+    final pngBytes = Uint8List.fromList(
+      base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      ),
+    );
+
+    test('settings resolve the uploaded logo against the API host', () {
+      final settings = PosSettings.fromApis(
+        store: {
+          'receipt_logo_url': '/media/receipt/brand.png',
+          'receipt_show_logo': true,
+        },
+        apiBaseUrl: 'https://pos.example.com/api',
+      );
+      expect(
+        settings.receiptLogoUrl,
+        'https://pos.example.com/media/receipt/brand.png',
+      );
+      final info = ReceiptStoreInfo.fromPosSettings(settings);
+      expect(info.logoUrl, settings.receiptLogoUrl);
+      expect(info.showLogo, isTrue);
+
+      expect(
+        PosSettings.fromApis(
+          store: {'receipt_logo_url': 'https://cdn.example.com/l.png'},
+        ).receiptLogoUrl,
+        'https://cdn.example.com/l.png',
+      );
+      expect(PosSettings.fromApis(store: {}).receiptLogoUrl, '');
+      expect(PosSettings.fromApis(store: {}).showLogo, isTrue);
+      expect(
+        PosSettings.fromApis(store: {'receipt_show_logo': false}).showLogo,
+        isFalse,
+      );
+      expect(resolveMediaUrl('/media/x.png', ''), '');
+      expect(resolveMediaUrl('   ', 'https://a.b/api'), '');
+    });
+
+    testWidgets('receipt shows the packaged logo when none is uploaded', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SingleChildScrollView(
+            child: ThermalReceiptView(receipt: _receipt()),
+          ),
+        ),
+      );
+      expect(find.byKey(const Key('receipt_logo_default')), findsOneWidget);
+    });
+
+    testWidgets('receipt uses the uploaded logo and falls back if it fails', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SingleChildScrollView(
+            child: ThermalReceiptView(
+              receipt: _receipt(),
+              store: const ReceiptStoreInfo(
+                logoUrl: 'https://pos.example.com/media/receipt/brand.png',
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.byKey(const Key('receipt_logo_uploaded')), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('receipt_logo_default')), findsOneWidget);
+    });
+
+    testWidgets('receipt hides the logo when the store turns it off', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SingleChildScrollView(
+            child: ThermalReceiptView(
+              receipt: _receipt(),
+              store: const ReceiptStoreInfo(showLogo: false),
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(ReceiptLogo), findsNothing);
+    });
+
+    test('PDF receipt embeds the logo', () async {
+      final plain = await buildReceiptPdf(_receipt());
+      final branded = await buildReceiptPdf(_receipt(), logoBytes: pngBytes);
+      final embeddedImage = RegExp(r'/Subtype\s*/Image');
+      expect(String.fromCharCodes(branded.take(4)), '%PDF');
+      expect(String.fromCharCodes(branded), contains(embeddedImage));
+      expect(String.fromCharCodes(plain), isNot(contains(embeddedImage)));
+      final hidden = await buildReceiptPdf(
+        _receipt(),
+        store: const ReceiptStoreInfo(showLogo: false),
+        logoBytes: pngBytes,
+      );
+      expect(String.fromCharCodes(hidden), isNot(contains(embeddedImage)));
+    });
+
+    test('logo loader prefers the upload, else the packaged mark', () async {
+      final packaged = Uint8List.fromList([9, 9]);
+      Future<Uint8List> packagedLogo() async => packaged;
+
+      final uploaded = await loadReceiptLogoBytes(
+        const ReceiptStoreInfo(logoUrl: 'https://pos.example.com/l.png'),
+        client: MockClient((_) async => http.Response.bytes(pngBytes, 200)),
+        packagedLogo: packagedLogo,
+      );
+      expect(uploaded, pngBytes);
+
+      final broken = await loadReceiptLogoBytes(
+        const ReceiptStoreInfo(logoUrl: 'https://pos.example.com/l.png'),
+        client: MockClient((_) async => http.Response('missing', 404)),
+        packagedLogo: packagedLogo,
+      );
+      expect(broken, packaged);
+
+      final offline = await loadReceiptLogoBytes(
+        const ReceiptStoreInfo(logoUrl: 'https://pos.example.com/l.png'),
+        client: MockClient((_) async => throw const SocketException('down')),
+        packagedLogo: packagedLogo,
+      );
+      expect(offline, packaged);
+
+      final none = await loadReceiptLogoBytes(
+        const ReceiptStoreInfo(),
+        packagedLogo: packagedLogo,
+      );
+      expect(none, packaged);
+
+      final hidden = await loadReceiptLogoBytes(
+        const ReceiptStoreInfo(showLogo: false),
+        packagedLogo: packagedLogo,
+      );
+      expect(hidden, isNull);
+
+      final missingAsset = await loadReceiptLogoBytes(
+        const ReceiptStoreInfo(),
+        packagedLogo: () async => throw StateError('no asset'),
+      );
+      expect(missingAsset, isNull);
+    });
   });
 }

@@ -44,7 +44,11 @@ String receiptPngFileName(SaleReceipt receipt) {
 Future<Uint8List> buildReceiptPdf(
   SaleReceipt receipt, {
   ReceiptStoreInfo store = const ReceiptStoreInfo(),
+  Uint8List? logoBytes,
 }) async {
+  final logo = store.showLogo && logoBytes != null && logoBytes.isNotEmpty
+      ? pw.MemoryImage(logoBytes)
+      : null;
   final document = pw.Document(
     title: 'Receipt ${receipt.saleNumber}',
     author: kDefaultReceiptStoreName,
@@ -65,6 +69,10 @@ Future<Uint8List> buildReceiptPdf(
             pw.Center(
               child: pw.Column(
                 children: [
+                  if (logo != null) ...[
+                    pw.Image(logo, height: 36, fit: pw.BoxFit.contain),
+                    pw.SizedBox(height: 3),
+                  ],
                   pw.Text(
                     store.storeName.toUpperCase(),
                     textAlign: pw.TextAlign.center,

@@ -372,7 +372,13 @@ class PosApi {
         }
       }
 
-      return Success(PosSettings.fromApis(sales: sales, store: store));
+      return Success(
+        PosSettings.fromApis(
+          sales: sales,
+          store: store,
+          apiBaseUrl: _client.baseUrl,
+        ),
+      );
     } on Object catch (e, st) {
       return Failure(e, st);
     }

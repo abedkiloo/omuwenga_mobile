@@ -19,6 +19,8 @@ class ReceiptStoreInfo {
     this.header = '',
     this.footer = kDefaultReceiptFooter,
     this.showSku = false,
+    this.logoUrl = '',
+    this.showLogo = true,
   });
 
   final String storeName;
@@ -29,6 +31,8 @@ class ReceiptStoreInfo {
   final String header;
   final String footer;
   final bool showSku;
+  final String logoUrl;
+  final bool showLogo;
 
   factory ReceiptStoreInfo.fromPosSettings(PosSettings settings) {
     return ReceiptStoreInfo(
@@ -44,6 +48,8 @@ class ReceiptStoreInfo {
           ? kDefaultReceiptFooter
           : settings.receiptFooter.trim(),
       showSku: settings.showSku,
+      logoUrl: settings.receiptLogoUrl,
+      showLogo: settings.showLogo,
     );
   }
 }
