@@ -18,6 +18,7 @@ abstract final class AppRoutes {
   static const deliveryRoute = '/delivery';
   static const dailyNotes = '/daily-notes';
   static const appraisals = '/appraisals';
+  static const approvals = '/approvals';
 
   static String posForSale(int saleId) => '$pos?sale=$saleId';
 

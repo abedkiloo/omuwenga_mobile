@@ -10,6 +10,7 @@ import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../sync/presentation/sync_failures_sheet.dart';
 import '../../../sync/presentation/sync_status_chip.dart';
 import '../../../sync/providers.dart';
+import '../../approvals/application/approvals_controller.dart';
 import '../../daily_notes/presentation/sticky_notes_gate.dart';
 import '../../appraisals/presentation/appraisal_greeting.dart';
 import '../../delivery/application/delivery_controllers.dart';
@@ -18,119 +19,288 @@ import '../../field_orders/domain/field_order.dart';
 import '../../field_orders/domain/field_order_commit.dart';
 import '../../home/presentation/store_home_dashboard.dart';
 import '../application/auth_controller.dart';
+import '../domain/permission_set.dart';
 import '../domain/persona.dart';
 
-/// Full-screen forms dock their own footer; the tab bar would rise with the
-/// keyboard and cover the page in a dark pane.
-bool shellHidesBottomNav(String location) {
+/// Full-screen forms hide the shell chrome so the keyboard does not fight the rail.
+bool shellHidesChrome(String location) {
   final path = Uri.tryParse(location)?.path ?? location;
   if (path == AppRoutes.customerNew) return true;
   return RegExp(r'^/customers/\d+/edit/?$').hasMatch(path);
 }
 
-class StoreShellPage extends ConsumerWidget {
+/// Kept for older tests / call sites.
+bool shellHidesBottomNav(String location) => shellHidesChrome(location);
+
+class _NavItem {
+  const _NavItem({
+    required this.label,
+    required this.icon,
+    required this.route,
+    this.key,
+  });
+  final String label;
+  final IconData icon;
+  final String route;
+  final Key? key;
+}
+
+List<_NavItem> _primaryNav(PermissionSet? perms, {required bool canApprove}) {
+  return [
+    const _NavItem(
+      label: 'Home',
+      icon: Icons.home_outlined,
+      route: AppRoutes.home,
+    ),
+    if (perms == null || perms.canAccessPos)
+      const _NavItem(
+        label: 'POS',
+        icon: Icons.point_of_sale_outlined,
+        route: AppRoutes.pos,
+      ),
+    if (canApprove)
+      const _NavItem(
+        label: 'Approvals',
+        icon: Icons.fact_check_outlined,
+        route: AppRoutes.approvals,
+        key: Key('nav_approvals'),
+      ),
+    if (perms == null || perms.canViewSales)
+      const _NavItem(
+        label: 'History',
+        icon: Icons.receipt_long_outlined,
+        route: AppRoutes.salesHistory,
+      ),
+    if (perms == null || perms.canViewCustomers)
+      const _NavItem(
+        label: 'Customers',
+        icon: Icons.people_outline,
+        route: AppRoutes.customers,
+      ),
+  ];
+}
+
+List<_NavItem> _moreNav({
+  required PermissionSet? perms,
+  required bool canHistory,
+  bool includePrimaryDupes = false,
+}) {
+  return [
+    if (includePrimaryDupes && (perms?.canViewSales ?? false))
+      const _NavItem(
+        label: 'Sales history',
+        icon: Icons.receipt_long_outlined,
+        route: AppRoutes.salesHistory,
+        key: Key('more_sales_history'),
+      ),
+    if (perms?.canPlaceVisitOrders ?? false)
+      const _NavItem(
+        label: 'New field sale',
+        icon: Icons.shopping_bag_outlined,
+        route: AppRoutes.siteVisit,
+        key: Key('more_visit_order'),
+      ),
+    if (perms?.canDispatch ?? false)
+      const _NavItem(
+        label: 'Field sales',
+        icon: Icons.inventory_2_outlined,
+        route: AppRoutes.dispatchQueue,
+        key: Key('more_dispatch'),
+      ),
+    if ((perms?.canAccessDelivery ?? false) || canHistory)
+      _NavItem(
+        label: canHistory ? 'Routes' : 'Today’s route',
+        icon: Icons.map_outlined,
+        route: AppRoutes.deliveryRoute,
+        key: const Key('more_delivery'),
+      ),
+    if (perms?.canViewDailySales ?? false)
+      const _NavItem(
+        label: 'Daily sales',
+        icon: Icons.calendar_today_outlined,
+        route: AppRoutes.dailySales,
+        key: Key('more_daily_sales'),
+      ),
+    if (perms?.canViewDebtManagement ?? false)
+      const _NavItem(
+        label: 'Debtors',
+        icon: Icons.account_balance_wallet_outlined,
+        route: AppRoutes.debtors,
+        key: Key('more_debtors'),
+      ),
+    if (perms?.canViewDailyNotes ?? false)
+      const _NavItem(
+        label: 'Daily notes',
+        icon: Icons.sticky_note_2_outlined,
+        route: AppRoutes.dailyNotes,
+        key: Key('more_daily_notes'),
+      ),
+    if (perms?.canViewAppraisals ?? false)
+      const _NavItem(
+        label: 'Target delivery',
+        icon: Icons.star_outline,
+        route: AppRoutes.appraisals,
+        key: Key('more_appraisals'),
+      ),
+    const _NavItem(
+      label: 'API health',
+      icon: Icons.monitor_heart_outlined,
+      route: AppRoutes.health,
+    ),
+  ];
+}
+
+class StoreShellPage extends ConsumerStatefulWidget {
   const StoreShellPage({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StoreShellPage> createState() => _StoreShellPageState();
+}
+
+class _StoreShellPageState extends ConsumerState<StoreShellPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeLoadApprovals());
+  }
+
+  void _maybeLoadApprovals() {
+    if (!mounted) return;
+    final perms = ref.read(authControllerProvider).session?.permissions;
+    final canApprove =
+        (perms?.canApproveSales ?? false) ||
+        (perms?.canApproveDebtManagement ?? false);
+    if (canApprove) {
+      ref.read(approvalsProvider.notifier).load();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final session = ref.watch(authControllerProvider).session;
     final perms = session?.permissions;
     final location = GoRouterState.of(context).uri.toString();
+    final hideChrome = shellHidesChrome(location);
+    final canApprove =
+        (perms?.canApproveSales ?? false) ||
+        (perms?.canApproveDebtManagement ?? false);
+    final canHistory = session != null &&
+        sessionCanViewDeliveryHistory(
+          permissions: session.permissions,
+          profile: session.profile,
+          isSuperuser: session.user.isSuperuser,
+        );
 
-    final destinations = <_NavDest>[
-      const _NavDest(
-        label: 'Home',
-        icon: Icons.home_outlined,
-        route: AppRoutes.home,
-      ),
-      if (perms == null || perms.canAccessPos)
-        const _NavDest(
-          label: 'POS',
-          icon: Icons.point_of_sale_outlined,
-          route: AppRoutes.pos,
-        ),
-      if (perms == null || perms.canViewSales)
-        const _NavDest(
-          label: 'History',
-          icon: Icons.receipt_long_outlined,
-          route: AppRoutes.salesHistory,
-        ),
-      if (perms == null || perms.canViewCustomers)
-        const _NavDest(
-          label: 'Customers',
-          icon: Icons.people_outline,
-          route: AppRoutes.customers,
-        ),
-      const _NavDest(
-        label: 'More',
-        icon: Icons.more_horiz,
-        route: AppRoutes.more,
-      ),
-    ];
-
+    final primary = _primaryNav(perms, canApprove: canApprove);
+    final more = _moreNav(perms: perms, canHistory: canHistory);
     final sync = ref.watch(syncStatusProvider);
+    final approvalsCount = canApprove
+        ? ref.watch(approvalsProvider).totalCount
+        : 0;
+
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!hideChrome)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: SyncStatusChip(
+                status: sync,
+                onTap: sync.failedCount > 0
+                    ? () async {
+                        final items = await ref
+                            .read(syncStatusProvider.notifier)
+                            .failedItems();
+                        if (!context.mounted) return;
+                        await SyncFailuresSheet.show(
+                          context,
+                          items: items,
+                          onRetry: (id) => ref
+                              .read(syncStatusProvider.notifier)
+                              .retryFailed(id),
+                          onDiscard: (id) => ref
+                              .read(syncStatusProvider.notifier)
+                              .discardFailed(id),
+                        );
+                      }
+                    : null,
+              ),
+            ),
+          ),
+        Expanded(
+          child: MediaQuery.removePadding(
+            context: context,
+            removeTop: true,
+            child: widget.child,
+          ),
+        ),
+      ],
+    );
 
     return Stack(
       children: [
-        Scaffold(
-          backgroundColor: AppColors.background,
-          resizeToAvoidBottomInset: false,
-          body: SafeArea(
-            bottom: false,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: SyncStatusChip(
-                      status: sync,
-                      onTap: sync.failedCount > 0
-                          ? () async {
-                              final items = await ref
-                                  .read(syncStatusProvider.notifier)
-                                  .failedItems();
-                              if (!context.mounted) return;
-                              await SyncFailuresSheet.show(
-                                context,
-                                items: items,
-                                onRetry: (id) => ref
-                                    .read(syncStatusProvider.notifier)
-                                    .retryFailed(id),
-                                onDiscard: (id) => ref
-                                    .read(syncStatusProvider.notifier)
-                                    .discardFailed(id),
-                              );
-                            }
-                          : null,
-                    ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 720;
+            if (hideChrome) {
+              return Scaffold(
+                backgroundColor: AppColors.background,
+                resizeToAvoidBottomInset: false,
+                body: SafeArea(bottom: false, child: body),
+              );
+            }
+            if (wide) {
+              return Scaffold(
+                backgroundColor: AppColors.background,
+                resizeToAvoidBottomInset: false,
+                body: SafeArea(
+                  bottom: false,
+                  child: Row(
+                    children: [
+                      _SideNavRail(
+                        primary: primary,
+                        more: more,
+                        location: location,
+                        approvalsCount: approvalsCount,
+                        onLogout: () =>
+                            ref.read(authControllerProvider.notifier).logout(),
+                      ),
+                      const VerticalDivider(width: 1),
+                      Expanded(child: body),
+                    ],
                   ),
                 ),
-                Expanded(
-                  child: MediaQuery.removePadding(
-                    context: context,
-                    removeTop: true,
-                    child: child,
-                  ),
+              );
+            }
+            return Scaffold(
+              backgroundColor: AppColors.background,
+              resizeToAvoidBottomInset: false,
+              appBar: AppBar(
+                backgroundColor: AppColors.background,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                titleSpacing: 0,
+                title: Text(
+                  _titleFor(location, primary, more),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-              ],
-            ),
-          ),
-          bottomNavigationBar: shellHidesBottomNav(location)
-              ? null
-              : NavigationBar(
-                  height: 64,
-                  selectedIndex: _selectedVisualIndex(location, destinations),
-                  onDestinationSelected: (i) =>
-                      context.go(destinations[i].route),
-                  destinations: [
-                    for (final d in destinations)
-                      NavigationDestination(icon: Icon(d.icon), label: d.label),
-                  ],
-                ),
+              ),
+              drawer: _SideDrawer(
+                primary: primary,
+                more: more,
+                location: location,
+                approvalsCount: approvalsCount,
+                displayName: session?.user.displayName ?? '',
+                onLogout: () =>
+                    ref.read(authControllerProvider.notifier).logout(),
+              ),
+              body: SafeArea(bottom: false, child: body),
+            );
+          },
         ),
         const StickyNotesGate(),
         const AppraisalGreeting(),
@@ -138,56 +308,255 @@ class StoreShellPage extends ConsumerWidget {
     );
   }
 
-  int _selectedVisualIndex(String location, List<_NavDest> destinations) {
-    for (var i = 0; i < destinations.length; i++) {
-      if (location.startsWith(destinations[i].route)) return i;
+  String _titleFor(String location, List<_NavItem> primary, List<_NavItem> more) {
+    for (final item in [...primary, ...more]) {
+      if (location.startsWith(item.route)) return item.label;
     }
-    return 0;
+    return 'CompleteByte';
   }
 }
 
-class _NavDest {
-  const _NavDest({
-    required this.label,
-    required this.icon,
-    required this.route,
-  });
-  final String label;
-  final IconData icon;
-  final String route;
-}
-
-class _MoreTile extends StatelessWidget {
-  const _MoreTile({
-    super.key,
-    required this.title,
-    required this.icon,
-    required this.onTap,
+class _SideNavRail extends StatelessWidget {
+  const _SideNavRail({
+    required this.primary,
+    required this.more,
+    required this.location,
+    required this.approvalsCount,
+    required this.onLogout,
   });
 
-  final String title;
-  final IconData icon;
-  final VoidCallback onTap;
+  final List<_NavItem> primary;
+  final List<_NavItem> more;
+  final String location;
+  final int approvalsCount;
+  final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: CbSurfaceCard(
-        padding: EdgeInsets.zero,
-        onTap: onTap,
-        child: ListTile(
-          leading: Icon(icon, color: AppColors.primary),
-          title: Text(title),
-          trailing: const Icon(
-            Icons.chevron_right,
-            color: AppColors.mutedForeground,
-          ),
+    final theme = Theme.of(context);
+    return SizedBox(
+      key: const Key('shell_side_rail'),
+      width: 220,
+      child: Material(
+        color: AppColors.background,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Text('Menu', style: theme.textTheme.titleSmall),
+            ),
+            for (final item in primary)
+              ListTile(
+                key: item.key,
+                dense: true,
+                leading: _NavIcon(
+                  icon: item.icon,
+                  badge: item.route == AppRoutes.approvals ? approvalsCount : 0,
+                ),
+                title: Text(item.label),
+                selected: location.startsWith(item.route),
+                onTap: () => context.go(item.route),
+              ),
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 4, 16, 4),
+              child: Text(
+                'More',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ),
+            for (final item in more)
+              ListTile(
+                key: item.key,
+                dense: true,
+                leading: Icon(item.icon, color: AppColors.primary),
+                title: Text(item.label),
+                selected: location.startsWith(item.route),
+                onTap: () => context.go(item.route),
+              ),
+            ListTile(
+              key: const Key('more_logout'),
+              dense: true,
+              leading: const Icon(Icons.logout, color: AppColors.primary),
+              title: const Text('Sign out'),
+              onTap: onLogout,
+            ),
+          ],
         ),
       ),
     );
   }
 }
+
+class _SideDrawer extends StatelessWidget {
+  const _SideDrawer({
+    required this.primary,
+    required this.more,
+    required this.location,
+    required this.approvalsCount,
+    required this.displayName,
+    required this.onLogout,
+  });
+
+  final List<_NavItem> primary;
+  final List<_NavItem> more;
+  final String location;
+  final int approvalsCount;
+  final String displayName;
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      key: const Key('shell_side_drawer'),
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Menu', style: Theme.of(context).textTheme.titleLarge),
+                  if (displayName.isNotEmpty)
+                    Text(
+                      displayName,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            for (final item in primary)
+              ListTile(
+                key: item.key,
+                leading: _NavIcon(
+                  icon: item.icon,
+                  badge: item.route == AppRoutes.approvals ? approvalsCount : 0,
+                ),
+                title: Text(item.label),
+                selected: location.startsWith(item.route),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go(item.route);
+                },
+              ),
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 4, 16, 4),
+              child: Text(
+                'More',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            ),
+            for (final item in more)
+              ListTile(
+                key: item.key,
+                leading: Icon(item.icon, color: AppColors.primary),
+                title: Text(item.label),
+                selected: location.startsWith(item.route),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go(item.route);
+                },
+              ),
+            ListTile(
+              key: const Key('more_logout'),
+              leading: const Icon(Icons.logout, color: AppColors.primary),
+              title: const Text('Sign out'),
+              onTap: () {
+                Navigator.of(context).pop();
+                onLogout();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavIcon extends StatelessWidget {
+  const _NavIcon({required this.icon, this.badge = 0});
+  final IconData icon;
+  final int badge;
+
+  @override
+  Widget build(BuildContext context) {
+    if (badge <= 0) return Icon(icon);
+    return Badge(
+      label: Text('$badge'),
+      child: Icon(icon),
+    );
+  }
+}
+
+class MorePage extends ConsumerWidget {
+  const MorePage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(authControllerProvider).session;
+    final perms = session?.permissions;
+    final canHistory = session != null &&
+        sessionCanViewDeliveryHistory(
+          permissions: session.permissions,
+          profile: session.profile,
+          isSuperuser: session.user.isSuperuser,
+        );
+    final items = _moreNav(
+      perms: perms,
+      canHistory: canHistory,
+      includePrimaryDupes: true,
+    );
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+        children: [
+          Text('More', style: theme.textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text(
+            'Tools and settings for your role.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppColors.mutedForeground,
+            ),
+          ),
+          const SizedBox(height: 12),
+          for (final item in items)
+            ListTile(
+              key: item.key,
+              leading: Icon(item.icon, color: AppColors.primary),
+              title: Text(item.label),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go(item.route),
+            ),
+          ListTile(
+            key: const Key('more_logout'),
+            leading: const Icon(Icons.logout, color: AppColors.primary),
+            title: const Text('Sign out'),
+            onTap: () => ref.read(authControllerProvider.notifier).logout(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// —— Home personas (unchanged behaviour) ——
 
 class PersonaHomePage extends ConsumerWidget {
   const PersonaHomePage({super.key});
@@ -204,6 +573,8 @@ class PersonaHomePage extends ConsumerWidget {
       profile: session.profile,
       isSuperuser: session.user.isSuperuser,
     );
+    final canApprove = session.permissions.canApproveSales ||
+        session.permissions.canApproveDebtManagement;
 
     switch (session.persona) {
       case AppPersona.cashier:
@@ -218,6 +589,7 @@ class PersonaHomePage extends ConsumerWidget {
           canDispatch: session.permissions.canDispatch,
           canAccessDelivery: session.permissions.canAccessDelivery,
           canViewDeliveryHistory: canHistory,
+          canApprove: canApprove,
         );
       case AppPersona.dispatcher:
         return _DispatcherHome(name: session.user.displayName);
@@ -238,6 +610,7 @@ class PersonaHomePage extends ConsumerWidget {
           canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
           canAccessDelivery: session.permissions.canAccessDelivery,
           canViewDeliveryHistory: canHistory,
+          canApprove: canApprove,
         );
     }
   }
@@ -464,110 +837,6 @@ class _DispatcherHome extends StatelessWidget {
               key: const Key('home_primary_cta'),
               label: 'Open dispatch queue',
               onPressed: () => context.go(AppRoutes.dispatchQueue),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class MorePage extends ConsumerWidget {
-  const MorePage({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(authControllerProvider).session;
-    final canDaily = session?.permissions.canViewDailySales ?? false;
-    final canSales = session?.permissions.canViewSales ?? false;
-    final canPlaceVisit = session?.permissions.canPlaceVisitOrders ?? false;
-    final canDispatch = session?.permissions.canDispatch ?? false;
-    final canDelivery = session?.permissions.canAccessDelivery ?? false;
-    final canHistory =
-        session != null &&
-        sessionCanViewDeliveryHistory(
-          permissions: session.permissions,
-          profile: session.profile,
-          isSuperuser: session.user.isSuperuser,
-        );
-    final canDebtors = session?.permissions.canViewDebtManagement ?? false;
-    final canNotes = session?.permissions.canViewDailyNotes ?? false;
-    final canAppraisals = session?.permissions.canViewAppraisals ?? false;
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        top: false,
-        bottom: false,
-        child: ListView(
-          padding: const EdgeInsets.all(12),
-          children: [
-            if (canPlaceVisit)
-              _MoreTile(
-                key: const Key('more_visit_order'),
-                title: 'New field sale',
-                icon: Icons.shopping_bag_outlined,
-                onTap: () => context.go(AppRoutes.siteVisit),
-              ),
-            if (canDispatch)
-              _MoreTile(
-                key: const Key('more_dispatch'),
-                title: 'Field sales',
-                icon: Icons.inventory_2_outlined,
-                onTap: () => context.go(AppRoutes.dispatchQueue),
-              ),
-            if (canDelivery || canHistory)
-              _MoreTile(
-                key: const Key('more_delivery'),
-                title: canHistory ? 'Routes' : 'Today’s route',
-                icon: Icons.map_outlined,
-                onTap: () => context.go(AppRoutes.deliveryRoute),
-              ),
-            if (canSales)
-              _MoreTile(
-                key: const Key('more_sales_history'),
-                title: 'Sales history',
-                icon: Icons.receipt_long_outlined,
-                onTap: () => context.go(AppRoutes.salesHistory),
-              ),
-            if (canDaily)
-              _MoreTile(
-                key: const Key('more_daily_sales'),
-                title: 'Daily sales',
-                icon: Icons.calendar_today_outlined,
-                onTap: () => context.go(AppRoutes.dailySales),
-              ),
-            if (canDebtors)
-              _MoreTile(
-                key: const Key('more_debtors'),
-                title: 'Debtors',
-                icon: Icons.account_balance_wallet_outlined,
-                onTap: () => context.go(AppRoutes.debtors),
-              ),
-            if (canNotes)
-              _MoreTile(
-                key: const Key('more_daily_notes'),
-                title: 'Daily notes',
-                icon: Icons.sticky_note_2_outlined,
-                onTap: () => context.go(AppRoutes.dailyNotes),
-              ),
-            if (canAppraisals)
-              _MoreTile(
-                key: const Key('more_appraisals'),
-                title: 'Target delivery',
-                icon: Icons.star_outline,
-                onTap: () => context.go(AppRoutes.appraisals),
-              ),
-            _MoreTile(
-              title: 'API health',
-              icon: Icons.monitor_heart_outlined,
-              onTap: () => context.go(AppRoutes.health),
-            ),
-            _MoreTile(
-              key: const Key('more_logout'),
-              title: 'Sign out',
-              icon: Icons.logout,
-              onTap: () => ref.read(authControllerProvider.notifier).logout(),
             ),
           ],
         ),

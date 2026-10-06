@@ -26,6 +26,7 @@ class StoreHomeDashboard extends ConsumerWidget {
     this.canPlaceVisitOrders = false,
     this.canAccessDelivery = false,
     this.canViewDeliveryHistory = false,
+    this.canApprove = false,
   });
 
   final String title;
@@ -38,6 +39,7 @@ class StoreHomeDashboard extends ConsumerWidget {
   final bool canPlaceVisitOrders;
   final bool canAccessDelivery;
   final bool canViewDeliveryHistory;
+  final bool canApprove;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -190,6 +192,17 @@ class StoreHomeDashboard extends ConsumerWidget {
           label: 'Debtors',
           description: 'Collect outstanding',
           onTap: () => context.go(AppRoutes.debtors),
+        ),
+      );
+    }
+    if (canApprove) {
+      tools.add(
+        _HomeTool(
+          key: const Key('home_approvals'),
+          icon: Icons.fact_check_outlined,
+          label: 'Approvals',
+          description: 'Sales & collections',
+          onTap: () => context.go(AppRoutes.approvals),
         ),
       );
     }

@@ -163,6 +163,9 @@ void main() {
   });
 
   testWidgets('admin home and more daily sales', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
     final admin = AuthSession(
       user: const AuthUser(id: 1, username: 'admin', firstName: 'Ada'),
       profile: const UserProfileSnapshot(
@@ -225,6 +228,13 @@ void main() {
     await tester.tap(find.byKey(const Key('home_primary_cta')));
     await tester.pumpAndSettle();
     expect(find.text('pos-body'), findsOneWidget);
+
+    Future<void> openMenu() async {
+      await tester.tap(find.byTooltip('Open navigation menu'));
+      await tester.pumpAndSettle();
+    }
+
+    await openMenu();
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -234,6 +244,7 @@ void main() {
     await tester.tap(find.byKey(const Key('home_customers')));
     await tester.pumpAndSettle();
     expect(find.text('cust-body'), findsOneWidget);
+    await openMenu();
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -243,13 +254,11 @@ void main() {
     await tester.tap(find.byKey(const Key('home_daily_sales')));
     await tester.pumpAndSettle();
     expect(find.text('daily-body'), findsOneWidget);
-    await tester.tap(find.text('More'));
-    await tester.pumpAndSettle();
+    await openMenu();
     await tester.tap(find.byKey(const Key('more_daily_sales')));
     await tester.pumpAndSettle();
     expect(find.text('daily-body'), findsOneWidget);
-    await tester.tap(find.text('More'));
-    await tester.pumpAndSettle();
+    await openMenu();
     await tester.tap(find.text('API health'));
     await tester.pumpAndSettle();
     expect(find.text('health-body'), findsOneWidget);

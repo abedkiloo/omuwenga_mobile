@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/approvals/presentation/approvals_page.dart';
 import '../features/daily_notes/presentation/daily_notes_page.dart';
 import '../features/appraisals/presentation/appraisals_page.dart';
 import '../features/dispatch/presentation/dispatch_queue_page.dart';
@@ -154,6 +155,12 @@ GoRouter createAppRouter({
           !(permissions?.canViewDailyNotes ?? false)) {
         return AppRoutes.home;
       }
+      if (loc.startsWith(AppRoutes.approvals)) {
+        final can =
+            (permissions?.canApproveSales ?? false) ||
+            (permissions?.canApproveDebtManagement ?? false);
+        if (!can) return AppRoutes.home;
+      }
       return null;
     },
     routes: [
@@ -235,6 +242,10 @@ GoRouter createAppRouter({
           GoRoute(
             path: AppRoutes.more,
             builder: (context, state) => const MorePage(),
+          ),
+          GoRoute(
+            path: AppRoutes.approvals,
+            builder: (context, state) => const ApprovalsPage(),
           ),
           GoRoute(
             path: AppRoutes.salesHistory,
