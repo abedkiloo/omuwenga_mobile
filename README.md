@@ -14,16 +14,19 @@ Android-first native client for CompleteBytePOS. Sprint docs live in
 cd mobile
 flutter pub get
 flutter run
-# Debug APK (default APP_ENV=dev → https://api.uat.omuwenga.com/api)
+# Debug APK → UAT (https://api.uat.omuwenga.com/api)
 flutter build apk --debug
-# Optional local backend override:
+# Release APK → production (https://shop.omuwenga.com/api) automatically
+flutter build apk --release
+# Optional overrides:
 # flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
-# Release against production:
-# flutter build apk --release --dart-define=APP_ENV=prod
+# flutter build apk --release --dart-define=APP_ENV=uat   # force UAT release
 ```
 
-| Flavor (`APP_ENV`) | Default `API_BASE_URL` |
-|--------------------|------------------------|
+| Build / `APP_ENV` | Default `API_BASE_URL` |
+|-------------------|------------------------|
+| Debug / profile (no `APP_ENV`) | `https://api.uat.omuwenga.com/api` |
+| Release (no `APP_ENV`) | `https://shop.omuwenga.com/api` |
 | `dev` / `staging` / `uat` | `https://api.uat.omuwenga.com/api` |
 | `prod` | `https://shop.omuwenga.com/api` |
 

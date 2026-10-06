@@ -1,4 +1,10 @@
+import 'package:flutter/foundation.dart';
+
 /// Environment / flavor configuration via `--dart-define`.
+///
+/// When `APP_ENV` is omitted:
+/// - **debug / profile** → UAT (`AppFlavor.dev`)
+/// - **release** → production (`AppFlavor.prod`)
 enum AppFlavor { dev, staging, prod }
 
 class AppEnv {
@@ -7,19 +13,29 @@ class AppEnv {
   final AppFlavor flavor;
   final String apiBaseUrl;
 
-  /// Reads compile-time defines. Defaults to [AppFlavor.dev].
+  /// Reads compile-time defines. Build mode picks UAT vs prod when `APP_ENV` is unset.
   factory AppEnv.fromDefines({
-    String flavorName = const String.fromEnvironment(
-      'APP_ENV',
-      defaultValue: 'dev',
-    ),
-    String? apiBaseUrlOverride = const String.fromEnvironment('API_BASE_URL'),
+    String flavorName = const String.fromEnvironment('APP_ENV'),
+    String apiBaseUrlOverride = const String.fromEnvironment('API_BASE_URL'),
+    bool? releaseMode,
   }) {
-    final flavor = parseFlavor(flavorName);
-    final url = (apiBaseUrlOverride != null && apiBaseUrlOverride.isNotEmpty)
+    final flavor = resolveFlavor(
+      flavorName,
+      releaseMode: releaseMode ?? kReleaseMode,
+    );
+    final url = apiBaseUrlOverride.trim().isNotEmpty
         ? _normalizeBase(apiBaseUrlOverride)
         : defaultBaseUrl(flavor);
     return AppEnv(flavor: flavor, apiBaseUrl: url);
+  }
+
+  /// Explicit `APP_ENV` wins; otherwise release → prod, debug/profile → UAT.
+  static AppFlavor resolveFlavor(String raw, {required bool releaseMode}) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      return releaseMode ? AppFlavor.prod : AppFlavor.dev;
+    }
+    return parseFlavor(trimmed);
   }
 
   static AppFlavor parseFlavor(String raw) {
@@ -57,4 +73,5 @@ class AppEnv {
   }
 
   bool get isDev => flavor == AppFlavor.dev;
+  bool get isProd => flavor == AppFlavor.prod;
 }
