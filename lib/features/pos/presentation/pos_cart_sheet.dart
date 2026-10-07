@@ -131,6 +131,20 @@ class PosCartSheet extends ConsumerWidget {
                                       line.lineKey,
                                       line.quantity + 1,
                                     ),
+                          onPriceChanged: (raw) {
+                            final parsed = double.tryParse(raw.trim());
+                            final error = ref
+                                .read(cartControllerProvider.notifier)
+                                .setUnitPrice(
+                                  line.lineKey,
+                                  parsed ?? double.nan,
+                                );
+                            if (error != null && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(error)),
+                              );
+                            }
+                          },
                           onRemove: () => ref
                               .read(cartControllerProvider.notifier)
                               .removeProduct(line.lineKey),
@@ -201,23 +215,79 @@ class PosCartSheet extends ConsumerWidget {
   }
 }
 
-class _CartSheetLine extends StatelessWidget {
+class _CartSheetLine extends StatefulWidget {
   const _CartSheetLine({
     required this.line,
     required this.onDec,
     required this.onInc,
+    required this.onPriceChanged,
     required this.onRemove,
   });
 
   final CartLine line;
   final VoidCallback onDec;
   final VoidCallback? onInc;
+  final ValueChanged<String> onPriceChanged;
   final VoidCallback onRemove;
+
+  @override
+  State<_CartSheetLine> createState() => _CartSheetLineState();
+}
+
+class _CartSheetLineState extends State<_CartSheetLine> {
+  late final TextEditingController _priceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _priceController = TextEditingController(
+      text: _formatPrice(widget.line.unitPrice),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _CartSheetLine oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.line.unitPrice != widget.line.unitPrice) {
+      final next = _formatPrice(widget.line.unitPrice);
+      if (_priceController.text != next) {
+        _priceController.text = next;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  String _formatPrice(double value) {
+    if (value.truncateToDouble() == value) {
+      return value.toStringAsFixed(0);
+    }
+    return value.toStringAsFixed(2);
+  }
+
+  void _commitPrice() {
+    widget.onPriceChanged(_priceController.text);
+    // Parent may reject — snap draft back to accepted unit price.
+    final accepted = _formatPrice(widget.line.unitPrice);
+    if (_priceController.text != accepted) {
+      // Give Riverpod a frame to update; then sync from line.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _priceController.text = _formatPrice(widget.line.unitPrice);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final line = widget.line;
     final stock = line.stockQuantity;
+    final markedUp = line.unitPrice > line.catalogPrice + 0.009;
 
     return CbSurfaceCard(
       key: Key('pos_cart_sheet_line_${line.lineKey}'),
@@ -255,6 +325,14 @@ class _CartSheetLine extends StatelessWidget {
                           color: AppColors.mutedForeground,
                         ),
                       ),
+                    if (markedUp)
+                      Text(
+                        'Custom price',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -279,7 +357,7 @@ class _CartSheetLine extends StatelessWidget {
               _SheetQtyButton(
                 key: Key('pos_cart_sheet_dec_${line.lineKey}'),
                 icon: Icons.remove,
-                onTap: onDec,
+                onTap: widget.onDec,
               ),
               Container(
                 width: 44,
@@ -301,13 +379,50 @@ class _CartSheetLine extends StatelessWidget {
               _SheetQtyButton(
                 key: Key('pos_cart_sheet_inc_${line.lineKey}'),
                 icon: Icons.add,
-                onTap: onInc,
+                onTap: widget.onInc,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '@',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+              const SizedBox(width: 4),
+              SizedBox(
+                width: 72,
+                height: 36,
+                child: TextField(
+                  key: Key('pos_cart_sheet_price_${line.lineKey}'),
+                  controller: _priceController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textAlign: TextAlign.right,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    hintText: _formatPrice(line.catalogPrice),
+                  ),
+                  onEditingComplete: _commitPrice,
+                  onSubmitted: (_) => _commitPrice(),
+                  onTapOutside: (_) => _commitPrice(),
+                ),
               ),
               const Spacer(),
               IconButton(
                 key: Key('pos_cart_sheet_remove_${line.lineKey}'),
                 tooltip: 'Remove item',
-                onPressed: onRemove,
+                onPressed: widget.onRemove,
                 icon: const Icon(
                   Icons.delete_outline,
                   color: AppColors.destructive,

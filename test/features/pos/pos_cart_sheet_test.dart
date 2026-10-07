@@ -224,6 +224,54 @@ void main() {
     expect(widgetRef.read(cartControllerProvider).isEmpty, isTrue);
   });
 
+  testWidgets('cart sheet allows raising unit price but not below selling price', (
+    tester,
+  ) async {
+    late WidgetRef widgetRef;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _overrides(_catalogClient()),
+        child: MaterialApp(
+          home: Consumer(
+            builder: (context, ref, _) {
+              widgetRef = ref;
+              return const PosPage();
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    widgetRef
+        .read(cartControllerProvider.notifier)
+        .addProduct(
+          const CatalogProduct(
+            id: 12,
+            name: 'Cement 50kg',
+            price: 150,
+            stockQuantity: 10,
+          ),
+        );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('pos_cart_icon')));
+    await tester.pumpAndSettle();
+
+    final priceField = find.byKey(const Key('pos_cart_sheet_price_12'));
+    expect(priceField, findsOneWidget);
+
+    await tester.enterText(priceField, '200');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(widgetRef.read(cartControllerProvider).lines.single.unitPrice, 200);
+
+    await tester.enterText(priceField, '100');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(widgetRef.read(cartControllerProvider).lines.single.unitPrice, 200);
+    expect(find.textContaining('below the selling price'), findsOneWidget);
+  });
+
   testWidgets('PosCartSheet standalone keeps shopping', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

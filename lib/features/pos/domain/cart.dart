@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'product_variant.dart';
+import 'sale_unit_price.dart';
 
 @immutable
 class CatalogProduct {
@@ -67,16 +68,20 @@ class CartLine {
     required this.name,
     required this.unitPrice,
     required this.quantity,
+    double? catalogPrice,
     this.sku,
     this.stockQuantity,
     this.variantId,
     this.variantLabel,
-  });
+  }) : catalogPrice = catalogPrice ?? unitPrice;
 
   final int productId;
   final String name;
   final String? sku;
   final double unitPrice;
+
+  /// Catalog selling price floor for this line (set when the item is added).
+  final double catalogPrice;
   final double quantity;
   final double? stockQuantity;
   final int? variantId;
@@ -94,12 +99,13 @@ class CartLine {
 
   double get lineTotal => unitPrice * quantity;
 
-  CartLine copyWith({double? quantity, double? unitPrice}) {
+  CartLine copyWith({double? quantity, double? unitPrice, double? catalogPrice}) {
     return CartLine(
       productId: productId,
       name: name,
       sku: sku,
       unitPrice: unitPrice ?? this.unitPrice,
+      catalogPrice: catalogPrice ?? this.catalogPrice,
       quantity: quantity ?? this.quantity,
       stockQuantity: stockQuantity,
       variantId: variantId,
@@ -157,6 +163,7 @@ class PosCart {
       updated[existing] = line.copyWith(quantity: line.quantity + qty);
       return copyWith(lines: updated);
     }
+    final price = variant?.effectivePrice ?? product.price;
     return copyWith(
       lines: [
         ...lines,
@@ -164,7 +171,8 @@ class PosCart {
           productId: product.id,
           name: product.name,
           sku: variant?.sku ?? product.sku,
-          unitPrice: variant?.effectivePrice ?? product.price,
+          unitPrice: price,
+          catalogPrice: price,
           quantity: qty,
           stockQuantity: variant?.stockQuantity ?? product.stockQuantity,
           variantId: variantId,
@@ -178,6 +186,32 @@ class PosCart {
     if (quantity <= 0) return removeLine(lineKey);
     final updated = lines
         .map((l) => l.lineKey == lineKey ? l.copyWith(quantity: quantity) : l)
+        .toList();
+    return copyWith(lines: updated);
+  }
+
+  /// Raises (or keeps) unit price. Returns an error if below selling price.
+  String? tryUpdateUnitPrice(String lineKey, double unitPrice) {
+    final index = lines.indexWhere((l) => l.lineKey == lineKey);
+    if (index < 0) return 'Item not found in cart.';
+    final line = lines[index];
+    final error = saleUnitPriceOverrideError(
+      catalogPrice: line.catalogPrice,
+      requestedPrice: unitPrice,
+    );
+    if (error != null) return error;
+    return null;
+  }
+
+  PosCart updateUnitPrice(String lineKey, double unitPrice) {
+    final error = tryUpdateUnitPrice(lineKey, unitPrice);
+    if (error != null) {
+      throw ArgumentError(error);
+    }
+    final updated = lines
+        .map(
+          (l) => l.lineKey == lineKey ? l.copyWith(unitPrice: unitPrice) : l,
+        )
         .toList();
     return copyWith(lines: updated);
   }

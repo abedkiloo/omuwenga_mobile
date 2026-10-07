@@ -38,6 +38,14 @@ class CartController extends StateNotifier<PosCart> {
     state = state.updateQuantity(lineKey, quantity);
   }
 
+  /// Returns an error message when the price is below selling price; null on success.
+  String? setUnitPrice(String lineKey, double unitPrice) {
+    final error = state.tryUpdateUnitPrice(lineKey, unitPrice);
+    if (error != null) return error;
+    state = state.updateUnitPrice(lineKey, unitPrice);
+    return null;
+  }
+
   void removeProduct(String lineKey) {
     state = state.removeLine(lineKey);
   }

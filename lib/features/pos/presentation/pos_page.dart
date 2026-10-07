@@ -84,6 +84,7 @@ class _PosPageState extends ConsumerState<PosPage> {
                 name: line.productName,
                 sku: line.sku,
                 unitPrice: line.unitPrice,
+                catalogPrice: line.unitPrice,
                 quantity: line.quantity < 1 ? 1 : line.quantity,
                 variantLabel: line.variantName,
               ),
