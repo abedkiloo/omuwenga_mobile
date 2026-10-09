@@ -120,32 +120,19 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
   }
 
   Future<void> _quickCreate() async {
+    // Full register form — location ping is captured there, not via a silent name-only create.
     _searchDebounce?.cancel();
     final name = _search.text.trim();
-    if (name.isEmpty) {
-      Navigator.pop(context);
-      context.push('${AppRoutes.customerNew}?returnTo=pos');
-      return;
-    }
-    setState(() => _paging.loading = true);
-    final result = await ref
-        .read(customersApiProvider)
-        .create(CustomerDraft(name: name));
-    if (!mounted) return;
-    result.when(
-      success: (c) {
-        ref
-            .read(cartControllerProvider.notifier)
-            .attachCustomer(id: c.id, name: c.name);
-        Navigator.pop(context);
-      },
-      failure: (e, _) {
-        setState(() {
-          _paging.loading = false;
-          _paging.error = e.toString();
-        });
-      },
-    );
+    Navigator.pop(context);
+    final params = <String, String>{'returnTo': 'pos'};
+    if (name.isNotEmpty) params['name'] = name;
+    final query = params.entries
+        .map(
+          (e) =>
+              '${Uri.encodeQueryComponent(e.key)}=${Uri.encodeQueryComponent(e.value)}',
+        )
+        .join('&');
+    context.push('${AppRoutes.customerNew}?$query');
   }
 
   @override

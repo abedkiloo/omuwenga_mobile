@@ -113,6 +113,9 @@ class CustomerDetail {
     this.ownerName,
     this.contactPerson,
     this.typicalGoods = const [],
+    this.latitude,
+    this.longitude,
+    this.locationAccuracy,
     this.walletBalance,
     this.totalOutstanding,
     this.standing = CustomerStanding.good,
@@ -133,6 +136,9 @@ class CustomerDetail {
   final String? ownerName;
   final String? contactPerson;
   final List<String> typicalGoods;
+  final double? latitude;
+  final double? longitude;
+  final double? locationAccuracy;
   final double? walletBalance;
   final double? totalOutstanding;
   final CustomerStanding standing;
@@ -140,6 +146,8 @@ class CustomerDetail {
   final List<CustomerOrderLite> recentOrders;
   final List<CustomerLedgerEntry> ledger;
   final bool isActive;
+
+  bool get hasLocationPing => latitude != null && longitude != null;
 
   double get debtAmount {
     final fromSummary = standingSummary?.walletDebt;
@@ -223,6 +231,9 @@ class CustomerDetail {
       ownerName: customer['owner_name']?.toString(),
       contactPerson: customer['contact_person']?.toString(),
       typicalGoods: _stringList(customer['typical_goods']),
+      latitude: _asDouble(customer['latitude']),
+      longitude: _asDouble(customer['longitude']),
+      locationAccuracy: _asDouble(customer['location_accuracy']),
       walletBalance: _asDouble(customer['wallet_balance']),
       totalOutstanding: _asDouble(customer['total_outstanding']),
       standing: standing,
@@ -405,6 +416,9 @@ class CustomerDraft {
     this.city = '',
     this.address = '',
     this.typicalGoods = const [],
+    this.latitude,
+    this.longitude,
+    this.locationAccuracy,
   });
 
   final String name;
@@ -416,6 +430,11 @@ class CustomerDraft {
   final String city;
   final String address;
   final List<String> typicalGoods;
+  final double? latitude;
+  final double? longitude;
+  final double? locationAccuracy;
+
+  bool get hasLocationPing => latitude != null && longitude != null;
 
   Map<String, dynamic> toJson() => {
     'name': name.trim(),
@@ -430,6 +449,9 @@ class CustomerDraft {
       for (final item in typicalGoods)
         if (item.trim().isNotEmpty) item.trim(),
     ],
+    if (latitude != null) 'latitude': latitude,
+    if (longitude != null) 'longitude': longitude,
+    if (locationAccuracy != null) 'location_accuracy': locationAccuracy,
   };
 }
 

@@ -342,7 +342,7 @@ class _ProfileCard extends StatelessWidget {
                       ),
                   ],
                 ),
-                if (location.isNotEmpty) ...[
+                if (location.isNotEmpty || detail.hasLocationPing) ...[
                   const SizedBox(height: 6),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,7 +355,11 @@ class _ProfileCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          location,
+                          [
+                            if (location.isNotEmpty) location,
+                            if (detail.hasLocationPing)
+                              '${detail.latitude!.toStringAsFixed(5)}, ${detail.longitude!.toStringAsFixed(5)}',
+                          ].join(' · '),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: AppColors.mutedForeground,
                           ),

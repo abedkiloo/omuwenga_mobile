@@ -208,7 +208,11 @@ GoRouter createAppRouter({
             builder: (context, state) {
               final returnToPos =
                   state.uri.queryParameters['returnTo'] == 'pos';
-              return CustomerFormPage(returnToPos: returnToPos);
+              final initialName = state.uri.queryParameters['name'];
+              return CustomerFormPage(
+                returnToPos: returnToPos,
+                initialName: initialName,
+              );
             },
           ),
           GoRoute(

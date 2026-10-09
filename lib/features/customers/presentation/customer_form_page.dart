@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
@@ -19,6 +20,7 @@ class CustomerFormPage extends ConsumerStatefulWidget {
     this.customerId,
     this.returnToPos = false,
     this.returnCustomer = false,
+    this.initialName,
   });
 
   final int? customerId;
@@ -26,6 +28,9 @@ class CustomerFormPage extends ConsumerStatefulWidget {
 
   /// When true, pop with the created [CustomerSummary] instead of navigating away.
   final bool returnCustomer;
+
+  /// Prefill duka name when opening from POS search.
+  final String? initialName;
 
   @override
   ConsumerState<CustomerFormPage> createState() => _CustomerFormPageState();
@@ -42,17 +47,28 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   final _nameFocus = FocusNode();
   final List<TextEditingController> _goods = [TextEditingController()];
   bool _saving = false;
+  bool _locating = false;
   String? _error;
   bool _seeded = false;
+  double? _latitude;
+  double? _longitude;
+  double? _locationAccuracy;
 
   bool get _isEdit => widget.customerId != null;
+
+  bool get _hasLocationPing => _latitude != null && _longitude != null;
 
   @override
   void initState() {
     super.initState();
     if (!_isEdit) {
+      final seedName = widget.initialName?.trim() ?? '';
+      if (seedName.isNotEmpty) _name.text = seedName;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _nameFocus.requestFocus();
+        if (!mounted) return;
+        _nameFocus.requestFocus();
+        // Quiet first attempt — agent is usually already at the duka.
+        _snapLocation(showErrors: false);
       });
     }
   }
@@ -111,7 +127,64 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     _city.text = detail.city ?? '';
     _landmark.text = detail.address ?? '';
     _contactPerson.text = detail.contactPerson ?? '';
+    _latitude = detail.latitude;
+    _longitude = detail.longitude;
+    _locationAccuracy = detail.locationAccuracy;
     _replaceGoods(detail.typicalGoods);
+  }
+
+  Future<void> _snapLocation({bool showErrors = true}) async {
+    if (_locating) return;
+    setState(() => _locating = true);
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (!mounted) return;
+        if (showErrors) {
+          setState(
+            () => _error =
+                'Allow location access so we can pin this duka for deliveries.',
+          );
+        }
+        return;
+      }
+      final serviceOn = await Geolocator.isLocationServiceEnabled();
+      if (!serviceOn) {
+        if (!mounted) return;
+        if (showErrors) {
+          setState(
+            () => _error = 'Turn on location services, then snap again.',
+          );
+        }
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _latitude = pos.latitude;
+        _longitude = pos.longitude;
+        _locationAccuracy = pos.accuracy;
+        if (_error != null &&
+            _error!.toLowerCase().contains('location')) {
+          _error = null;
+        }
+      });
+    } on Object catch (e) {
+      if (!mounted) return;
+      if (showErrors) {
+        setState(() => _error = 'Could not snap location: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
   }
 
   Future<void> _save() async {
@@ -139,6 +212,13 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
       setState(() => _error = emailErr);
       return;
     }
+    if (!_isEdit && !_hasLocationPing) {
+      setState(
+        () => _error =
+            'Snap the location at this duka before registering.',
+      );
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -152,6 +232,9 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
       address: _landmark.text,
       contactPerson: _contactPerson.text,
       typicalGoods: [for (final c in _goods) c.text],
+      latitude: _latitude,
+      longitude: _longitude,
+      locationAccuracy: _locationAccuracy,
     );
     final api = ref.read(customersApiProvider);
     final result = _isEdit
@@ -331,9 +414,24 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                     decoration: const InputDecoration(
                       labelText: 'Phone',
                       hintText: 'e.g. 0712 345 678',
+                      helperText:
+                          'With a phone, they get a short welcome SMS from Omuwenga.',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.phone_outlined),
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  _sectionLabel(
+                    theme,
+                    'Location ping',
+                    hint: _isEdit ? '(optional)' : '(required)',
+                  ),
+                  _LocationPingCard(
+                    locating: _locating,
+                    latitude: _latitude,
+                    longitude: _longitude,
+                    accuracy: _locationAccuracy,
+                    onSnap: _saving ? null : () => _snapLocation(),
                   ),
                   const SizedBox(height: 20),
                   _sectionLabel(theme, 'Other details', hint: '(optional)'),
@@ -441,6 +539,101 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
             onPrimary: _saving ? null : _save,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LocationPingCard extends StatelessWidget {
+  const _LocationPingCard({
+    required this.locating,
+    required this.latitude,
+    required this.longitude,
+    required this.accuracy,
+    required this.onSnap,
+  });
+
+  final bool locating;
+  final double? latitude;
+  final double? longitude;
+  final double? accuracy;
+  final VoidCallback? onSnap;
+
+  bool get _hasPing => latitude != null && longitude != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final coords = _hasPing
+        ? '${latitude!.toStringAsFixed(5)}, ${longitude!.toStringAsFixed(5)}'
+        : null;
+    final accuracyLabel = accuracy == null
+        ? null
+        : '±${accuracy!.round()} m';
+
+    return Material(
+      color: AppColors.secondary,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  _hasPing ? Icons.location_on : Icons.location_searching,
+                  color: _hasPing
+                      ? const Color(0xFF15803D)
+                      : AppColors.mutedForeground,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _hasPing ? 'Location captured' : 'Stand at the duka',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _hasPing
+                            ? [
+                                ?coords,
+                                ?accuracyLabel,
+                              ].join(' · ')
+                            : 'Snap GPS so deliveries know where to stop.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              key: const Key('customer_form_snap_location'),
+              onPressed: locating ? null : onSnap,
+              icon: locating
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(_hasPing ? Icons.refresh : Icons.my_location),
+              label: Text(
+                locating
+                    ? 'Snapping…'
+                    : (_hasPing ? 'Snap again' : 'Snap location'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
