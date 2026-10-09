@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../../core/network/api_client.dart';
 import '../../../core/result/result.dart';
 import '../../sales_history/domain/sale.dart';
+import '../domain/approval_details.dart';
 
 class PendingDebtCollection {
   const PendingDebtCollection({
@@ -13,6 +14,7 @@ class PendingDebtCollection {
     this.madeByName,
     this.createdAt,
     this.reason,
+    this.details = const ApprovalDetails(),
   });
 
   final int id;
@@ -22,6 +24,7 @@ class PendingDebtCollection {
   final String? madeByName;
   final String? createdAt;
   final String? reason;
+  final ApprovalDetails details;
 
   factory PendingDebtCollection.fromJson(Map<String, dynamic> json) {
     final apply = json['apply_payload'];
@@ -35,19 +38,23 @@ class PendingDebtCollection {
         (applyMap['payment_method'] ?? proposedMap['payment_method'] ?? 'cash')
             ?.toString();
     final customer =
+        json['entity_repr'] ??
         json['entity_label'] ??
         json['customer_name'] ??
         applyMap['customer_name'] ??
         'Customer';
-    final madeBy = json['made_by_name'] ?? json['made_by'];
+    final madeBy =
+        json['made_by_username'] ?? json['made_by_name'] ?? json['made_by'];
     return PendingDebtCollection(
       id: int.tryParse('${json['id']}') ?? 0,
       customerName: customer.toString(),
       amount: double.tryParse('$amountRaw') ?? 0,
       paymentMethod: method,
       madeByName: madeBy?.toString(),
-      createdAt: json['created_at']?.toString(),
+      createdAt:
+          json['made_at']?.toString() ?? json['created_at']?.toString(),
       reason: json['reason']?.toString(),
+      details: ApprovalDetails.fromJson(json['details']),
     );
   }
 }
@@ -56,6 +63,30 @@ class ApprovalsApi {
   ApprovalsApi(this._client);
 
   final ApiClient _client;
+
+  Future<Result<SaleDetail>> saleDetail(int saleId) async {
+    final response = await _client.get('sales/$saleId/');
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(ApprovalsApiException(_safeError(res.body)));
+    }
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) {
+        return Failure(ApprovalsApiException('Could not read sale detail.'));
+      }
+      return Success(SaleDetail.fromJson(Map<String, dynamic>.from(decoded)));
+    } on Object catch (_, st) {
+      return Failure(
+        ApprovalsApiException('Could not read sale detail.'),
+        st,
+      );
+    }
+  }
 
   Future<Result<List<SaleSummary>>> listPendingSales() async {
     final response = await _client.get(

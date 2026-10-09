@@ -52,11 +52,118 @@ List<Override> _approverOverrides() {
         ),
         tokenStore: tokens,
         httpClient: MockClient((request) async {
-          if (request.url.path.contains('sales')) {
+          final path = request.url.path;
+          if (path.endsWith('/sales/') || path.contains('/sales/?')) {
             return http.Response(jsonEncode({'results': []}), 200);
           }
-          if (request.url.path.contains('pending-changes')) {
+          if (path.contains('pending-changes')) {
             return http.Response(jsonEncode([]), 200);
+          }
+          return http.Response('{}', 404);
+        }),
+      );
+    }),
+  ];
+}
+
+List<Override> _approverWithSaleOverrides() {
+  final tokens = InMemoryTokenStore();
+  return [
+    ...seedOverrides(_approver(), tokens: tokens),
+    apiClientProvider.overrideWith((ref) {
+      return ApiClient(
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
+        tokenStore: tokens,
+        httpClient: MockClient((request) async {
+          final path = request.url.path;
+          if (path.contains('pending-changes')) {
+            return http.Response(jsonEncode([]), 200);
+          }
+          if (RegExp(r'/sales/\d+/?$').hasMatch(path)) {
+            return http.Response(
+              jsonEncode({
+                'id': 9,
+                'sale_number': 'S-9',
+                'total': 500,
+                'amount_paid': 500,
+                'status': 'pending_approval',
+                'items': [],
+                'approval_details': {
+                  'sections': [
+                    {
+                      'title': 'Items',
+                      'lines': [
+                        {
+                          'name': 'Maize Flour',
+                          'variant': '',
+                          'quantity': '2',
+                          'unit_price': '250.00',
+                          'subtotal': '500.00',
+                        },
+                      ],
+                    },
+                    {
+                      'title': 'Money',
+                      'facts': [
+                        {
+                          'label': 'Total',
+                          'value': '500.00',
+                          'kind': 'money',
+                        },
+                      ],
+                    },
+                  ],
+                },
+              }),
+              200,
+            );
+          }
+          if (path.contains('sales')) {
+            return http.Response(
+              jsonEncode({
+                'results': [
+                  {
+                    'id': 9,
+                    'sale_number': 'S-9',
+                    'total': 500,
+                    'amount_paid': 500,
+                    'status': 'pending_approval',
+                    'cashier_name': 'Ann',
+                    'customer_name': 'Jane',
+                    'approval_details': {
+                      'sections': [
+                        {
+                          'title': 'Items',
+                          'lines': [
+                            {
+                              'name': 'Maize Flour',
+                              'variant': '',
+                              'quantity': '2',
+                              'unit_price': '250.00',
+                              'subtotal': '500.00',
+                            },
+                          ],
+                        },
+                        {
+                          'title': 'Money',
+                          'facts': [
+                            {
+                              'label': 'Total',
+                              'value': '500.00',
+                              'kind': 'money',
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  },
+                ],
+              }),
+              200,
+            );
           }
           return http.Response('{}', 404);
         }),
@@ -104,6 +211,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('No sales waiting.'), findsOneWidget);
     expect(find.text('No collections waiting.'), findsOneWidget);
+  });
+
+  testWidgets('tapping a sale shows full approval details', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _approverWithSaleOverrides(),
+        child: const MaterialApp(home: ApprovalsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('S-9'), findsOneWidget);
+    expect(find.text('Maize Flour'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('approval_sale_9')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('approval_details_panel')), findsOneWidget);
+    expect(find.text('Maize Flour'), findsOneWidget);
+    expect(find.textContaining('KES 500'), findsWidgets);
+    expect(find.byKey(const Key('approval_sheet_approve')), findsOneWidget);
   });
 
   testWidgets('home shows Approvals quick action when permitted', (tester) async {

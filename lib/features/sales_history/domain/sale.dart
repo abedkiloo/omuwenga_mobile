@@ -1,3 +1,4 @@
+import '../../approvals/domain/approval_details.dart';
 import 'payment_status.dart';
 import 'sale_status_display.dart';
 
@@ -40,6 +41,7 @@ class SaleSummary {
     this.saleOrigin = 'shop',
     this.needsSalespersonAction = false,
     this.rejectionReason,
+    this.approvalDetails = const ApprovalDetails(),
   });
 
   final int id;
@@ -59,6 +61,7 @@ class SaleSummary {
   final String saleOrigin;
   final bool needsSalespersonAction;
   final String? rejectionReason;
+  final ApprovalDetails approvalDetails;
 
   PaymentStatusDisplay get paymentStatus =>
       classifyPaymentStatus(total: total, amountPaid: amountPaid);
@@ -100,6 +103,7 @@ class SaleSummary {
       saleOrigin: field ? 'field' : 'shop',
       needsSalespersonAction: _asBool(json['needs_salesperson_action']),
       rejectionReason: json['rejection_reason']?.toString(),
+      approvalDetails: ApprovalDetails.fromJson(json['approval_details']),
     );
   }
 }
@@ -169,6 +173,7 @@ class SaleDetail {
     this.needsSalespersonAction = false,
     this.rejectionReason,
     this.canCorrectDate = false,
+    this.approvalDetails = const ApprovalDetails(),
   });
 
   final int id;
@@ -200,6 +205,7 @@ class SaleDetail {
   final bool needsSalespersonAction;
   final String? rejectionReason;
   final bool canCorrectDate;
+  final ApprovalDetails approvalDetails;
 
   PaymentStatusDisplay get paymentStatus =>
       classifyPaymentStatus(total: total, amountPaid: amountPaid);
@@ -210,6 +216,11 @@ class SaleDetail {
     payment: paymentStatus,
     needsSalespersonAction: needsSalespersonAction,
   );
+
+  double get debtAmount {
+    final debt = total - amountPaid;
+    return debt < 0 ? 0 : debt;
+  }
 
   factory SaleDetail.fromJson(Map<String, dynamic> json) {
     final items = <SaleLine>[];
@@ -257,6 +268,7 @@ class SaleDetail {
       needsSalespersonAction: _asBool(json['needs_salesperson_action']),
       rejectionReason: json['rejection_reason']?.toString(),
       canCorrectDate: json['can_correct_date'] == true,
+      approvalDetails: ApprovalDetails.fromJson(json['approval_details']),
     );
   }
 }

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../design_system/chrome/cb_bounded_sheet.dart';
 import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../sales_history/domain/sale.dart';
 import '../application/approvals_controller.dart';
 import '../data/approvals_api.dart';
+import '../domain/approval_details.dart';
+import 'approval_details_panel.dart';
 
 String _kes(num value) {
   final n = value.toDouble();
@@ -63,7 +66,7 @@ class _ApprovalsPageState extends ConsumerState<ApprovalsPage> {
             Text('Approvals', style: theme.textTheme.titleLarge),
             const SizedBox(height: 4),
             Text(
-              'Review cashier sales and debt collections waiting for you.',
+              'Tap a request to review every detail, then approve or return it.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: AppColors.mutedForeground,
               ),
@@ -100,9 +103,7 @@ class _ApprovalsPageState extends ConsumerState<ApprovalsPage> {
                     _SaleApprovalCard(
                       sale: sale,
                       busy: state.acting,
-                      onApprove: () => _act(() => ctrl.approveSale(sale.id)),
-                      onReject: (reason) =>
-                          _act(() => ctrl.rejectSale(sale.id, reason)),
+                      onOpen: () => _openSaleReview(sale),
                     ),
               ],
               if (ctrl.canApproveCollections) ...[
@@ -124,10 +125,7 @@ class _ApprovalsPageState extends ConsumerState<ApprovalsPage> {
                     _CollectionApprovalCard(
                       row: row,
                       busy: state.acting,
-                      onApprove: () =>
-                          _act(() => ctrl.approveCollection(row.id)),
-                      onReject: (reason) =>
-                          _act(() => ctrl.rejectCollection(row.id, reason)),
+                      onOpen: () => _openCollectionReview(row),
                     ),
               ],
             ],
@@ -137,37 +135,188 @@ class _ApprovalsPageState extends ConsumerState<ApprovalsPage> {
     );
   }
 
-  Future<void> _act(Future<String?> Function() action) async {
-    final err = await action();
-    if (!mounted) return;
-    if (err != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Done')));
+  Future<void> _openSaleReview(SaleSummary sale) async {
+    final ctrl = ref.read(approvalsProvider.notifier);
+    var details = sale.approvalDetails;
+    if (details.isEmpty) {
+      final api = ref.read(approvalsApiProvider);
+      final result = await api.saleDetail(sale.id);
+      if (!mounted) return;
+      result.when(
+        success: (detail) {
+          details = detail.approvalDetails;
+          if (details.isEmpty && detail.items.isNotEmpty) {
+            details = ApprovalDetails(
+              sections: [
+                ApprovalSection(
+                  title: 'Sale',
+                  facts: [
+                    ApprovalFact(label: 'Sale number', value: detail.saleNumber),
+                    if (detail.customerName != null &&
+                        detail.customerName!.isNotEmpty)
+                      ApprovalFact(
+                        label: 'Customer',
+                        value: detail.customerName!,
+                      ),
+                    if (detail.cashierName != null &&
+                        detail.cashierName!.isNotEmpty)
+                      ApprovalFact(
+                        label: 'Sold by',
+                        value: detail.cashierName!,
+                      ),
+                    if (detail.notes != null && detail.notes!.isNotEmpty)
+                      ApprovalFact(label: 'Notes', value: detail.notes!),
+                  ],
+                ),
+                ApprovalSection(
+                  title: 'Items',
+                  lines: [
+                    for (final line in detail.items)
+                      ApprovalLine(
+                        name: line.productName,
+                        variant: line.variantName ?? '',
+                        quantity: line.quantity == line.quantity.roundToDouble()
+                            ? line.quantity.toStringAsFixed(0)
+                            : line.quantity.toString(),
+                        unitPrice: line.unitPrice.toString(),
+                        subtotal: line.lineTotal.toString(),
+                      ),
+                  ],
+                ),
+                ApprovalSection(
+                  title: 'Money',
+                  facts: [
+                    ApprovalFact(
+                      label: 'Total',
+                      value: detail.total.toString(),
+                      kind: 'money',
+                    ),
+                    ApprovalFact(
+                      label: 'Amount paid',
+                      value: detail.amountPaid.toString(),
+                      kind: 'money',
+                    ),
+                    if (detail.paymentMethod != null)
+                      ApprovalFact(
+                        label: 'Payment method',
+                        value: detail.paymentMethod!,
+                      ),
+                    if (detail.debtAmount > 0)
+                      ApprovalFact(
+                        label: 'Balance left as debt',
+                        value: detail.debtAmount.toString(),
+                        kind: 'money',
+                      ),
+                  ],
+                ),
+              ],
+            );
+          }
+        },
+        failure: (_, _) {},
+      );
     }
+    if (!mounted) return;
+    await showCbBoundedSheet<void>(
+      context: context,
+      heightFactor: 0.9,
+      builder: (ctx) => _ApprovalReviewSheet(
+        title: sale.saleNumber,
+        subtitle:
+            '${sale.cashierName ?? 'Cashier'}'
+            '${sale.customerName != null && sale.customerName!.isNotEmpty ? ' · ${sale.customerName}' : ''}'
+            ' · KES ${_kes(sale.total)}',
+        details: details,
+        waitingOnCashier: sale.needsSalespersonAction,
+        waitingMessage: sale.rejectionReason?.isNotEmpty == true
+            ? 'Waiting on salesperson. Your comment: ${sale.rejectionReason}'
+            : 'Waiting on the salesperson to fix this sale and send it again.',
+        busy: ref.read(approvalsProvider).acting,
+        onApprove: sale.needsSalespersonAction
+            ? null
+            : () async {
+                final err = await ctrl.approveSale(sale.id);
+                if (!ctx.mounted) return;
+                Navigator.of(ctx).pop();
+                _toast(err);
+              },
+        onReject: sale.needsSalespersonAction
+            ? null
+            : (reason) async {
+                final err = await ctrl.rejectSale(sale.id, reason);
+                if (!ctx.mounted) return;
+                Navigator.of(ctx).pop();
+                _toast(err);
+              },
+      ),
+    );
+  }
+
+  Future<void> _openCollectionReview(PendingDebtCollection row) async {
+    final ctrl = ref.read(approvalsProvider.notifier);
+    await showCbBoundedSheet<void>(
+      context: context,
+      heightFactor: 0.9,
+      builder: (ctx) => _ApprovalReviewSheet(
+        title: row.customerName,
+        subtitle:
+            'KES ${_kes(row.amount)} · ${(row.paymentMethod ?? 'cash').toUpperCase()}'
+            '${row.madeByName != null ? ' · ${row.madeByName}' : ''}',
+        details: row.details,
+        reason: row.reason,
+        busy: ref.read(approvalsProvider).acting,
+        onApprove: () async {
+          final err = await ctrl.approveCollection(row.id);
+          if (!ctx.mounted) return;
+          Navigator.of(ctx).pop();
+          _toast(err);
+        },
+        onReject: (reason) async {
+          final err = await ctrl.rejectCollection(row.id, reason);
+          if (!ctx.mounted) return;
+          Navigator.of(ctx).pop();
+          _toast(err);
+        },
+      ),
+    );
+  }
+
+  void _toast(String? err) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(err ?? 'Done')),
+    );
   }
 }
 
-class _SaleApprovalCard extends StatefulWidget {
-  const _SaleApprovalCard({
-    required this.sale,
+class _ApprovalReviewSheet extends StatefulWidget {
+  const _ApprovalReviewSheet({
+    required this.title,
+    required this.subtitle,
+    required this.details,
     required this.busy,
-    required this.onApprove,
-    required this.onReject,
+    this.reason,
+    this.waitingOnCashier = false,
+    this.waitingMessage,
+    this.onApprove,
+    this.onReject,
   });
 
-  final SaleSummary sale;
+  final String title;
+  final String subtitle;
+  final ApprovalDetails details;
   final bool busy;
-  final VoidCallback onApprove;
-  final Future<void> Function(String reason) onReject;
+  final String? reason;
+  final bool waitingOnCashier;
+  final String? waitingMessage;
+  final Future<void> Function()? onApprove;
+  final Future<void> Function(String reason)? onReject;
 
   @override
-  State<_SaleApprovalCard> createState() => _SaleApprovalCardState();
+  State<_ApprovalReviewSheet> createState() => _ApprovalReviewSheetState();
 }
 
-class _SaleApprovalCardState extends State<_SaleApprovalCard> {
+class _ApprovalReviewSheetState extends State<_ApprovalReviewSheet> {
   bool _rejectOpen = false;
   final _reason = TextEditingController();
 
@@ -179,103 +328,214 @@ class _SaleApprovalCardState extends State<_SaleApprovalCard> {
 
   @override
   Widget build(BuildContext context) {
-    final sale = widget.sale;
+    return Material(
+      color: AppColors.surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 4),
+                Text(
+                  widget.subtitle,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              children: [
+                if (widget.reason != null && widget.reason!.trim().isNotEmpty) ...[
+                  Text(
+                    'WHY THEY ASKED',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.mutedForeground,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(widget.reason!),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                ApprovalDetailsPanel(
+                  key: const Key('approval_details_panel'),
+                  details: widget.details,
+                ),
+                if (widget.waitingOnCashier) ...[
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7ED),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFDBA74)),
+                    ),
+                    child: Text(
+                      widget.waitingMessage ??
+                          'Waiting on the salesperson to fix this sale.',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (!widget.waitingOnCashier &&
+              (widget.onApprove != null || widget.onReject != null))
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_rejectOpen) ...[
+                      TextField(
+                        controller: _reason,
+                        decoration: const InputDecoration(
+                          labelText: 'Reason for the requester',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: widget.busy
+                                  ? null
+                                  : () => setState(() => _rejectOpen = false),
+                              child: const Text('Cancel'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.destructive,
+                              ),
+                              onPressed: widget.busy
+                                  ? null
+                                  : () => widget.onReject?.call(_reason.text),
+                              child: const Text('Confirm return'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton(
+                              key: const Key('approval_sheet_approve'),
+                              onPressed: widget.busy
+                                  ? null
+                                  : () => widget.onApprove?.call(),
+                              child: const Text('Approve'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              key: const Key('approval_sheet_reject'),
+                              onPressed: widget.busy
+                                  ? null
+                                  : () => setState(() => _rejectOpen = true),
+                              child: const Text('Return'),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SaleApprovalCard extends StatelessWidget {
+  const _SaleApprovalCard({
+    required this.sale,
+    required this.busy,
+    required this.onOpen,
+  });
+
+  final SaleSummary sale;
+  final bool busy;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
     final waitingOnCashier = sale.needsSalespersonAction;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: CbSurfaceCard(
         key: Key('approval_sale_${sale.id}'),
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        onTap: busy ? null : onOpen,
+        child: Row(
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        sale.saleNumber,
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      Text(
-                        '${sale.cashierName ?? 'Cashier'}'
-                        '${sale.customerName != null && sale.customerName!.isNotEmpty ? ' · ${sale.customerName}' : ''}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.mutedForeground,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  'KES ${_kes(sale.total)}',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ],
-            ),
-            if (waitingOnCashier) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFFDBA74)),
-                ),
-                child: Text(
-                  sale.rejectionReason?.isNotEmpty == true
-                      ? 'Waiting on salesperson. Your comment: ${sale.rejectionReason}'
-                      : 'Waiting on the salesperson to fix this sale and send it again.',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ),
-            ] else ...[
-              const SizedBox(height: 10),
-              Row(
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FilledButton(
-                    key: Key('approval_sale_approve_${sale.id}'),
-                    onPressed: widget.busy ? null : widget.onApprove,
-                    child: const Text('Approve'),
+                  Text(
+                    sale.saleNumber,
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
-                  const SizedBox(width: 8),
-                  OutlinedButton(
-                    key: Key('approval_sale_reject_${sale.id}'),
-                    onPressed: widget.busy
-                        ? null
-                        : () => setState(() => _rejectOpen = !_rejectOpen),
-                    child: const Text('Return'),
+                  Text(
+                    '${sale.cashierName ?? 'Cashier'}'
+                    '${sale.customerName != null && sale.customerName!.isNotEmpty ? ' · ${sale.customerName}' : ''}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
                   ),
+                  if (waitingOnCashier)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Waiting on salesperson',
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: const Color(0xFFC2410C)),
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Tap for full details',
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: AppColors.mutedForeground),
+                      ),
+                    ),
                 ],
               ),
-              if (_rejectOpen) ...[
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _reason,
-                  decoration: const InputDecoration(
-                    labelText: 'Reason for the salesperson',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.destructive,
-                    ),
-                    onPressed: widget.busy
-                        ? null
-                        : () => widget.onReject(_reason.text),
-                    child: const Text('Confirm return'),
-                  ),
-                ),
-              ],
-            ],
+            ),
+            Text(
+              'KES ${_kes(sale.total)}',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right, color: AppColors.mutedForeground),
           ],
         ),
       ),
@@ -283,93 +543,58 @@ class _SaleApprovalCardState extends State<_SaleApprovalCard> {
   }
 }
 
-class _CollectionApprovalCard extends StatefulWidget {
+class _CollectionApprovalCard extends StatelessWidget {
   const _CollectionApprovalCard({
     required this.row,
     required this.busy,
-    required this.onApprove,
-    required this.onReject,
+    required this.onOpen,
   });
 
   final PendingDebtCollection row;
   final bool busy;
-  final VoidCallback onApprove;
-  final Future<void> Function(String reason) onReject;
-
-  @override
-  State<_CollectionApprovalCard> createState() =>
-      _CollectionApprovalCardState();
-}
-
-class _CollectionApprovalCardState extends State<_CollectionApprovalCard> {
-  bool _rejectOpen = false;
-  final _reason = TextEditingController();
-
-  @override
-  void dispose() {
-    _reason.dispose();
-    super.dispose();
-  }
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
-    final row = widget.row;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: CbSurfaceCard(
         key: Key('approval_collection_${row.id}'),
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        onTap: busy ? null : onOpen,
+        child: Row(
           children: [
-            Text(row.customerName, style: Theme.of(context).textTheme.titleSmall),
-            Text(
-              'KES ${_kes(row.amount)} · ${(row.paymentMethod ?? 'cash').toUpperCase()}'
-              '${row.madeByName != null ? ' · ${row.madeByName}' : ''}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.mutedForeground,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                FilledButton(
-                  onPressed: widget.busy ? null : widget.onApprove,
-                  child: const Text('Approve'),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton(
-                  onPressed: widget.busy
-                      ? null
-                      : () => setState(() => _rejectOpen = !_rejectOpen),
-                  child: const Text('Reject'),
-                ),
-              ],
-            ),
-            if (_rejectOpen) ...[
-              const SizedBox(height: 8),
-              TextField(
-                controller: _reason,
-                decoration: const InputDecoration(
-                  labelText: 'Rejection reason',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.destructive,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    row.customerName,
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
-                  onPressed: widget.busy
-                      ? null
-                      : () => widget.onReject(_reason.text),
-                  child: const Text('Confirm reject'),
-                ),
+                  Text(
+                    '${(row.paymentMethod ?? 'cash').toUpperCase()}'
+                    '${row.madeByName != null ? ' · ${row.madeByName}' : ''}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Tap for full details',
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: AppColors.mutedForeground),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
+            Text(
+              'KES ${_kes(row.amount)}',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right, color: AppColors.mutedForeground),
           ],
         ),
       ),
