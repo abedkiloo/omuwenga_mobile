@@ -15,6 +15,7 @@ import '../../daily_notes/presentation/sticky_notes_gate.dart';
 import '../../appraisals/presentation/appraisal_greeting.dart';
 import '../../delivery/application/delivery_controllers.dart';
 import '../../delivery/domain/delivery_stop.dart';
+import '../../expenses/application/expenses_controller.dart';
 import '../../field_orders/domain/field_order.dart';
 import '../../field_orders/domain/field_order_commit.dart';
 import '../../home/presentation/store_home_dashboard.dart';
@@ -142,6 +143,13 @@ List<_NavItem> _moreNav({
         route: AppRoutes.appraisals,
         key: Key('more_appraisals'),
       ),
+    if (perms?.canViewExpenses ?? false)
+      const _NavItem(
+        label: 'Expenses',
+        icon: Icons.payments_outlined,
+        route: AppRoutes.expenses,
+        key: Key('more_expenses'),
+      ),
     const _NavItem(
       label: 'API health',
       icon: Icons.monitor_heart_outlined,
@@ -168,10 +176,12 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
 
   void _maybeLoadApprovals() {
     if (!mounted) return;
-    final perms = ref.read(authControllerProvider).session?.permissions;
+    final session = ref.read(authControllerProvider).session;
+    final perms = session?.permissions;
     final canApprove =
         (perms?.canApproveSales ?? false) ||
-        (perms?.canApproveDebtManagement ?? false);
+        (perms?.canApproveDebtManagement ?? false) ||
+        sessionCanApproveExpenses(session);
     if (canApprove) {
       ref.read(approvalsProvider.notifier).load();
     }
@@ -185,7 +195,8 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
     final hideChrome = shellHidesChrome(location);
     final canApprove =
         (perms?.canApproveSales ?? false) ||
-        (perms?.canApproveDebtManagement ?? false);
+        (perms?.canApproveDebtManagement ?? false) ||
+        sessionCanApproveExpenses(session);
     final canHistory = session != null &&
         sessionCanViewDeliveryHistory(
           permissions: session.permissions,

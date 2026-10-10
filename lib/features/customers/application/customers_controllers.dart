@@ -6,11 +6,20 @@ import '../../../sync/domain/client_uuid.dart';
 import '../../auth/application/auth_controller.dart';
 import '../data/customers_api.dart';
 import '../domain/customer.dart';
+import '../domain/kenya_admin_units.dart';
 import 'customer_list_paging.dart';
 
 final customersApiProvider = Provider<CustomersApi>((ref) {
   return CustomersApi(ref.watch(apiClientProvider));
 });
+
+final kenyaAdminUnitsProvider = FutureProvider<KenyaAdminUnits>((ref) async {
+  final result = await ref.watch(customersApiProvider).fetchKenyaLocations();
+  return result.getOrThrow();
+});
+
+/// Disable automatic GPS snap on the register form (widget tests).
+final customerFormAutoSnapLocationProvider = Provider<bool>((ref) => true);
 
 final customersSettingsProvider = FutureProvider<CustomersModuleSettings>((
   ref,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/branding/brand_logo.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
@@ -45,6 +46,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final theme = Theme.of(context);
     final error = _localError ?? auth.message;
 
+    final env = ref.watch(appEnvProvider);
+    final envLabel = env.environmentLabel;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -62,6 +66,32 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (envLabel.isNotEmpty) ...[
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            key: const Key('login_env_badge'),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.mutedForeground.withValues(
+                                alpha: 0.12,
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              envLabel,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: AppColors.mutedForeground,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                       const Spacer(),
                       BrandLogo(height: short ? 120 : 160),
                       const SizedBox(height: 16),

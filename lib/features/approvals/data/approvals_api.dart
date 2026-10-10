@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/result/result.dart';
+import '../../expenses/domain/expense.dart';
 import '../../sales_history/domain/sale.dart';
 import '../domain/approval_details.dart';
 
@@ -109,6 +110,73 @@ class ApprovalsApi {
     } on Object catch (_, st) {
       return Failure(
         ApprovalsApiException('Could not read pending sales.'),
+        st,
+      );
+    }
+  }
+
+  Future<Result<List<Expense>>> listPendingExpenses() async {
+    final response = await _client.get(
+      'expenses/?status=pending&show_all=true&page_size=100',
+    );
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(ApprovalsApiException(_safeError(res.body)));
+    }
+    try {
+      return Success([
+        for (final item in _asList(res.body))
+          if (item is Map) Expense.fromJson(Map<String, dynamic>.from(item)),
+      ]);
+    } on Object catch (_, st) {
+      return Failure(
+        ApprovalsApiException('Could not read pending expenses.'),
+        st,
+      );
+    }
+  }
+
+  Future<Result<Expense>> approveExpense(int expenseId) async {
+    final response = await _client.post(
+      'expenses/$expenseId/approve/',
+      body: const {},
+    );
+    return _parseExpense(response);
+  }
+
+  Future<Result<Expense>> rejectExpense({
+    required int expenseId,
+    required String reason,
+  }) async {
+    final response = await _client.post(
+      'expenses/$expenseId/reject/',
+      body: {'rejection_reason': reason.trim()},
+    );
+    return _parseExpense(response);
+  }
+
+  Result<Expense> _parseExpense(Result response) {
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure<Expense>(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure<Expense>(ApprovalsApiException(_safeError(res.body)));
+    }
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) {
+        return Failure<Expense>(ApprovalsApiException('Could not read expense.'));
+      }
+      return Success(Expense.fromJson(Map<String, dynamic>.from(decoded)));
+    } on Object catch (_, st) {
+      return Failure<Expense>(
+        ApprovalsApiException('Could not read expense.'),
         st,
       );
     }

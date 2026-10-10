@@ -12,6 +12,8 @@ import '../../../design_system/states/async_states.dart';
 import '../../pos/application/pos_controllers.dart';
 import '../application/customers_controllers.dart';
 import '../domain/customer.dart';
+import '../domain/kenya_admin_units.dart';
+import 'kenya_location_fields.dart';
 import '../../../core/validation/field_types.dart';
 
 class CustomerFormPage extends ConsumerStatefulWidget {
@@ -41,8 +43,10 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   final _ownerName = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
-  final _city = TextEditingController();
   final _landmark = TextEditingController();
+  String _county = KenyaLocationDefaults.fallback.county;
+  String _subCounty = KenyaLocationDefaults.fallback.subCounty;
+  String _ward = KenyaLocationDefaults.fallback.ward;
   final _contactPerson = TextEditingController();
   final _nameFocus = FocusNode();
   final List<TextEditingController> _goods = [TextEditingController()];
@@ -50,6 +54,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   bool _locating = false;
   String? _error;
   bool _seeded = false;
+  bool _autoSnapAttempted = false;
   double? _latitude;
   double? _longitude;
   double? _locationAccuracy;
@@ -67,9 +72,19 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _nameFocus.requestFocus();
-        // Quiet first attempt — agent is usually already at the duka.
-        _snapLocation(showErrors: false);
       });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isEdit &&
+        !_autoSnapAttempted &&
+        ref.read(customerFormAutoSnapLocationProvider)) {
+      _autoSnapAttempted = true;
+      // Quiet first attempt — agent is usually already at the duka.
+      _snapLocation(showErrors: false);
     }
   }
 
@@ -79,7 +94,6 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     _ownerName.dispose();
     _phone.dispose();
     _email.dispose();
-    _city.dispose();
     _landmark.dispose();
     _contactPerson.dispose();
     _nameFocus.dispose();
@@ -124,7 +138,20 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     _ownerName.text = detail.ownerName ?? '';
     _phone.text = detail.phone ?? '';
     _email.text = detail.email ?? '';
-    _city.text = detail.city ?? '';
+    _county =
+        detail.county?.trim().isNotEmpty == true
+            ? detail.county!.trim()
+            : (detail.city?.trim().isNotEmpty == true
+                ? detail.city!.trim()
+                : KenyaLocationDefaults.fallback.county);
+    _subCounty =
+        detail.subCounty?.trim().isNotEmpty == true
+            ? detail.subCounty!.trim()
+            : KenyaLocationDefaults.fallback.subCounty;
+    _ward =
+        detail.ward?.trim().isNotEmpty == true
+            ? detail.ward!.trim()
+            : KenyaLocationDefaults.fallback.ward;
     _landmark.text = detail.address ?? '';
     _contactPerson.text = detail.contactPerson ?? '';
     _latitude = detail.latitude;
@@ -228,7 +255,10 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
       ownerName: _ownerName.text,
       phone: _phone.text,
       email: _email.text,
-      city: _city.text,
+      city: _county,
+      county: _county,
+      subCounty: _subCounty,
+      ward: _ward,
       address: _landmark.text,
       contactPerson: _contactPerson.text,
       typicalGoods: [for (final c in _goods) c.text],
@@ -448,17 +478,15 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    key: const Key('customer_form_city'),
-                    controller: _city,
-                    textCapitalization: TextCapitalization.words,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: 'City',
-                      hintText: 'e.g. Nairobi',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.location_city_outlined),
-                    ),
+                  KenyaLocationFields(
+                    county: _county,
+                    subCounty: _subCounty,
+                    ward: _ward,
+                    onCountyChanged: (value) =>
+                        setState(() => _county = value),
+                    onSubCountyChanged: (value) =>
+                        setState(() => _subCounty = value),
+                    onWardChanged: (value) => setState(() => _ward = value),
                   ),
                   const SizedBox(height: 20),
                   _sectionLabel(theme, 'Notes'),

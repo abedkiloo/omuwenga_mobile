@@ -8,19 +8,31 @@ Android-first native client for CompleteBytePOS. Sprint docs live in
 - Flutter 3.24+ (`flutter doctor`)
 - Android emulator or device
 
-## Run
+## Run vs release (API target)
+
+**Default rule (no `APP_ENV` needed):**
+
+| What you do | API |
+|-------------|-----|
+| `flutter run` / debug / profile | **UAT** → `https://api.uat.omuwenga.com/api` |
+| `flutter build apk --release` / appbundle | **Production** → `https://shop.omuwenga.com/api` |
+
+Login shows a **UAT** badge on non-prod builds.
 
 ```bash
 cd mobile
 flutter pub get
+
+# Day-to-day: talks to UAT
 flutter run
-# Debug APK → UAT (https://api.uat.omuwenga.com/api)
-flutter build apk --debug
-# Release APK → production (https://shop.omuwenga.com/api) automatically
+
+# Ship to production stores / installers
 flutter build apk --release
-# Optional overrides:
+flutter build appbundle --release
+
+# Optional overrides only when you need them:
 # flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000/api
-# flutter build apk --release --dart-define=APP_ENV=uat   # force UAT release
+# flutter build apk --release --dart-define=APP_ENV=uat   # force UAT in a release binary
 ```
 
 | Build / `APP_ENV` | Default `API_BASE_URL` |

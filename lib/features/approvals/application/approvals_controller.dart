@@ -4,6 +4,8 @@ import '../../../app/providers.dart';
 import '../../../core/result/result.dart';
 import '../../../sync/domain/client_uuid.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../expenses/application/expenses_controller.dart';
+import '../../expenses/domain/expense.dart';
 import '../../sales_history/domain/sale.dart';
 import '../data/approvals_api.dart';
 
@@ -15,6 +17,7 @@ class ApprovalsState {
   const ApprovalsState({
     this.sales = const [],
     this.collections = const [],
+    this.expenses = const [],
     this.loading = false,
     this.acting = false,
     this.error,
@@ -22,15 +25,17 @@ class ApprovalsState {
 
   final List<SaleSummary> sales;
   final List<PendingDebtCollection> collections;
+  final List<Expense> expenses;
   final bool loading;
   final bool acting;
   final String? error;
 
-  int get totalCount => sales.length + collections.length;
+  int get totalCount => sales.length + collections.length + expenses.length;
 
   ApprovalsState copyWith({
     List<SaleSummary>? sales,
     List<PendingDebtCollection>? collections,
+    List<Expense>? expenses,
     bool? loading,
     bool? acting,
     String? error,
@@ -39,6 +44,7 @@ class ApprovalsState {
     return ApprovalsState(
       sales: sales ?? this.sales,
       collections: collections ?? this.collections,
+      expenses: expenses ?? this.expenses,
       loading: loading ?? this.loading,
       acting: acting ?? this.acting,
       error: clearError ? null : (error ?? this.error),
@@ -64,7 +70,14 @@ class ApprovalsController extends StateNotifier<ApprovalsState> {
     return perms?.canApproveDebtManagement ?? false;
   }
 
-  bool get canOpen => canApproveSales || canApproveCollections;
+  bool get canApproveExpenses {
+    return sessionCanApproveExpenses(
+      _ref.read(authControllerProvider).session,
+    );
+  }
+
+  bool get canOpen =>
+      canApproveSales || canApproveCollections || canApproveExpenses;
 
   Future<void> load() async {
     if (!canOpen) {
@@ -79,12 +92,17 @@ class ApprovalsController extends StateNotifier<ApprovalsState> {
       final collectionsFuture = canApproveCollections
           ? _api.listPendingCollections()
           : Future.value(const Success(<PendingDebtCollection>[]));
+      final expensesFuture = canApproveExpenses
+          ? _api.listPendingExpenses()
+          : Future.value(const Success(<Expense>[]));
       final salesResult = await salesFuture;
       final collectionsResult = await collectionsFuture;
+      final expensesResult = await expensesFuture;
 
       String? error;
       var sales = <SaleSummary>[];
       var collections = <PendingDebtCollection>[];
+      var expenses = <Expense>[];
       if (salesResult.isFailure) {
         error = salesResult.when(
           success: (_) => null,
@@ -101,9 +119,18 @@ class ApprovalsController extends StateNotifier<ApprovalsState> {
       } else {
         collections = collectionsResult.getOrThrow();
       }
+      if (expensesResult.isFailure) {
+        error ??= expensesResult.when(
+          success: (_) => null,
+          failure: (e, _) => e.toString(),
+        );
+      } else {
+        expenses = expensesResult.getOrThrow();
+      }
       state = ApprovalsState(
         sales: sales,
         collections: collections,
+        expenses: expenses,
         loading: false,
         error: error,
       );
@@ -174,6 +201,40 @@ class ApprovalsController extends StateNotifier<ApprovalsState> {
       changeId: changeId,
       reason: reason,
       idempotencyKey: _uuid.next(),
+    );
+    state = state.copyWith(acting: false);
+    if (result.isFailure) {
+      return result.when(
+        success: (_) => null,
+        failure: (e, _) => e.toString(),
+      );
+    }
+    await load();
+    return null;
+  }
+
+  Future<String?> approveExpense(int expenseId) async {
+    state = state.copyWith(acting: true, clearError: true);
+    final result = await _api.approveExpense(expenseId);
+    state = state.copyWith(acting: false);
+    if (result.isFailure) {
+      return result.when(
+        success: (_) => null,
+        failure: (e, _) => e.toString(),
+      );
+    }
+    await load();
+    return null;
+  }
+
+  Future<String?> rejectExpense(int expenseId, String reason) async {
+    if (reason.trim().isEmpty) {
+      return 'Please say why you are returning this expense';
+    }
+    state = state.copyWith(acting: true, clearError: true);
+    final result = await _api.rejectExpense(
+      expenseId: expenseId,
+      reason: reason,
     );
     state = state.copyWith(acting: false);
     if (result.isFailure) {

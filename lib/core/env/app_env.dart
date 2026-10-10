@@ -73,5 +73,21 @@ class AppEnv {
   }
 
   bool get isDev => flavor == AppFlavor.dev;
+  bool get isStaging => flavor == AppFlavor.staging;
   bool get isProd => flavor == AppFlavor.prod;
+
+  /// Short label for non-prod banners (empty in production).
+  String get environmentLabel {
+    switch (flavor) {
+      case AppFlavor.prod:
+        return '';
+      case AppFlavor.staging:
+        return 'UAT';
+      case AppFlavor.dev:
+        return 'UAT';
+    }
+  }
+
+  /// True when this build should talk to the UAT API by default.
+  bool get isNonProd => !isProd;
 }

@@ -64,6 +64,8 @@ void main() {
         releaseMode: false,
       );
       expect(debugEnv.flavor, AppFlavor.dev);
+      expect(debugEnv.isNonProd, isTrue);
+      expect(debugEnv.environmentLabel, 'UAT');
       expect(debugEnv.apiBaseUrl, 'https://api.uat.omuwenga.com/api');
 
       final releaseEnv = AppEnv.fromDefines(
@@ -73,6 +75,7 @@ void main() {
       );
       expect(releaseEnv.flavor, AppFlavor.prod);
       expect(releaseEnv.isProd, isTrue);
+      expect(releaseEnv.environmentLabel, '');
       expect(releaseEnv.apiBaseUrl, 'https://shop.omuwenga.com/api');
     });
   });

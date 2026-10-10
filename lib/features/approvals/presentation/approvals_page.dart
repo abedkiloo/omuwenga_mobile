@@ -4,11 +4,46 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/chrome/cb_bounded_sheet.dart';
 import '../../../design_system/chrome/cb_surface_card.dart';
+import '../../expenses/domain/expense.dart';
 import '../../sales_history/domain/sale.dart';
 import '../application/approvals_controller.dart';
 import '../data/approvals_api.dart';
 import '../domain/approval_details.dart';
 import 'approval_details_panel.dart';
+
+ApprovalDetails expenseApprovalDetails(Expense expense) {
+  return ApprovalDetails(
+    sections: [
+      ApprovalSection(
+        title: 'Expense',
+        facts: [
+          ApprovalFact(label: 'Reference', value: expense.expenseNumber),
+          ApprovalFact(
+            label: 'Amount',
+            value: expense.amount.toString(),
+            kind: 'money',
+          ),
+          if (expense.categoryName != null && expense.categoryName!.isNotEmpty)
+            ApprovalFact(label: 'Category', value: expense.categoryName!),
+          if (expense.expenseDate.isNotEmpty)
+            ApprovalFact(label: 'Expense date', value: expense.expenseDate),
+          ApprovalFact(label: 'Payment method', value: expense.paymentLabel),
+          if (expense.vendor.isNotEmpty)
+            ApprovalFact(label: 'Vendor', value: expense.vendor),
+          if (expense.receiptNumber.isNotEmpty)
+            ApprovalFact(label: 'Receipt number', value: expense.receiptNumber),
+          if (expense.description.isNotEmpty)
+            ApprovalFact(label: 'Description', value: expense.description),
+          if (expense.notes.isNotEmpty)
+            ApprovalFact(label: 'Notes', value: expense.notes),
+          if (expense.createdByName != null &&
+              expense.createdByName!.isNotEmpty)
+            ApprovalFact(label: 'Requested by', value: expense.createdByName!),
+        ],
+      ),
+    ],
+  );
+}
 
 String _kes(num value) {
   final n = value.toDouble();
@@ -44,7 +79,7 @@ class _ApprovalsPageState extends ConsumerState<ApprovalsPage> {
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              'You do not have permission to approve sales or debt collections.',
+              'You do not have permission to approve sales, debt collections, or expenses.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: AppColors.mutedForeground,
@@ -128,9 +163,61 @@ class _ApprovalsPageState extends ConsumerState<ApprovalsPage> {
                       onOpen: () => _openCollectionReview(row),
                     ),
               ],
+              if (ctrl.canApproveExpenses) ...[
+                const SizedBox(height: 20),
+                Text(
+                  'Expenses (${state.expenses.length})',
+                  style: theme.textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                if (state.expenses.isEmpty)
+                  Text(
+                    'No expenses waiting.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
+                  )
+                else
+                  for (final expense in state.expenses)
+                    _ExpenseApprovalCard(
+                      expense: expense,
+                      busy: state.acting,
+                      onOpen: () => _openExpenseReview(expense),
+                    ),
+              ],
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _openExpenseReview(Expense expense) async {
+    final ctrl = ref.read(approvalsProvider.notifier);
+    await showCbBoundedSheet<void>(
+      context: context,
+      heightFactor: 0.9,
+      builder: (ctx) => _ApprovalReviewSheet(
+        title: expense.description.isNotEmpty
+            ? expense.description
+            : expense.expenseNumber,
+        subtitle:
+            'KES ${_kes(expense.amount)} · ${expense.paymentLabel}'
+            '${expense.createdByName != null ? ' · ${expense.createdByName}' : ''}',
+        details: expenseApprovalDetails(expense),
+        busy: ref.read(approvalsProvider).acting,
+        onApprove: () async {
+          final err = await ctrl.approveExpense(expense.id);
+          if (!ctx.mounted) return;
+          Navigator.of(ctx).pop();
+          _toast(err);
+        },
+        onReject: (reason) async {
+          final err = await ctrl.rejectExpense(expense.id, reason);
+          if (!ctx.mounted) return;
+          Navigator.of(ctx).pop();
+          _toast(err);
+        },
       ),
     );
   }
@@ -532,6 +619,74 @@ class _SaleApprovalCard extends StatelessWidget {
             ),
             Text(
               'KES ${_kes(sale.total)}',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right, color: AppColors.mutedForeground),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpenseApprovalCard extends StatelessWidget {
+  const _ExpenseApprovalCard({
+    required this.expense,
+    required this.busy,
+    required this.onOpen,
+  });
+
+  final Expense expense;
+  final bool busy;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: CbSurfaceCard(
+        key: Key('approval_expense_${expense.id}'),
+        onTap: busy ? null : onOpen,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    expense.description.isNotEmpty
+                        ? expense.description
+                        : expense.expenseNumber,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  Text(
+                    [
+                      if (expense.categoryName != null &&
+                          expense.categoryName!.isNotEmpty)
+                        expense.categoryName!,
+                      expense.paymentLabel,
+                      if (expense.createdByName != null)
+                        expense.createdByName!,
+                    ].join(' · '),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Tap for full details',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              'KES ${_kes(expense.amount)}',
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(width: 4),

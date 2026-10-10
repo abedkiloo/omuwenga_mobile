@@ -109,6 +109,9 @@ class CustomerDetail {
     this.email,
     this.address,
     this.city,
+    this.county,
+    this.subCounty,
+    this.ward,
     this.notes,
     this.ownerName,
     this.contactPerson,
@@ -132,6 +135,9 @@ class CustomerDetail {
   final String? email;
   final String? address;
   final String? city;
+  final String? county;
+  final String? subCounty;
+  final String? ward;
   final String? notes;
   final String? ownerName;
   final String? contactPerson;
@@ -167,11 +173,17 @@ class CustomerDetail {
       standingLabel(standing, debtAmount: debtAmount, credit: creditAmount);
 
   String get locationLine {
+    final admin = [
+      if (ward != null && ward!.trim().isNotEmpty) ward!.trim(),
+      if (subCounty != null && subCounty!.trim().isNotEmpty) subCounty!.trim(),
+      if (county != null && county!.trim().isNotEmpty) county!.trim(),
+    ].join(', ');
     final parts = [
       if (address != null && address!.trim().isNotEmpty) address!.trim(),
-      if (city != null && city!.trim().isNotEmpty) city!.trim(),
+      if (admin.isNotEmpty) admin else if (city != null && city!.trim().isNotEmpty)
+        city!.trim(),
     ];
-    return parts.join(', ');
+    return parts.join(' · ');
   }
 
   factory CustomerDetail.fromDetailJson(Map<String, dynamic> json) {
@@ -227,6 +239,9 @@ class CustomerDetail {
       email: customer['email']?.toString(),
       address: customer['address']?.toString(),
       city: customer['city']?.toString(),
+      county: customer['county']?.toString(),
+      subCounty: customer['sub_county']?.toString(),
+      ward: customer['ward']?.toString(),
       notes: customer['notes']?.toString(),
       ownerName: customer['owner_name']?.toString(),
       contactPerson: customer['contact_person']?.toString(),
@@ -414,6 +429,9 @@ class CustomerDraft {
     this.ownerName = '',
     this.contactPerson = '',
     this.city = '',
+    this.county = '',
+    this.subCounty = '',
+    this.ward = '',
     this.address = '',
     this.typicalGoods = const [],
     this.latitude,
@@ -428,6 +446,9 @@ class CustomerDraft {
   final String ownerName;
   final String contactPerson;
   final String city;
+  final String county;
+  final String subCounty;
+  final String ward;
   final String address;
   final List<String> typicalGoods;
   final double? latitude;
@@ -443,7 +464,10 @@ class CustomerDraft {
     'notes': notes.trim(),
     'owner_name': ownerName.trim(),
     'contact_person': contactPerson.trim(),
-    'city': city.trim(),
+    'city': (county.trim().isNotEmpty ? county : city).trim(),
+    'county': county.trim(),
+    'sub_county': subCounty.trim(),
+    'ward': ward.trim(),
     'address': address.trim(),
     'typical_goods': [
       for (final item in typicalGoods)

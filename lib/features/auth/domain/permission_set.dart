@@ -91,6 +91,11 @@ class PermissionSet {
   bool get canManageAppraisals => has('appraisals', 'manage');
   bool get canViewAllAppraisals => has('appraisals', 'view_all');
 
+  bool get canViewExpenses => has('expenses', 'view');
+  bool get canCreateExpenses => has('expenses', 'create');
+  bool get canUpdateExpenses => has('expenses', 'update');
+  bool get canDeleteExpenses => has('expenses', 'delete');
+
   bool get isEmpty => _keys.isEmpty;
   int get length => _keys.length;
 }

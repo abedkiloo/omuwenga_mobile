@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../../../core/network/api_client.dart';
 import '../../../core/result/result.dart';
 import '../domain/customer.dart';
+import '../domain/kenya_admin_units.dart';
 
 class ReceiveWalletPaymentResult {
   const ReceiveWalletPaymentResult({
@@ -153,6 +154,25 @@ class CustomersApi {
     }
     return Success(
       CustomerDetail.fromDetailJson(Map<String, dynamic>.from(decoded)),
+    );
+  }
+
+  Future<Result<KenyaAdminUnits>> fetchKenyaLocations() async {
+    final response = await _client.get('sales/customers/kenya-locations/');
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(CustomersApiException(_safeError(res.body)));
+    }
+    final decoded = jsonDecode(res.body);
+    if (decoded is! Map) {
+      return Failure(CustomersApiException('Unexpected location data.'));
+    }
+    return Success(
+      KenyaAdminUnits.fromJson(Map<String, dynamic>.from(decoded)),
     );
   }
 

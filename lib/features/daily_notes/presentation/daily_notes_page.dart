@@ -9,6 +9,7 @@ import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../design_system/states/async_states.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../auth/domain/auth_session.dart';
+import '../../expenses/application/expenses_controller.dart';
 import '../application/daily_notes_controllers.dart';
 import '../domain/approval_return.dart';
 import '../domain/daily_note.dart';
@@ -157,6 +158,48 @@ class _DailyNotesPageState extends ConsumerState<DailyNotesPage> {
                           if (path != null) context.go(path);
                         },
                         child: const Text('Open sale'),
+                      ),
+                    )
+                  else if (task.requiresExpenseResubmit)
+                    ListTile(
+                      key: Key('daily_task_${task.id}'),
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        task.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: _taskSubtitle(task).isEmpty
+                          ? null
+                          : Text(
+                              _taskSubtitle(task),
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                      trailing: FilledButton(
+                        key: Key('daily_task_resubmit_expense_${task.id}'),
+                        onPressed: () async {
+                          final expenseId = rejectedExpenseId(
+                            content: task.description,
+                            title: task.title,
+                          );
+                          if (expenseId == null) return;
+                          final err = await ref
+                              .read(expensesProvider.notifier)
+                              .resubmit(expenseId);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                err ?? 'Expense sent back for approval',
+                              ),
+                            ),
+                          );
+                          if (err == null) {
+                            await ref.read(dailyNotesProvider.notifier).load();
+                          }
+                        },
+                        child: const Text('Resubmit'),
                       ),
                     )
                   else

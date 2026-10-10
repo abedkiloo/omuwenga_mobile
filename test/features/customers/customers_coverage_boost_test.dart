@@ -14,6 +14,7 @@ import 'package:completebyte_pos_mobile/features/auth/domain/persona.dart';
 import 'package:completebyte_pos_mobile/features/customers/application/customers_controllers.dart';
 import 'package:completebyte_pos_mobile/features/customers/data/customers_api.dart';
 import 'package:completebyte_pos_mobile/features/customers/domain/customer.dart';
+import 'package:completebyte_pos_mobile/features/customers/domain/kenya_admin_units.dart';
 import 'package:completebyte_pos_mobile/features/customers/presentation/customer_detail_page.dart';
 import 'package:completebyte_pos_mobile/features/customers/presentation/customer_form_page.dart';
 import 'package:completebyte_pos_mobile/features/customers/presentation/customer_picker_sheet.dart';
@@ -29,8 +30,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geolocator_platform_interface/geolocator_platform_interface.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+
+class _FakeGeolocatorPlatform extends GeolocatorPlatform {
+  @override
+  Future<LocationPermission> checkPermission() async =>
+      LocationPermission.always;
+
+  @override
+  Future<LocationPermission> requestPermission() async =>
+      LocationPermission.always;
+
+  @override
+  Future<bool> isLocationServiceEnabled() async => true;
+
+  @override
+  Future<Position> getCurrentPosition({LocationSettings? locationSettings}) async {
+    return Position(
+      latitude: -1.2921,
+      longitude: 36.8219,
+      timestamp: DateTime.utc(2024, 1, 1),
+      accuracy: 8,
+      altitude: 0,
+      altitudeAccuracy: 0,
+      heading: 0,
+      headingAccuracy: 0,
+      speed: 0,
+      speedAccuracy: 0,
+    );
+  }
+}
+
+Future<void> _snapCustomerLocation(WidgetTester tester) async {
+  final snap = find.byKey(const Key('customer_form_snap_location'));
+  await tester.ensureVisible(snap);
+  await tester.tap(snap);
+  await tester.pumpAndSettle();
+}
 
 AuthSession _fullSession() {
   return AuthSession(
@@ -58,9 +97,24 @@ AuthSession _fullSession() {
   );
 }
 
+final _testKenyaAdminUnits = KenyaAdminUnits(
+  counties: {
+    'Nairobi': {
+      'Starehe': ['Landimawe', 'Pangani'],
+      'Westlands': ['Parklands/Highridge'],
+    },
+    'Mombasa': {
+      'Mvita': ['Majengo'],
+    },
+  },
+  defaults: KenyaLocationDefaults.fallback,
+);
+
 List<Override> _base(MockClient client, {AuthSession? session}) {
   final tokens = InMemoryTokenStore();
   return [
+    kenyaAdminUnitsProvider.overrideWith((ref) async => _testKenyaAdminUnits),
+    customerFormAutoSnapLocationProvider.overrideWithValue(false),
     tokenStoreProvider.overrideWithValue(tokens),
     appEnvProvider.overrideWithValue(
       const AppEnv(flavor: AppFlavor.dev, apiBaseUrl: 'http://example.com/api'),
@@ -96,6 +150,9 @@ CustomersApi _api(MockClient client) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  GeolocatorPlatform.instance = _FakeGeolocatorPlatform();
+
   test('domain edge parsers', () {
     final summary = CustomerSummary.fromJson({
       'id': 1,
@@ -435,6 +492,7 @@ void main() {
       find.byKey(const Key('customer_form_name')),
       'Fresh',
     );
+    await _snapCustomerLocation(tester);
     await tester.tap(find.byKey(const Key('customer_form_save')));
     await tester.pumpAndSettle();
   });
@@ -482,24 +540,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Good standing'), findsOneWidget);
 
+    final pickerRouter = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, _) => Scaffold(
+            body: Consumer(
+              builder: (context, ref, _) => TextButton(
+                key: const Key('open_picker'),
+                onPressed: () => showCustomerPickerSheet(context, ref),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: AppRoutes.customerNew,
+          builder: (_, _) => const CustomerFormPage(returnToPos: true),
+        ),
+      ],
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: _base(client),
-        child: Consumer(
-          builder: (context, ref, _) {
-            return MaterialApp(
-              home: Scaffold(
-                body: Builder(
-                  builder: (context) => TextButton(
-                    key: const Key('open_picker'),
-                    onPressed: () => showCustomerPickerSheet(context, ref),
-                    child: const Text('open'),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+        child: MaterialApp.router(routerConfig: pickerRouter),
       ),
     );
     await tester.pumpAndSettle();
@@ -510,6 +574,8 @@ void main() {
     await tester.tap(find.byKey(const Key('pos_pick_customer_1')));
     await tester.pumpAndSettle();
 
+    pickerRouter.go('/');
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('open_picker')));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -518,6 +584,7 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('pos_customer_create')));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('customer_form_name')), findsOneWidget);
   });
 
   testWidgets('list empty and settle validation', (tester) async {
@@ -716,6 +783,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('at least 2 characters'), findsOneWidget);
     await tester.enterText(find.byKey(const Key('customer_form_name')), 'Fail');
+    await _snapCustomerLocation(tester);
     await tester.tap(find.byKey(const Key('customer_form_save')));
     await tester.pumpAndSettle();
     expect(find.textContaining('create failed'), findsOneWidget);
@@ -750,6 +818,7 @@ void main() {
       find.byKey(const Key('customer_form_name')),
       'PosCust',
     );
+    await _snapCustomerLocation(tester);
     await tester.tap(find.byKey(const Key('customer_form_save')));
     await tester.pumpAndSettle();
     expect(okContainer.read(cartControllerProvider).customerId, 55);
@@ -920,24 +989,30 @@ void main() {
       return http.Response('{}', 200);
     });
 
+    final pickerRouter = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, _) => Scaffold(
+            body: Consumer(
+              builder: (context, ref, _) => TextButton(
+                key: const Key('open_picker3'),
+                onPressed: () => showCustomerPickerSheet(context, ref),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: AppRoutes.customerNew,
+          builder: (_, _) => const CustomerFormPage(returnToPos: true),
+        ),
+      ],
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: _base(client),
-        child: Consumer(
-          builder: (context, ref, _) {
-            return MaterialApp(
-              home: Scaffold(
-                body: Builder(
-                  builder: (context) => TextButton(
-                    key: const Key('open_picker3'),
-                    onPressed: () => showCustomerPickerSheet(context, ref),
-                    child: const Text('open'),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+        child: MaterialApp.router(routerConfig: pickerRouter),
       ),
     );
     await tester.pumpAndSettle();
@@ -952,7 +1027,7 @@ void main() {
     expect(find.textContaining('No match for'), findsOneWidget);
     await tester.tap(find.byKey(const Key('pos_customer_create')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('create failed'), findsOneWidget);
+    expect(find.byKey(const Key('customer_form_name')), findsOneWidget);
   });
 
   testWidgets('edit form shows loading then fields', (tester) async {
@@ -1265,6 +1340,7 @@ void main() {
       find.byKey(const Key('customer_form_name')),
       'Returned',
     );
+    await _snapCustomerLocation(tester);
     await tester.tap(find.byKey(const Key('customer_form_save')));
     await tester.pumpAndSettle();
     expect(find.text('open'), findsOneWidget);
@@ -1292,24 +1368,30 @@ void main() {
       return http.Response('{}', 200);
     });
 
+    final pickerRouter = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, _) => Scaffold(
+            body: Consumer(
+              builder: (context, ref, _) => TextButton(
+                key: const Key('open_picker_named'),
+                onPressed: () => showCustomerPickerSheet(context, ref),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: AppRoutes.customerNew,
+          builder: (_, _) => const CustomerFormPage(returnToPos: true),
+        ),
+      ],
+    );
     await tester.pumpWidget(
       ProviderScope(
         overrides: _base(client),
-        child: Consumer(
-          builder: (context, ref, _) {
-            return MaterialApp(
-              home: Scaffold(
-                body: Builder(
-                  builder: (context) => TextButton(
-                    key: const Key('open_picker_named'),
-                    onPressed: () => showCustomerPickerSheet(context, ref),
-                    child: const Text('open'),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
+        child: MaterialApp.router(routerConfig: pickerRouter),
       ),
     );
     await tester.pumpAndSettle();
@@ -1324,8 +1406,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const Key('pos_customer_create')));
     await tester.pumpAndSettle();
-    expect(created, isTrue);
+    expect(created, isFalse);
 
+    pickerRouter.go('/');
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('open_picker_named')));
     await tester.pumpAndSettle();
     await tester.drag(find.byType(ListView).last, const Offset(0, -120));

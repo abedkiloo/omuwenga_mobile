@@ -64,3 +64,30 @@ String? rejectedSaleFixPath({String content = '', String title = ''}) {
   if (saleId != null) return '/pos?sale=$saleId';
   return null;
 }
+
+bool isRejectedExpenseNotice(
+  ApprovalRejectionNotice? parsed, {
+  String text = '',
+  String title = '',
+}) {
+  if (parsed?.source == 'expense') return true;
+  final blob = '$title\n$text'.toLowerCase();
+  return blob.contains('approval rejected') && blob.contains('expense');
+}
+
+bool noticeRequiresExpenseResubmit({String content = '', String title = ''}) {
+  return isRejectedExpenseNotice(
+    parseApprovalRejectionNotice(content),
+    text: content,
+    title: title,
+  );
+}
+
+int? rejectedExpenseId({String content = '', String title = ''}) {
+  final parsed = parseApprovalRejectionNotice(content);
+  if (parsed?.source == 'expense') return parsed!.id;
+  if (!noticeRequiresExpenseResubmit(content: content, title: title)) {
+    return null;
+  }
+  return parsed?.id;
+}

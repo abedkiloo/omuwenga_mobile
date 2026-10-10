@@ -40,8 +40,11 @@ class DailyNote {
   bool get isGeneral => !isSticky;
   bool get requiresSaleFix =>
       noticeRequiresSaleFix(content: content, title: title);
+  bool get requiresExpenseResubmit =>
+      noticeRequiresExpenseResubmit(content: content, title: title);
   String get kindLabel {
     if (requiresSaleFix) return 'Fix sale';
+    if (requiresExpenseResubmit) return 'Resubmit expense';
     return isSticky ? 'Must tick' : 'Note';
   }
 
@@ -95,6 +98,9 @@ class DailyTaskItem {
 
   bool get requiresSaleFix =>
       noticeRequiresSaleFix(content: description, title: title);
+
+  bool get requiresExpenseResubmit =>
+      noticeRequiresExpenseResubmit(content: description, title: title);
 
   factory DailyTaskItem.fromJson(Map<String, dynamic> json) {
     return DailyTaskItem(

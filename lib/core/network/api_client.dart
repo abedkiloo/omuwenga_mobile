@@ -165,6 +165,25 @@ class ApiClient {
     }, path: path);
   }
 
+  Future<Result<http.Response>> delete(
+    String path, {
+    Map<String, dynamic>? body,
+    bool auth = true,
+    String? idempotencyKey,
+  }) {
+    return _send(() async {
+      final headers = await _headers(idempotencyKey: idempotencyKey);
+      if (!auth) {
+        headers.remove('Authorization');
+      }
+      return _http.delete(
+        resolve(path),
+        headers: headers,
+        body: body == null ? null : jsonEncode(body),
+      );
+    }, path: path);
+  }
+
   Future<Result<http.Response>> _send(
     Future<http.Response> Function() request, {
     required String path,

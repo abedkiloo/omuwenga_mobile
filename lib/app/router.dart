@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../features/approvals/presentation/approvals_page.dart';
 import '../features/daily_notes/presentation/daily_notes_page.dart';
 import '../features/appraisals/presentation/appraisals_page.dart';
+import '../features/expenses/presentation/expenses_list_page.dart';
 import '../features/dispatch/presentation/dispatch_queue_page.dart';
 import '../features/delivery/presentation/delivery_route_page.dart';
 import '../features/field_orders/presentation/google_map_pin_picker.dart';
@@ -250,6 +251,10 @@ GoRouter createAppRouter({
           GoRoute(
             path: AppRoutes.approvals,
             builder: (context, state) => const ApprovalsPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.expenses,
+            builder: (context, state) => const ExpensesListPage(),
           ),
           GoRoute(
             path: AppRoutes.salesHistory,
