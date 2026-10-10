@@ -231,8 +231,66 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('POS'), findsNothing);
     expect(find.text('Home'), findsOneWidget);
+    // Default test surface is wide → side rail (business + overflow).
     expect(find.byKey(const Key('shell_side_rail')), findsOneWidget);
-    expect(find.text('More'), findsOneWidget);
+    expect(find.text('Business'), findsOneWidget);
+    expect(find.text('Other'), findsOneWidget);
+    expect(find.text('API health'), findsOneWidget);
+  });
+
+  testWidgets('phone shell shows bottom nav and More sheet', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final session = AuthSession(
+      user: const AuthUser(id: 3, username: 'sales'),
+      profile: const UserProfileSnapshot(
+        role: 'cashier',
+        isSuperAdmin: false,
+        isAdmin: false,
+        isManager: false,
+      ),
+      permissions: PermissionSet(const [
+        PermissionGrant(module: 'pos', action: 'view'),
+        PermissionGrant(module: 'sales', action: 'view'),
+        PermissionGrant(module: 'customers', action: 'view'),
+        PermissionGrant(module: 'expenses', action: 'view'),
+      ]),
+      persona: AppPersona.cashier,
+    );
+    final router = GoRouter(
+      initialLocation: AppRoutes.home,
+      routes: [
+        ShellRoute(
+          builder: (context, state, child) => StoreShellPage(child: child),
+          routes: [
+            GoRoute(
+              path: AppRoutes.home,
+              builder: (_, _) => const Text('home-body'),
+            ),
+            GoRoute(
+              path: AppRoutes.expenses,
+              builder: (_, _) => const Text('expenses-body'),
+            ),
+          ],
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: seedOverrides(session),
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('shell_bottom_nav')), findsOneWidget);
+    expect(find.byKey(const Key('nav_more')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('nav_more')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('shell_more_sheet')), findsOneWidget);
+    expect(find.byKey(const Key('more_expenses')), findsOneWidget);
   });
 
   test('shell hides tab bar on register and edit duka', () {

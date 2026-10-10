@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_bounded_sheet.dart';
 import '../../../design_system/chrome/cb_commit_confirm.dart';
 import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../../sync/presentation/sync_failures_sheet.dart';
@@ -46,7 +47,12 @@ class _NavItem {
   final Key? key;
 }
 
-List<_NavItem> _primaryNav(PermissionSet? perms, {required bool canApprove}) {
+/// Core day-to-day business tabs on the bottom bar (phone).
+List<_NavItem> _bottomBusinessNav(
+  PermissionSet? perms, {
+  required bool canApprove,
+}) {
+  final showHistoryOnBar = !canApprove && (perms == null || perms.canViewSales);
   return [
     const _NavItem(
       label: 'Home',
@@ -66,7 +72,7 @@ List<_NavItem> _primaryNav(PermissionSet? perms, {required bool canApprove}) {
         route: AppRoutes.approvals,
         key: Key('nav_approvals'),
       ),
-    if (perms == null || perms.canViewSales)
+    if (showHistoryOnBar)
       const _NavItem(
         label: 'History',
         icon: Icons.receipt_long_outlined,
@@ -81,13 +87,14 @@ List<_NavItem> _primaryNav(PermissionSet? perms, {required bool canApprove}) {
   ];
 }
 
-List<_NavItem> _moreNav({
+/// Extra business tools — shown in the More bottom sheet (not the side drawer).
+List<_NavItem> _businessMoreNav({
   required PermissionSet? perms,
   required bool canHistory,
-  bool includePrimaryDupes = false,
+  bool includeSalesHistory = false,
 }) {
   return [
-    if (includePrimaryDupes && (perms?.canViewSales ?? false))
+    if (includeSalesHistory && (perms?.canViewSales ?? false))
       const _NavItem(
         label: 'Sales history',
         icon: Icons.receipt_long_outlined,
@@ -150,12 +157,86 @@ List<_NavItem> _moreNav({
         route: AppRoutes.expenses,
         key: Key('more_expenses'),
       ),
-    const _NavItem(
+  ];
+}
+
+/// Non-business overflow — side nav / drawer only.
+List<_NavItem> _sideOverflowNav() {
+  return const [
+    _NavItem(
       label: 'API health',
       icon: Icons.monitor_heart_outlined,
       route: AppRoutes.health,
+      key: Key('more_api_health'),
     ),
   ];
+}
+
+/// Wide rail / More page: business tools (+ sales history when not on the bar).
+List<_NavItem> _moreNav({
+  required PermissionSet? perms,
+  required bool canHistory,
+  required bool canApprove,
+  bool includePrimaryDupes = false,
+}) {
+  final historyOnBar = !canApprove && (perms == null || perms.canViewSales);
+  return _businessMoreNav(
+    perms: perms,
+    canHistory: canHistory,
+    includeSalesHistory: includePrimaryDupes || !historyOnBar,
+  );
+}
+
+Future<void> _openBusinessMoreSheet({
+  required BuildContext context,
+  required List<_NavItem> items,
+  required String location,
+  required int approvalsCount,
+}) {
+  return showCbBoundedSheet<void>(
+    context: context,
+    heightFactor: 0.72,
+    builder: (ctx) {
+      return Material(
+        color: AppColors.background,
+        child: ListView(
+          key: const Key('shell_more_sheet'),
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 24),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+              child: Text(
+                'Business tools',
+                style: Theme.of(ctx).textTheme.titleMedium,
+              ),
+            ),
+            if (items.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('No extra tools for your role.'),
+              )
+            else
+              for (final item in items)
+                ListTile(
+                  key: item.key,
+                  leading: _NavIcon(
+                    icon: item.icon,
+                    badge:
+                        item.route == AppRoutes.approvals ? approvalsCount : 0,
+                  ),
+                  title: Text(item.label),
+                  selected: location.startsWith(item.route),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(ctx).pop();
+                    context.go(item.route);
+                  },
+                ),
+          ],
+        ),
+      );
+    },
+  );
 }
 
 class StoreShellPage extends ConsumerStatefulWidget {
@@ -204,8 +285,15 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
           isSuperuser: session.user.isSuperuser,
         );
 
-    final primary = _primaryNav(perms, canApprove: canApprove);
-    final more = _moreNav(perms: perms, canHistory: canHistory);
+    final bottom = _bottomBusinessNav(perms, canApprove: canApprove);
+    final historyOnBar =
+        !canApprove && (perms == null || perms.canViewSales);
+    final businessMore = _businessMoreNav(
+      perms: perms,
+      canHistory: canHistory,
+      includeSalesHistory: !historyOnBar,
+    );
+    final overflow = _sideOverflowNav();
     final sync = ref.watch(syncStatusProvider);
     final approvalsCount = canApprove
         ? ref.watch(approvalsProvider).totalCount
@@ -252,6 +340,14 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
       ],
     );
 
+    int bottomIndex() {
+      for (var i = 0; i < bottom.length; i++) {
+        if (location.startsWith(bottom[i].route)) return i;
+      }
+      // More tab is selected when on a business-more or overflow route.
+      return bottom.length;
+    }
+
     return Stack(
       children: [
         LayoutBuilder(
@@ -273,8 +369,9 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
                   child: Row(
                     children: [
                       _SideNavRail(
-                        primary: primary,
-                        more: more,
+                        primary: bottom,
+                        more: businessMore,
+                        overflow: overflow,
                         location: location,
                         approvalsCount: approvalsCount,
                         onLogout: () =>
@@ -287,6 +384,7 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
                 ),
               );
             }
+            final selected = bottomIndex();
             return Scaffold(
               backgroundColor: AppColors.background,
               resizeToAvoidBottomInset: false,
@@ -296,20 +394,52 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
                 scrolledUnderElevation: 0,
                 titleSpacing: 0,
                 title: Text(
-                  _titleFor(location, primary, more),
+                  _titleFor(location, bottom, [...businessMore, ...overflow]),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               drawer: _SideDrawer(
-                primary: primary,
-                more: more,
+                overflow: overflow,
                 location: location,
-                approvalsCount: approvalsCount,
                 displayName: session?.user.displayName ?? '',
                 onLogout: () =>
                     ref.read(authControllerProvider.notifier).logout(),
               ),
               body: SafeArea(bottom: false, child: body),
+              bottomNavigationBar: NavigationBar(
+                key: const Key('shell_bottom_nav'),
+                selectedIndex: selected.clamp(0, bottom.length),
+                onDestinationSelected: (index) async {
+                  if (index >= bottom.length) {
+                    await _openBusinessMoreSheet(
+                      context: context,
+                      items: businessMore,
+                      location: location,
+                      approvalsCount: approvalsCount,
+                    );
+                    return;
+                  }
+                  context.go(bottom[index].route);
+                },
+                destinations: [
+                  for (final item in bottom)
+                    NavigationDestination(
+                      key: item.key,
+                      icon: _NavIcon(
+                        icon: item.icon,
+                        badge: item.route == AppRoutes.approvals
+                            ? approvalsCount
+                            : 0,
+                      ),
+                      label: item.label,
+                    ),
+                  const NavigationDestination(
+                    key: Key('nav_more'),
+                    icon: Icon(Icons.more_horiz),
+                    label: 'More',
+                  ),
+                ],
+              ),
             );
           },
         ),
@@ -319,7 +449,11 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
     );
   }
 
-  String _titleFor(String location, List<_NavItem> primary, List<_NavItem> more) {
+  String _titleFor(
+    String location,
+    List<_NavItem> primary,
+    List<_NavItem> more,
+  ) {
     for (final item in [...primary, ...more]) {
       if (location.startsWith(item.route)) return item.label;
     }
@@ -331,6 +465,7 @@ class _SideNavRail extends StatelessWidget {
   const _SideNavRail({
     required this.primary,
     required this.more,
+    required this.overflow,
     required this.location,
     required this.approvalsCount,
     required this.onLogout,
@@ -338,6 +473,7 @@ class _SideNavRail extends StatelessWidget {
 
   final List<_NavItem> primary;
   final List<_NavItem> more;
+  final List<_NavItem> overflow;
   final String location;
   final int approvalsCount;
   final VoidCallback onLogout;
@@ -355,7 +491,7 @@ class _SideNavRail extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Text('Menu', style: theme.textTheme.titleSmall),
+              child: Text('Business', style: theme.textTheme.titleSmall),
             ),
             for (final item in primary)
               ListTile(
@@ -369,11 +505,34 @@ class _SideNavRail extends StatelessWidget {
                 selected: location.startsWith(item.route),
                 onTap: () => context.go(item.route),
               ),
+            if (more.isNotEmpty) ...[
+              const Divider(),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 4, 16, 4),
+                child: Text(
+                  'More tools',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ),
+              for (final item in more)
+                ListTile(
+                  key: item.key,
+                  dense: true,
+                  leading: Icon(item.icon, color: AppColors.primary),
+                  title: Text(item.label),
+                  selected: location.startsWith(item.route),
+                  onTap: () => context.go(item.route),
+                ),
+            ],
             const Divider(),
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 4, 16, 4),
               child: Text(
-                'More',
+                'Other',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -381,7 +540,7 @@ class _SideNavRail extends StatelessWidget {
                 ),
               ),
             ),
-            for (final item in more)
+            for (final item in overflow)
               ListTile(
                 key: item.key,
                 dense: true,
@@ -406,18 +565,14 @@ class _SideNavRail extends StatelessWidget {
 
 class _SideDrawer extends StatelessWidget {
   const _SideDrawer({
-    required this.primary,
-    required this.more,
+    required this.overflow,
     required this.location,
-    required this.approvalsCount,
     required this.displayName,
     required this.onLogout,
   });
 
-  final List<_NavItem> primary;
-  final List<_NavItem> more;
+  final List<_NavItem> overflow;
   final String location;
-  final int approvalsCount;
   final String displayName;
   final VoidCallback onLogout;
 
@@ -434,7 +589,7 @@ class _SideDrawer extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Menu', style: Theme.of(context).textTheme.titleLarge),
+                  Text('Other', style: Theme.of(context).textTheme.titleLarge),
                   if (displayName.isNotEmpty)
                     Text(
                       displayName,
@@ -445,33 +600,7 @@ class _SideDrawer extends StatelessWidget {
                 ],
               ),
             ),
-            for (final item in primary)
-              ListTile(
-                key: item.key,
-                leading: _NavIcon(
-                  icon: item.icon,
-                  badge: item.route == AppRoutes.approvals ? approvalsCount : 0,
-                ),
-                title: Text(item.label),
-                selected: location.startsWith(item.route),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  context.go(item.route);
-                },
-              ),
-            const Divider(),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 4, 16, 4),
-              child: Text(
-                'More',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.mutedForeground,
-                ),
-              ),
-            ),
-            for (final item in more)
+            for (final item in overflow)
               ListTile(
                 key: item.key,
                 leading: Icon(item.icon, color: AppColors.primary),
@@ -526,11 +655,17 @@ class MorePage extends ConsumerWidget {
           profile: session.profile,
           isSuperuser: session.user.isSuperuser,
         );
+    final canApprove =
+        (perms?.canApproveSales ?? false) ||
+        (perms?.canApproveDebtManagement ?? false) ||
+        sessionCanApproveExpenses(session);
     final items = _moreNav(
       perms: perms,
       canHistory: canHistory,
+      canApprove: canApprove,
       includePrimaryDupes: true,
     );
+    final overflow = _sideOverflowNav();
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -541,13 +676,22 @@ class MorePage extends ConsumerWidget {
           Text('More', style: theme.textTheme.titleLarge),
           const SizedBox(height: 4),
           Text(
-            'Tools and settings for your role.',
+            'Business tools for your role.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppColors.mutedForeground,
             ),
           ),
           const SizedBox(height: 12),
           for (final item in items)
+            ListTile(
+              key: item.key,
+              leading: Icon(item.icon, color: AppColors.primary),
+              title: Text(item.label),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.go(item.route),
+            ),
+          const Divider(),
+          for (final item in overflow)
             ListTile(
               key: item.key,
               leading: Icon(item.icon, color: AppColors.primary),

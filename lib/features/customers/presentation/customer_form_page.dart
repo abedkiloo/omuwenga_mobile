@@ -49,6 +49,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   String _ward = KenyaLocationDefaults.fallback.ward;
   final _contactPerson = TextEditingController();
   final _nameFocus = FocusNode();
+  final _errorKey = GlobalKey();
   final List<TextEditingController> _goods = [TextEditingController()];
   bool _saving = false;
   bool _locating = false;
@@ -292,6 +293,14 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
           _saving = false;
           _error = e.toString();
         });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _errorKey.currentContext == null) return;
+          Scrollable.ensureVisible(
+            _errorKey.currentContext!,
+            alignment: 0.05,
+            duration: const Duration(milliseconds: 220),
+          );
+        });
       },
     );
   }
@@ -398,10 +407,13 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                   ),
                   const SizedBox(height: 16),
                   if (_error != null) ...[
-                    Text(
-                      _error!,
-                      key: const Key('customer_form_error'),
-                      style: const TextStyle(color: AppColors.destructive),
+                    KeyedSubtree(
+                      key: _errorKey,
+                      child: Text(
+                        _error!,
+                        key: const Key('customer_form_error'),
+                        style: const TextStyle(color: AppColors.destructive),
+                      ),
                     ),
                     const SizedBox(height: 12),
                   ],

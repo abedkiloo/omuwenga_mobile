@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error_message.dart';
 import '../../../core/result/result.dart';
 import '../domain/expense.dart';
 
@@ -210,27 +211,6 @@ class ExpensesApi {
     return const Success(null);
   }
 
-  static String _errorMessage(String body, String fallback) {
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map) {
-        final err =
-            decoded['error'] ??
-            decoded['detail'] ??
-            decoded['rejection_reason'] ??
-            decoded['proposal_reason'] ??
-            decoded['non_field_errors'];
-        if (err is List && err.isNotEmpty) return err.first.toString();
-        if (err != null) return err.toString();
-        for (final entry in decoded.entries) {
-          final v = entry.value;
-          if (v is List && v.isNotEmpty) return v.first.toString();
-          if (v is String && v.trim().isNotEmpty) return v;
-        }
-      }
-    } on Object {
-      // fall through
-    }
-    return fallback;
-  }
+  static String _errorMessage(String body, String fallback) =>
+      apiErrorMessage(body, fallback: fallback);
 }

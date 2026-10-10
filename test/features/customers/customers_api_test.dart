@@ -301,4 +301,26 @@ void main() {
       'Nope',
     );
   });
+
+  test('create surfaces field validation from the API', () async {
+    final api = apiWith(
+      MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'phone': [
+              'This phone is already used by Wambua Hardware. '
+                  'Open that duka instead of registering again.',
+            ],
+          }),
+          400,
+        ),
+      ),
+    );
+    final fail = await api.create(const CustomerDraft(name: 'New Duka'));
+    expect(fail.isFailure, isTrue);
+    expect(
+      fail.when(success: (_) => '', failure: (e, _) => e.toString()),
+      contains('Phone: This phone is already used by Wambua Hardware'),
+    );
+  });
 }

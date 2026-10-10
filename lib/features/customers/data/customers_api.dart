@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error_message.dart';
 import '../../../core/result/result.dart';
 import '../domain/customer.dart';
 import '../domain/kenya_admin_units.dart';
@@ -269,18 +270,10 @@ class CustomersApi {
     }
   }
 
-  static String _safeError(String body) {
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map) {
-        final err = decoded['error'] ?? decoded['detail'];
-        if (err != null) return err.toString();
-      }
-    } on Object {
-      // fall through
-    }
-    return 'Something went wrong. Please try again.';
-  }
+  static String _safeError(String body) => apiErrorMessage(
+    body,
+    fallback: 'Could not save this duka. Check the details and try again.',
+  );
 }
 
 class CustomersApiException implements Exception {

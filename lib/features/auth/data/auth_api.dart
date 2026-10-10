@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error_message.dart';
 import '../../../core/result/result.dart';
 import '../../../core/secure/token_store.dart';
 import '../domain/auth_session.dart';
@@ -115,18 +116,7 @@ class AuthApi {
   }
 
   /// Never surface raw stack traces / token material to the UI.
-  static String safeMessage(String body) {
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map) {
-        final error = decoded['error'] ?? decoded['detail'];
-        if (error != null) return error.toString();
-      }
-    } on Object {
-      // fall through
-    }
-    return 'Something went wrong. Please try again.';
-  }
+  static String safeMessage(String body) => apiErrorMessage(body);
 }
 
 class AuthFailure implements Exception {

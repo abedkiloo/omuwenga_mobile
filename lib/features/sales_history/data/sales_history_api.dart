@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error_message.dart';
 import '../../../core/result/result.dart';
 import '../domain/sale.dart';
 
@@ -165,18 +166,7 @@ class SalesHistoryApi {
     }
   }
 
-  static String _safeError(String body) {
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map) {
-        final err = decoded['error'] ?? decoded['detail'] ?? decoded['reason'];
-        if (err != null) return err.toString();
-      }
-    } on Object {
-      // fall through
-    }
-    return 'Something went wrong. Please try again.';
-  }
+  static String _safeError(String body) => apiErrorMessage(body);
 }
 
 class SalesHistoryApiException implements Exception {

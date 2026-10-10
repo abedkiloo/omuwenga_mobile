@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_error_message.dart';
 import '../../../core/result/result.dart';
 import '../domain/cart.dart';
 import '../domain/payment.dart';
@@ -485,18 +486,10 @@ class PosApi {
     return Success(SaleReceipt.fromJson(Map<String, dynamic>.from(decoded)));
   }
 
-  static String _safeError(String body) {
-    try {
-      final decoded = jsonDecode(body);
-      if (decoded is Map) {
-        final err = decoded['error'] ?? decoded['detail'];
-        if (err != null) return err.toString();
-      }
-    } on Object {
-      // fall through
-    }
-    return 'Could not complete sale. Please try again.';
-  }
+  static String _safeError(String body) => apiErrorMessage(
+    body,
+    fallback: 'Could not complete sale. Please try again.',
+  );
 }
 
 class PosApiException implements Exception {
