@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
 import '../domain/debt_management.dart';
+import '../../../core/format/money.dart';
 
-String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 class DebtCollectionsPanel extends StatelessWidget {
   const DebtCollectionsPanel({
@@ -128,7 +128,7 @@ class DebtCollectionsPanel extends StatelessWidget {
               ),
           ],
           Text(
-            '$count payment${count == 1 ? '' : 's'} · ${_kes(total)}',
+            '$count payment${count == 1 ? '' : 's'} · ${formatKes(total)}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(
@@ -192,7 +192,7 @@ class DebtCollectionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final remainingText = row.stillOwes
-        ? '${row.remainingLabel} ${_kes(row.remainingDebt)}'
+        ? '${row.remainingLabel} ${formatKes(row.remainingDebt)}'
         : 'Settled';
     final notes = [
       if (row.reference.isNotEmpty) row.reference,
@@ -281,7 +281,7 @@ class DebtCollectionTile extends StatelessWidget {
               const SizedBox(width: 8),
               Flexible(
                 child: CbFitMoney(
-                  _kes(row.amount),
+                  formatKes(row.amount),
                   key: Key('collection_amount_${row.id}'),
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,

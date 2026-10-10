@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/states/async_states.dart';
@@ -71,7 +72,7 @@ class CustomerDayPage extends ConsumerWidget {
                   channel: order.clientChannel,
                 ),
                 subtitle: Text(order.lifecycle.label),
-                trailing: Text(order.total.toStringAsFixed(2)),
+                trailing: Text(formatGroupedNumber(order.total)),
                 onTap: () => context.push(AppRoutes.saleDetail(order.id)),
               ),
           ],

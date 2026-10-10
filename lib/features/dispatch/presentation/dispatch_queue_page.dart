@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
 import '../../../design_system/chrome/cb_commit_confirm.dart';
@@ -401,9 +402,9 @@ class _DispatchOrderDetailPageState
                 contentPadding: EdgeInsets.zero,
                 title: Text(line.displayName),
                 subtitle: Text(
-                  'Qty ${line.quantity} · ${line.unitPrice.toStringAsFixed(2)} each',
+                  'Qty ${line.quantity} · ${formatGroupedNumber(line.unitPrice)} each',
                 ),
-                trailing: Text(line.lineTotal.toStringAsFixed(2)),
+                trailing: Text(formatGroupedNumber(line.lineTotal)),
               ),
             const SizedBox(height: 16),
             if (canPack)

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
 import '../domain/approval_details.dart';
 
 String formatApprovalMoney(String raw) {
   final n = double.tryParse(raw);
   if (n == null) return raw;
-  if (n == n.roundToDouble()) return n.toStringAsFixed(0);
-  return n.toStringAsFixed(2);
+  if (n == n.roundToDouble()) {
+    return formatGroupedNumber(n, fractionDigits: 0);
+  }
+  return formatGroupedNumber(n);
 }
 
 /// Renders API approval sections (facts + line items) for the checker.

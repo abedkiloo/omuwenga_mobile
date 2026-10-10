@@ -1,3 +1,5 @@
+import '../../../core/format/money.dart';
+
 /// Wallet debt helpers — negative balance means the customer owes money.
 double debtAmountFromWalletBalance(double? walletBalance) {
   if (walletBalance == null) return 0;
@@ -20,9 +22,9 @@ String standingLabel(
 }) {
   switch (standing) {
     case CustomerStanding.debt:
-      return 'Owes ${debtAmount.toStringAsFixed(2)}';
+      return 'Owes ${formatGroupedNumber(debtAmount)}';
     case CustomerStanding.credit:
-      return 'Credit ${credit.toStringAsFixed(2)}';
+      return 'Credit ${formatGroupedNumber(credit)}';
     case CustomerStanding.good:
       return 'Good standing';
   }

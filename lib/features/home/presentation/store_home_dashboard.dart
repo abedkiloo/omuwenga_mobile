@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
@@ -522,7 +523,7 @@ class _MetricCard extends StatelessWidget {
           ],
           const SizedBox(height: 6),
           CbFitMoney(
-            'KES ${value.toStringAsFixed(2)}',
+            formatKes(value),
             alignment: Alignment.centerLeft,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
@@ -626,7 +627,7 @@ class _OrderTile extends StatelessWidget {
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 104),
             child: CbFitMoney(
-              'KES ${order.total.toStringAsFixed(2)}',
+              formatKes(order.total),
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
               ),

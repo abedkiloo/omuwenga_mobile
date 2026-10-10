@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
 import '../application/payment_controllers.dart';
@@ -72,7 +73,7 @@ class _StkWaitPageState extends ConsumerState<StkWaitPage> {
     } else {
       title = 'Waiting for M-Pesa';
       body =
-          'We asked ${widget.phone} to pay KES ${widget.amount.toStringAsFixed(2)}. '
+          'We asked ${widget.phone} to pay ${formatKes(widget.amount)}. '
           'Money is real only when confirmed.';
       statusVariant = CbStatusPillVariant.info;
     }

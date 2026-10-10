@@ -23,8 +23,8 @@ import 'receipt_layout.dart';
 import 'receipt_page.dart';
 import 'pos_cart_sheet.dart';
 import 'variant_picker_sheet.dart';
+import '../../../core/format/money.dart';
 
-String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 class PosPage extends ConsumerStatefulWidget {
   const PosPage({super.key, this.resumeSaleId});
@@ -418,7 +418,7 @@ class _PosPageState extends ConsumerState<PosPage> {
                         collapsedLabel: 'Sale header & customer',
                         collapsedSummary: cart.isEmpty
                             ? userName
-                            : '${cart.itemCount} items · ${_kes(cart.total)}'
+                            : '${cart.itemCount} items · ${formatKes(cart.total)}'
                                   '${cart.customerName == null ? '' : ' · ${cart.customerName}'}',
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -635,7 +635,7 @@ class _PosPageState extends ConsumerState<PosPage> {
                   ),
                   const SizedBox(width: 8),
                   CbFitMoney(
-                    _kes(cart.total),
+                    formatKes(cart.total),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -657,7 +657,7 @@ class _PosPageState extends ConsumerState<PosPage> {
                         ),
                       ),
                       CbFitMoney(
-                        _kes(cart.total),
+                        formatKes(cart.total),
                         key: const Key('pos_total'),
                         alignment: Alignment.centerLeft,
                         style: theme.textTheme.titleLarge?.copyWith(
@@ -991,14 +991,14 @@ class _CartLineCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     CbFitMoney(
-                      _kes(line.lineTotal),
+                      formatKes(line.lineTotal),
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,
                       ),
                     ),
                     CbEllipsisText(
-                      '@ ${line.unitPrice.toStringAsFixed(2)}',
+                      '@ ${formatGroupedNumber(line.unitPrice)}',
                       textAlign: TextAlign.right,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppColors.mutedForeground,
@@ -1144,7 +1144,7 @@ class _CatalogProductCard extends StatelessWidget {
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 88),
             child: CbFitMoney(
-              _kes(product.price),
+              formatKes(product.price),
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
@@ -1393,11 +1393,11 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
         ? 'Record payment and any remaining debt. A manager will approve before stock, books, and the receipt go live.'
         : switch (kind) {
       CheckoutKind.payLater =>
-        'No payment is collected now. The full ${_kes(cart.total)} will be added to ${cart.customerName ?? 'the customer'}\'s account.',
+        'No payment is collected now. The full ${formatKes(cart.total)} will be added to ${cart.customerName ?? 'the customer'}\'s account.',
       CheckoutKind.partial =>
-        'Collected ${_kes(paid)} now. Balance ${_kes(balance)} will be added to ${cart.customerName ?? 'the customer'}\'s account.',
+        'Collected ${formatKes(paid)} now. Balance ${formatKes(balance)} will be added to ${cart.customerName ?? 'the customer'}\'s account.',
       CheckoutKind.full =>
-        'Confirm payment of ${_kes(cart.total)} and record this sale. '
+        'Confirm payment of ${formatKes(cart.total)} and record this sale. '
             'Choose Back to sale if you need to change any item first.',
     };
     return showCommitConfirm(
@@ -1463,16 +1463,16 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     if (checkout.phase == CheckoutPhase.submitting) {
       confirmLabel = 'Processing…';
     } else if (sendForApproval) {
-      confirmLabel = 'Send for approval · ${_kes(cart.total)}';
+      confirmLabel = 'Send for approval · ${formatKes(cart.total)}';
     } else if (kind == CheckoutKind.payLater) {
-      confirmLabel = 'Pay later — ${_kes(cart.total)}';
+      confirmLabel = 'Pay later — ${formatKes(cart.total)}';
     } else if (kind == CheckoutKind.partial) {
-      confirmLabel = 'Pay ${_kes(amountPaid)} · debt ${_kes(balanceDue)}';
+      confirmLabel = 'Pay ${formatKes(amountPaid)} · debt ${formatKes(balanceDue)}';
     } else if (needsStk) {
       confirmLabel =
-          'Send M-Pesa prompt · ${_kes(amountPaid > 0 ? amountPaid : cart.total)}';
+          'Send M-Pesa prompt · ${formatKes(amountPaid > 0 ? amountPaid : cart.total)}';
     } else {
-      confirmLabel = 'Confirm Payment - ${_kes(cart.total)}';
+      confirmLabel = 'Confirm Payment - ${formatKes(cart.total)}';
     }
 
     return Column(
@@ -1528,7 +1528,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'KES ${cart.total.toStringAsFixed(2)}',
+                    formatKes(cart.total),
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppColors.primary,
@@ -1651,8 +1651,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                         const SizedBox(height: 8),
                         Text(
                           kind == CheckoutKind.payLater
-                              ? 'Pay later: entire ${_kes(cart.total)} will be added to the customer account.'
-                              : 'Balance on account: ${_kes(balanceDue)}',
+                              ? 'Pay later: entire ${formatKes(cart.total)} will be added to the customer account.'
+                              : 'Balance on account: ${formatKes(balanceDue)}',
                           key: const Key('pos_account_balance'),
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: AppColors.warning,
@@ -1674,7 +1674,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                   ChoiceChip(
                     label: Text(
                       amount == cart.total
-                          ? 'Exact ${cart.total.toStringAsFixed(2)}'
+                          ? 'Exact ${formatGroupedNumber(cart.total)}'
                           : 'KES ${amount.toStringAsFixed(0)}',
                     ),
                     selected: (double.tryParse(_amount.text) ?? 0) == amount,
@@ -1701,7 +1701,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
             if (changeDue > 0) ...[
               const SizedBox(height: 8),
               Text(
-                'Change due: KES ${changeDue.toStringAsFixed(2)}',
+                'Change due: ${formatKes(changeDue)}',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: AppColors.success,
                   fontWeight: FontWeight.w600,

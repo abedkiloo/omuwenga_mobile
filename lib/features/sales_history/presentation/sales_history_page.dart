@@ -9,6 +9,7 @@ import '../../../design_system/design_system.dart';
 import '../application/sales_history_controllers.dart';
 import '../domain/payment_status.dart';
 import '../domain/sale.dart';
+import '../../../core/format/money.dart';
 
 class SalesHistoryPage extends ConsumerStatefulWidget {
   const SalesHistoryPage({super.key});
@@ -96,7 +97,7 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
             collapsedLabel: 'Sales filters & summary',
             collapsedSummary: state.items.isEmpty
                 ? null
-                : '${state.items.length} sales · ${_money(gross)}',
+                : '${state.items.length} sales · ${formatKes(gross)}',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -519,7 +520,7 @@ class _ShiftSummary extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            _money(gross),
+            formatKes(gross),
             key: const Key('sales_shift_total'),
             style: Theme.of(
               context,
@@ -561,7 +562,7 @@ class _TenderTotal extends StatelessWidget {
         children: [
           Text(label, style: Theme.of(context).textTheme.labelSmall),
           Text(
-            _money(value),
+            formatKes(value),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
@@ -610,7 +611,7 @@ class _SaleHistoryCard extends StatelessWidget {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 110),
                   child: Text(
-                    _money(sale.total),
+                    formatKes(sale.total),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.right,
@@ -719,7 +720,6 @@ class _SaleHistoryCard extends StatelessWidget {
   }
 }
 
-String _money(double value) => 'KES ${value.toStringAsFixed(2)}';
 
 String _time(String? raw) {
   final parsed = DateTime.tryParse(raw ?? '')?.toLocal();

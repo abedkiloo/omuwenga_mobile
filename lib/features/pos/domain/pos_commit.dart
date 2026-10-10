@@ -1,8 +1,8 @@
 import '../../../design_system/chrome/cb_commit_confirm.dart';
 import 'cart.dart';
 import 'payment.dart';
+import '../../../core/format/money.dart';
 
-String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 List<CommitSummaryRow> posCloseSaleRows({
   required PosCart cart,
@@ -21,13 +21,13 @@ List<CommitSummaryRow> posCloseSaleRows({
       label: 'Items',
       value: '${cart.lines.length} line${cart.lines.length == 1 ? '' : 's'}',
     ),
-    CommitSummaryRow(label: 'Total', value: _kes(cart.total), emphasis: true),
+    CommitSummaryRow(label: 'Total', value: formatKes(cart.total), emphasis: true),
     if (kind != CheckoutKind.payLater)
-      CommitSummaryRow(label: 'Collected now', value: _kes(paid)),
+      CommitSummaryRow(label: 'Collected now', value: formatKes(paid)),
     if (kind != CheckoutKind.full)
       CommitSummaryRow(
         label: 'On account',
-        value: _kes(balance),
+        value: formatKes(balance),
         emphasis: true,
       ),
   ];

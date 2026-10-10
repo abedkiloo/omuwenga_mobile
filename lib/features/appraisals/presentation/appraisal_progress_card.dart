@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
 import '../domain/appraisal.dart';
 
@@ -105,7 +106,7 @@ class AppraisalProgressCard extends StatelessWidget {
           SizedBox(height: emphasis ? 16 : 12),
           _Bar(
             label:
-                'Today KES ${snapshot.today.sales.round()} of ${snapshot.today.target.round()} daily target',
+                'Today ${formatKes(snapshot.today.sales.round(), dropTrailingZeros: true)} of ${formatGroupedNumber(snapshot.today.target.round(), fractionDigits: 0)} daily target',
             progress: snapshot.today.targetProgress,
             tone: snapshot.today.tone,
             thick: emphasis,

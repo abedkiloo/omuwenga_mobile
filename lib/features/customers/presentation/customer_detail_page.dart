@@ -11,8 +11,8 @@ import '../../auth/application/auth_controller.dart';
 import '../application/customers_controllers.dart';
 import '../domain/customer.dart';
 import '../domain/wallet_debt.dart';
+import '../../../core/format/money.dart';
 
-String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 String _shortDate(String? raw) {
   if (raw == null || raw.isEmpty) return '';
@@ -238,7 +238,7 @@ class _LedgerBottomBar extends StatelessWidget {
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          'Receive Payment  ${_kes(debtAmount)}',
+                          'Receive Payment  ${formatKes(debtAmount)}',
                           maxLines: 1,
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
@@ -471,7 +471,7 @@ class _StandingGaugeCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${_kes(debt)} Outstanding',
+                  '${formatKes(debt)} Outstanding',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: debt > 0 ? AppColors.destructive : null,
@@ -480,7 +480,7 @@ class _StandingGaugeCard extends StatelessWidget {
               ),
               if (credit > 0)
                 Text(
-                  'Credit ${_kes(credit)}',
+                  'Credit ${formatKes(credit)}',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                     color: AppColors.success,
@@ -495,7 +495,7 @@ class _StandingGaugeCard extends StatelessWidget {
                 child: _MiniStat(
                   key: const Key('customer_stat_wallet_debt'),
                   label: 'Wallet debt',
-                  value: _kes(debt),
+                  value: formatKes(debt),
                   tint: const Color(0xFFE8F0FE),
                   valueColor: AppColors.primary,
                   onTap: onOpenLedger,
@@ -506,7 +506,7 @@ class _StandingGaugeCard extends StatelessWidget {
                 child: _MiniStat(
                   key: const Key('customer_stat_invoice'),
                   label: credit > 0 ? 'Wallet credit' : 'Invoice outstanding',
-                  value: _kes(credit > 0 ? credit : outstanding),
+                  value: formatKes(credit > 0 ? credit : outstanding),
                   tint: const Color(0xFFFFF4E5),
                   valueColor: AppColors.warning,
                   onTap: onOpenOrders,
@@ -520,7 +520,7 @@ class _StandingGaugeCard extends StatelessWidget {
               key: const Key('customer_stat_collected'),
               onTap: onOpenLedger,
               child: Text(
-                'Lifetime debt ${_kes(incurred)} · Collected ${_kes(collected)}',
+                'Lifetime debt ${formatKes(incurred)} · Collected ${formatKes(collected)}',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w600,
@@ -539,7 +539,7 @@ class _StandingGaugeCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                'Open balance ${_kes(debt)}. Receive payment to clear wallet debt.',
+                'Open balance ${formatKes(debt)}. Receive payment to clear wallet debt.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: const Color(0xFF991B1B),
                   fontWeight: FontWeight.w600,
@@ -715,7 +715,7 @@ class _AgeBucket extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            amount.toStringAsFixed(0),
+            formatGroupedNumber(amount, fractionDigits: 0),
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
               color: accent,
@@ -850,7 +850,7 @@ class _LedgerRow extends StatelessWidget {
         ? (const Color(0xFFFEF3C7), AppColors.warning)
         : (AppColors.accentSoft, AppColors.primary);
     final remainingLabel = entry.stillOwes
-        ? 'Remains ${_kes(entry.remainingDebt)}'
+        ? 'Remains ${formatKes(entry.remainingDebt)}'
         : 'Settled';
 
     return InkWell(
@@ -925,7 +925,7 @@ class _LedgerRow extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  amount < 0 ? '-${_kes(-amount)}' : _kes(amount),
+                  amount < 0 ? '-${formatKes(-amount)}' : formatKes(amount),
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: settlement
@@ -1059,7 +1059,7 @@ class _OrderDebtRow extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  _kes(unpaid ? order.debtAmount : order.total),
+                  formatKes(unpaid ? order.debtAmount : order.total),
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: unpaid ? AppColors.destructive : null,

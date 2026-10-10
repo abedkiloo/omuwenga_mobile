@@ -1,4 +1,5 @@
 import '../../../core/branding/brand_assets.dart';
+import '../../../core/format/money.dart';
 import '../data/pos_api.dart';
 import '../domain/cart.dart';
 import '../domain/payment.dart';
@@ -57,16 +58,7 @@ class ReceiptStoreInfo {
 String formatReceiptMoney(num value) {
   final n = value.toDouble();
   final sign = n < 0 ? '-' : '';
-  final abs = n.abs();
-  final parts = abs.toStringAsFixed(2).split('.');
-  final whole = parts[0];
-  final grouped = StringBuffer();
-  for (var i = 0; i < whole.length; i++) {
-    final remaining = whole.length - i;
-    if (i > 0 && remaining % 3 == 0) grouped.write(',');
-    grouped.write(whole[i]);
-  }
-  return '${sign}Ksh ${grouped.toString()}.${parts[1]}';
+  return '${sign}Ksh ${formatGroupedNumber(n.abs())}';
 }
 
 String formatReceiptDate(DateTime? value) {

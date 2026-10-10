@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
 import '../../../design_system/chrome/cb_bounded_sheet.dart';
@@ -135,7 +136,7 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
                     Text(
                       _selected == null
                           ? 'Choose a variant'
-                          : '${_selected!.displayLabel} · ${_selected!.effectivePrice.toStringAsFixed(2)}',
+                          : '${_selected!.displayLabel} · ${formatGroupedNumber(_selected!.effectivePrice)}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.mutedForeground,
                       ),
@@ -226,7 +227,7 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
             subtitle: Text(
               [
                 if (v.sku != null && v.sku!.isNotEmpty) v.sku!,
-                v.effectivePrice.toStringAsFixed(2),
+                formatGroupedNumber(v.effectivePrice),
                 if (v.stockQuantity != null)
                   'stock ${v.stockQuantity!.toStringAsFixed(0)}',
               ].join(' · '),

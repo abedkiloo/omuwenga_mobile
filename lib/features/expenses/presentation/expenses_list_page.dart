@@ -10,12 +10,8 @@ import '../../approvals/application/approvals_controller.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/expenses_controller.dart';
 import '../domain/expense.dart';
+import '../../../core/format/money.dart';
 
-String _kes(num value) {
-  final n = value.toDouble();
-  if (n == n.roundToDouble()) return n.toStringAsFixed(0);
-  return n.toStringAsFixed(2);
-}
 
 String _todayIso() {
   final now = DateTime.now();
@@ -202,7 +198,7 @@ class _ExpensesListPageState extends ConsumerState<ExpensesListPage> {
                                         ),
                                       ),
                                       Text(
-                                        'KES ${_kes(expense.amount)}',
+                                        formatKes(expense.amount),
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleSmall,
@@ -278,7 +274,7 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${expense.expenseNumber} · ${expense.statusLabel} · KES ${_kes(expense.amount)}',
+                  '${expense.expenseNumber} · ${expense.statusLabel} · ${formatKes(expense.amount, dropTrailingZeros: true)}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.mutedForeground,
                   ),

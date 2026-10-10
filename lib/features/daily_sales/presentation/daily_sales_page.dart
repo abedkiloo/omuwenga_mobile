@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
@@ -296,7 +297,7 @@ class DailySalesPage extends ConsumerWidget {
                 order.lifecycle.label,
               ].whereType<String>().join(' · '),
             ),
-            trailing: Text(order.total.toStringAsFixed(2)),
+            trailing: Text(formatGroupedNumber(order.total)),
             onTap: () =>
                 context.push(dailyOrderRoute(order, date: state.dateApi)),
           );
@@ -357,7 +358,7 @@ class _SummaryStrip extends StatelessWidget {
       children: [
         Text(
           key: const Key('daily_summary_sales'),
-          'Sales ${summary.totalSales.toStringAsFixed(2)} · ${summary.ordersCount} orders',
+          'Sales ${formatGroupedNumber(summary.totalSales)} · ${summary.ordersCount} orders',
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 6),
@@ -368,21 +369,21 @@ class _SummaryStrip extends StatelessWidget {
             _SummaryLink(
               key: const Key('daily_summary_paid'),
               label:
-                  'Paid ${summary.totalPaid.toStringAsFixed(2)}',
+                  'Paid ${formatGroupedNumber(summary.totalPaid)}',
               onTap: onPaidTap,
               style: muted,
             ),
             _SummaryLink(
               key: const Key('daily_summary_debt'),
               label:
-                  'Debt ${summary.totalDebtIncurred.toStringAsFixed(2)}',
+                  'Debt ${formatGroupedNumber(summary.totalDebtIncurred)}',
               onTap: onDebtTap,
               style: muted,
             ),
             _SummaryLink(
               key: const Key('daily_summary_collected'),
               label:
-                  'Collected ${summary.totalDebtCollected.toStringAsFixed(2)} · ${summary.debtSettlementCount} payment${summary.debtSettlementCount == 1 ? '' : 's'}',
+                  'Collected ${formatGroupedNumber(summary.totalDebtCollected)} · ${summary.debtSettlementCount} payment${summary.debtSettlementCount == 1 ? '' : 's'}',
               onTap: onCollectedTap,
               selected: collectedSelected,
               style: muted?.copyWith(

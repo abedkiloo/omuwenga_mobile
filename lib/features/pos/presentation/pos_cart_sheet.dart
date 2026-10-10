@@ -5,8 +5,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
 import '../application/pos_controllers.dart';
 import '../domain/cart.dart';
+import '../../../core/format/money.dart';
 
-String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 /// Opens a cart drawer for reviewing lines, editing qty, and starting checkout.
 Future<void> showPosCartSheet({
@@ -157,7 +157,7 @@ class PosCartSheet extends ConsumerWidget {
               summary: cart.isEmpty
                   ? null
                   : '${cart.itemCount} packs · ${cart.lines.length} SKUs',
-              summaryTrailing: cart.isEmpty ? null : _kes(cart.total),
+              summaryTrailing: cart.isEmpty ? null : formatKes(cart.total),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -175,7 +175,7 @@ class PosCartSheet extends ConsumerWidget {
                         ),
                         Text(
                           key: const Key('pos_cart_sheet_total'),
-                          _kes(cart.total),
+                          formatKes(cart.total),
                           style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.w800,
                             color: AppColors.primary,
@@ -339,7 +339,7 @@ class _CartSheetLineState extends State<_CartSheetLine> {
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 96),
                 child: Text(
-                  _kes(line.lineTotal),
+                  formatKes(line.lineTotal),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,

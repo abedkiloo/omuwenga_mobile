@@ -27,8 +27,8 @@ import '../application/visit_order_controller.dart';
 import '../domain/field_order_commit.dart';
 import '../domain/site_pin.dart';
 import 'map_pin_picker.dart';
+import '../../../core/format/money.dart';
 
-String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 String _shortName(String name) {
   final parts = name.trim().split(RegExp(r'\s+'));
@@ -356,7 +356,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
             : null;
         summary =
             '${state.lines.length} SKU · ${state.lines.fold<double>(0, (s, l) => s + l.quantity).round()} packs';
-        summaryTrailing = _kes(state.subtotal);
+        summaryTrailing = formatKes(state.subtotal);
         back = TextButton(
           key: const Key('visit_back'),
           onPressed: () => ref.read(visitOrderProvider.notifier).goBack(),
@@ -380,7 +380,7 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
         primaryKey = const Key('visit_place_order');
         onPrimary = state.canPlace ? _place : null;
         summary = '${state.lines.length} items';
-        summaryTrailing = _kes(state.subtotal);
+        summaryTrailing = formatKes(state.subtotal);
         back = TextButton(
           key: const Key('visit_back'),
           onPressed: state.submitting
@@ -407,9 +407,9 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
 String _customerLedgerSummary(CustomerSummary c) {
   switch (c.standing) {
     case CustomerStanding.debt:
-      return '${_shortName(c.name)} · Outstanding ${_kes(c.debtAmount)}';
+      return '${_shortName(c.name)} · Outstanding ${formatKes(c.debtAmount)}';
     case CustomerStanding.credit:
-      return '${_shortName(c.name)} · Credit ${_kes(c.walletBalance ?? 0)}';
+      return '${_shortName(c.name)} · Credit ${formatKes(c.walletBalance ?? 0)}';
     case CustomerStanding.good:
       return '${_shortName(c.name)} · Good standing';
   }
@@ -672,14 +672,14 @@ class _ActiveStoreCard extends StatelessWidget {
                     Expanded(
                       child: _LedgerStat(
                         label: 'Outstanding debt',
-                        value: _kes(debt),
+                        value: formatKes(debt),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: _LedgerStat(
                         label: 'Wallet credit',
-                        value: _kes(credit),
+                        value: formatKes(credit),
                       ),
                     ),
                   ],
@@ -688,7 +688,7 @@ class _ActiveStoreCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   _LedgerStat(
                     label: 'Total outstanding',
-                    value: _kes(customer.totalOutstanding!),
+                    value: formatKes(customer.totalOutstanding!),
                   ),
                 ],
                 const SizedBox(height: 12),
@@ -716,9 +716,9 @@ class _ActiveStoreCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         standing == CustomerStanding.debt
-                            ? _kes(debt)
+                            ? formatKes(debt)
                             : standing == CustomerStanding.credit
-                            ? _kes(credit)
+                            ? formatKes(credit)
                             : 'Cleared for booking',
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w700,
@@ -797,11 +797,11 @@ class _CustomerListCard extends StatelessWidget {
     final standing = customer.standing;
     final pill = switch (standing) {
       CustomerStanding.debt => CbStatusPill(
-        label: 'Owes ${_kes(customer.debtAmount)}',
+        label: 'Owes ${formatKes(customer.debtAmount)}',
         variant: CbStatusPillVariant.warning,
       ),
       CustomerStanding.credit => CbStatusPill(
-        label: 'Credit ${_kes(customer.walletBalance ?? 0)}',
+        label: 'Credit ${formatKes(customer.walletBalance ?? 0)}',
         variant: CbStatusPillVariant.success,
       ),
       CustomerStanding.good => const CbStatusPill(
@@ -1052,7 +1052,7 @@ class _ProductsStepState extends ConsumerState<_ProductsStep> {
                                 ),
                               ),
                               Text(
-                                _kes(p.price),
+                                formatKes(p.price),
                                 style: theme.textTheme.titleSmall?.copyWith(
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -1157,7 +1157,7 @@ class _ProductLineCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                '${_kes(line.unitPrice)} / unit',
+                '${formatKes(line.unitPrice)} / unit',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: AppColors.mutedForeground,
                 ),
@@ -1189,7 +1189,7 @@ class _ProductLineCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              'Pack total ${_kes(line.lineTotal)}',
+              'Pack total ${formatKes(line.lineTotal)}',
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: AppColors.primary,
@@ -1255,7 +1255,7 @@ class _LocationStep extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                _kes(subtotal),
+                formatKes(subtotal),
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -1505,7 +1505,7 @@ class _ReviewStep extends StatelessWidget {
                           children: [
                             Text(line.displayName),
                             Text(
-                              '${line.quantity.round()} × ${_kes(line.unitPrice)}',
+                              '${line.quantity.round()} × ${formatKes(line.unitPrice)}',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: AppColors.mutedForeground,
                               ),
@@ -1514,7 +1514,7 @@ class _ReviewStep extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        _kes(line.lineTotal),
+                        formatKes(line.lineTotal),
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -1538,7 +1538,7 @@ class _ReviewStep extends StatelessWidget {
                     ),
                     const Spacer(),
                     Text(
-                      _kes(state.subtotal),
+                      formatKes(state.subtotal),
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                         color: AppColors.primary,

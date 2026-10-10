@@ -12,8 +12,8 @@ import '../application/customer_list_paging.dart';
 import '../application/customers_controllers.dart';
 import '../domain/customer.dart';
 import '../domain/wallet_debt.dart';
+import '../../../core/format/money.dart';
 
-String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 enum _CustomerFilter { all, debtors, credit, good }
 
@@ -151,7 +151,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
             collapsedLabel: 'Customer directory summary',
             collapsedSummary: state.items.isEmpty
                 ? null
-                : '${state.count > 0 ? state.count : state.items.length} customers · ${_kes(totalOutstanding)} outstanding',
+                : '${state.count > 0 ? state.count : state.items.length} customers · ${formatKes(totalOutstanding)} outstanding',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -591,7 +591,7 @@ class _DirectorySummaryCard extends StatelessWidget {
               Expanded(
                 child: _SummaryMetric(
                   label: 'Total Outstanding',
-                  value: _kes(totalOutstanding),
+                  value: formatKes(totalOutstanding),
                   subtitle: 'Across $shopCount customers',
                 ),
               ),
@@ -874,10 +874,10 @@ class _CustomerExpandableCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     debt > 0
-                        ? _kes(debt)
+                        ? formatKes(debt)
                         : credit > 0
-                        ? 'Credit ${_kes(credit)}'
-                        : _kes(0),
+                        ? 'Credit ${formatKes(credit)}'
+                        : formatKes(0),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: debt > 0

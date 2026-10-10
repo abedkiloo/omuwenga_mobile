@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/chrome/cb_commit_confirm.dart';
 import '../../../design_system/states/async_states.dart';
@@ -77,9 +78,9 @@ class FieldOrderReviewPage extends ConsumerWidget {
               contentPadding: EdgeInsets.zero,
               title: Text(line.displayName),
               subtitle: Text(
-                '${line.quantity} × ${line.unitPrice.toStringAsFixed(2)}',
+                '${line.quantity} × ${formatGroupedNumber(line.unitPrice)}',
               ),
-              trailing: Text(line.lineTotal.toStringAsFixed(2)),
+              trailing: Text(formatGroupedNumber(line.lineTotal)),
             ),
           if (state.error != null)
             Text(
@@ -274,7 +275,7 @@ class _FieldOrderCartPageState extends ConsumerState<FieldOrderCartPage> {
                           [
                             if (p.hasVariants) 'Has variants',
                             if (p.sku != null && p.sku!.isNotEmpty) p.sku!,
-                            p.price.toStringAsFixed(2),
+                            formatGroupedNumber(p.price),
                           ].join(' · '),
                         ),
                         trailing: Icon(
@@ -304,9 +305,9 @@ class _FieldOrderCartPageState extends ConsumerState<FieldOrderCartPage> {
                         key: Key('fo_line_${line.lineKey}'),
                         title: Text(line.displayName),
                         subtitle: Text(
-                          '${line.quantity} × ${line.unitPrice.toStringAsFixed(2)}',
+                          '${line.quantity} × ${formatGroupedNumber(line.unitPrice)}',
                         ),
-                        trailing: Text(line.lineTotal.toStringAsFixed(2)),
+                        trailing: Text(formatGroupedNumber(line.lineTotal)),
                       );
                     },
                   ),

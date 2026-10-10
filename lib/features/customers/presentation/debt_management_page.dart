@@ -11,8 +11,8 @@ import '../application/debt_management_controller.dart';
 import '../domain/customer.dart';
 import '../domain/debt_management.dart';
 import 'debt_collection_list.dart';
+import '../../../core/format/money.dart';
 
-String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 const _agingBuckets = <(String key, String label)>[
   ('0_7', '0–7 days'),
@@ -85,7 +85,7 @@ class _DebtManagementPageState extends ConsumerState<DebtManagementPage> {
             collapsedLabel: 'Debtors',
             collapsedSummary: state.summary == null
                 ? null
-                : '${state.summary!.customersWithDebt} · ${_kes(state.summary!.totalDebt)}',
+                : '${state.summary!.customersWithDebt} · ${formatKes(state.summary!.totalDebt)}',
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
               child: Column(
@@ -294,7 +294,7 @@ class _SummaryStrip extends StatelessWidget {
           child: _StatTile(
             key: const Key('debt_stat_total'),
             label: 'Outstanding',
-            value: _kes(summary.totalDebt),
+            value: formatKes(summary.totalDebt),
             valueColor: summary.totalDebt > 0 ? AppColors.destructive : null,
           ),
         ),
@@ -303,7 +303,7 @@ class _SummaryStrip extends StatelessWidget {
           child: _StatTile(
             key: const Key('debt_stat_collected'),
             label: 'Collected today',
-            value: _kes(summary.collectedToday),
+            value: formatKes(summary.collectedToday),
             valueColor: summary.collectedToday > 0 ? AppColors.success : null,
             selected: collectedSelected,
             onTap: onCollectedTap,
@@ -473,7 +473,7 @@ class _DebtorCard extends StatelessWidget {
                 constraints: const BoxConstraints(maxWidth: 120),
                 child: Text(
                   key: Key('debtor_amount_${row.id}'),
-                  _kes(row.debtAmount),
+                  formatKes(row.debtAmount),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,

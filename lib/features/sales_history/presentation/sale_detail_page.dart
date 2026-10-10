@@ -22,6 +22,7 @@ import '../domain/sale.dart';
 import '../domain/sale_action_help.dart';
 import '../domain/sale_status_display.dart';
 import 'sale_action_help_icon.dart';
+import '../../../core/format/money.dart';
 
 class SaleDetailPage extends ConsumerStatefulWidget {
   const SaleDetailPage({super.key, required this.saleId});
@@ -815,7 +816,7 @@ class _SaleLineCard extends StatelessWidget {
                     ),
                   ),
                 Text(
-                  'Unit Price: ${_money(line.unitPrice)}',
+                  'Unit Price: ${formatKesSigned(line.unitPrice)}',
                   style: Theme.of(context).textTheme.labelSmall,
                 ),
               ],
@@ -827,7 +828,7 @@ class _SaleLineCard extends StatelessWidget {
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 96),
                 child: Text(
-                  _money(line.lineTotal),
+                  formatKesSigned(line.lineTotal),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.right,
@@ -933,7 +934,7 @@ class _AmountRow extends StatelessWidget {
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 120),
             child: Text(
-              _money(value),
+              formatKesSigned(value),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.right,
@@ -1173,7 +1174,3 @@ class _SaleActions extends StatelessWidget {
   }
 }
 
-String _money(double value) {
-  final sign = value < 0 ? '-' : '';
-  return '${sign}KES ${value.abs().toStringAsFixed(2)}';
-}

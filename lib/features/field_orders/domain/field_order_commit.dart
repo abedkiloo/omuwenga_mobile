@@ -2,8 +2,8 @@ import '../../pos/domain/cart.dart';
 import '../../../design_system/chrome/cb_commit_confirm.dart';
 import 'field_order.dart';
 import 'site_pin.dart';
+import '../../../core/format/money.dart';
 
-String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 String? visitOrderPlaceError({
   required bool hasCustomer,
@@ -37,7 +37,7 @@ List<CommitSummaryRow> visitOrderCommitRows({
       label: 'Items',
       value: '${lines.length} SKU · ${qty.round()} packs',
     ),
-    CommitSummaryRow(label: 'Total', value: _kes(total), emphasis: true),
+    CommitSummaryRow(label: 'Total', value: formatKes(total), emphasis: true),
     CommitSummaryRow(label: 'Drop pin', value: pinText),
     if (landmark.trim().isNotEmpty)
       CommitSummaryRow(label: 'Landmark', value: landmark.trim()),
@@ -68,7 +68,7 @@ List<CommitSummaryRow> fieldOrderReviewRows(FieldOrderCart cart) {
       label: 'Items',
       value: '${cart.lines.length} SKU · ${qty.round()} packs',
     ),
-    CommitSummaryRow(label: 'Total', value: _kes(cart.subtotal), emphasis: true),
+    CommitSummaryRow(label: 'Total', value: formatKes(cart.subtotal), emphasis: true),
     CommitSummaryRow(label: 'Drop pin', value: pinText),
   ];
 }
@@ -193,7 +193,7 @@ List<CommitSummaryRow> dispatchPackRows(FieldOrderSummary order) {
       label: 'Items',
       value: '${order.lines.length} SKU · qty ${qty.round()}',
     ),
-    CommitSummaryRow(label: 'Total', value: _kes(total), emphasis: true),
+    CommitSummaryRow(label: 'Total', value: formatKes(total), emphasis: true),
     const CommitSummaryRow(
       label: 'Customer account',
       value: debtorConfirmCopy,

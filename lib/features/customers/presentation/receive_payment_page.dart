@@ -12,8 +12,8 @@ import '../../payments/presentation/mpesa_capture.dart';
 import '../../payments/presentation/stk_wait_page.dart';
 import '../application/customers_controllers.dart';
 import '../domain/mpesa_receipt.dart';
+import '../../../core/format/money.dart';
 
-String _kes(num value) => 'KES ${value.toStringAsFixed(2)}';
 
 class ReceivePaymentPage extends ConsumerStatefulWidget {
   const ReceivePaymentPage({super.key, required this.customerId});
@@ -98,7 +98,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                 'A manager must approve it before the wallet is updated.',
       rows: [
         CommitSummaryRow(label: 'Customer', value: detail.name),
-        CommitSummaryRow(label: 'Amount', value: _kes(amount), emphasis: true),
+        CommitSummaryRow(label: 'Amount', value: formatKes(amount), emphasis: true),
         CommitSummaryRow(label: 'Method', value: _method.label),
         if (_method == PosPaymentMethod.mpesa &&
             isLiveMpesaPrompt(_mpesaCapture))
@@ -113,7 +113,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
         if (detail.debtAmount > 0)
           CommitSummaryRow(
             label: 'Current debt',
-            value: _kes(detail.debtAmount),
+            value: formatKes(detail.debtAmount),
           ),
       ],
       confirmLabel: 'Yes, record payment',

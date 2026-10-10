@@ -10,6 +10,7 @@ import '../application/approvals_controller.dart';
 import '../data/approvals_api.dart';
 import '../domain/approval_details.dart';
 import 'approval_details_panel.dart';
+import '../../../core/format/money.dart';
 
 ApprovalDetails expenseApprovalDetails(Expense expense) {
   return ApprovalDetails(
@@ -45,11 +46,6 @@ ApprovalDetails expenseApprovalDetails(Expense expense) {
   );
 }
 
-String _kes(num value) {
-  final n = value.toDouble();
-  if (n == n.roundToDouble()) return n.toStringAsFixed(0);
-  return n.toStringAsFixed(2);
-}
 
 class ApprovalsPage extends ConsumerStatefulWidget {
   const ApprovalsPage({super.key});
@@ -202,7 +198,7 @@ class _ApprovalsPageState extends ConsumerState<ApprovalsPage> {
             ? expense.description
             : expense.expenseNumber,
         subtitle:
-            'KES ${_kes(expense.amount)} · ${expense.paymentLabel}'
+            '${formatKes(expense.amount, dropTrailingZeros: true)} · ${expense.paymentLabel}'
             '${expense.createdByName != null ? ' · ${expense.createdByName}' : ''}',
         details: expenseApprovalDetails(expense),
         busy: ref.read(approvalsProvider).acting,
@@ -312,7 +308,7 @@ class _ApprovalsPageState extends ConsumerState<ApprovalsPage> {
         subtitle:
             '${sale.cashierName ?? 'Cashier'}'
             '${sale.customerName != null && sale.customerName!.isNotEmpty ? ' · ${sale.customerName}' : ''}'
-            ' · KES ${_kes(sale.total)}',
+            ' · ${formatKes(sale.total, dropTrailingZeros: true)}',
         details: details,
         waitingOnCashier: sale.needsSalespersonAction,
         waitingMessage: sale.rejectionReason?.isNotEmpty == true
@@ -347,7 +343,7 @@ class _ApprovalsPageState extends ConsumerState<ApprovalsPage> {
       builder: (ctx) => _ApprovalReviewSheet(
         title: row.customerName,
         subtitle:
-            'KES ${_kes(row.amount)} · ${(row.paymentMethod ?? 'cash').toUpperCase()}'
+            '${formatKes(row.amount, dropTrailingZeros: true)} · ${(row.paymentMethod ?? 'cash').toUpperCase()}'
             '${row.madeByName != null ? ' · ${row.madeByName}' : ''}',
         details: row.details,
         reason: row.reason,
@@ -618,7 +614,7 @@ class _SaleApprovalCard extends StatelessWidget {
               ),
             ),
             Text(
-              'KES ${_kes(sale.total)}',
+              formatKes(sale.total),
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(width: 4),
@@ -686,7 +682,7 @@ class _ExpenseApprovalCard extends StatelessWidget {
               ),
             ),
             Text(
-              'KES ${_kes(expense.amount)}',
+              formatKes(expense.amount),
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(width: 4),
@@ -745,7 +741,7 @@ class _CollectionApprovalCard extends StatelessWidget {
               ),
             ),
             Text(
-              'KES ${_kes(row.amount)}',
+              formatKes(row.amount),
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(width: 4),
