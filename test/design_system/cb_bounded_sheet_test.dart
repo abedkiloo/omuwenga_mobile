@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('sheet height does not double-count keyboard insets', () {
+  test('stable sheet height ignores keyboard inset by default', () {
     expect(
       cbSheetFrameHeight(
         mediaHeight: 800,
@@ -11,23 +11,27 @@ void main() {
         maxConstraintHeight: 800,
         heightFactor: 0.5,
       ),
-      250,
+      400,
     );
     expect(
       cbSheetFrameHeight(
         mediaHeight: 800,
         inset: 300,
-        maxConstraintHeight: 400,
+        maxConstraintHeight: 350,
         heightFactor: 0.5,
       ),
-      200,
+      350,
     );
+  });
+
+  test('legacy shrink mode still accounts for keyboard inset', () {
     expect(
       cbSheetFrameHeight(
         mediaHeight: 800,
         inset: 300,
-        maxConstraintHeight: double.infinity,
+        maxConstraintHeight: 800,
         heightFactor: 0.5,
+        shrinkForKeyboard: true,
       ),
       250,
     );
@@ -37,6 +41,7 @@ void main() {
         inset: 200,
         maxConstraintHeight: 600,
         heightFactor: 0.9,
+        shrinkForKeyboard: true,
       ),
       0,
     );
@@ -72,9 +77,12 @@ void main() {
     expect(find.text('sheet-body'), findsOneWidget);
     final frame = tester.widget<CbSheetFrame>(find.byType(CbSheetFrame));
     expect(frame.heightFactor, 0.92);
+    expect(frame.shrinkForKeyboard, isFalse);
   });
 
-  testWidgets('sheet frame shrinks by the keyboard inset', (tester) async {
+  testWidgets('stable sheet frame keeps height when keyboard is open', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const Align(
         alignment: Alignment.topCenter,
@@ -91,6 +99,6 @@ void main() {
       ),
     );
     final box = tester.renderObject<RenderBox>(find.byType(CbSheetFrame));
-    expect(box.size.height, 250);
+    expect(box.size.height, 400);
   });
 }

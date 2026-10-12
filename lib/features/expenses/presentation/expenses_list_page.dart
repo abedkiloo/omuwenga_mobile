@@ -293,7 +293,11 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                 if (expense.vendor.isNotEmpty) _fact('Vendor', expense.vendor),
                 if (expense.receiptNumber.isNotEmpty)
                   _fact('Receipt', expense.receiptNumber),
-                if (expense.notes.isNotEmpty) _fact('Notes', expense.notes),
+                if (expense.notes.trim().isNotEmpty)
+                  _NotesFact(
+                    notes: expense.notes.trim(),
+                    onOpen: () => _showNotes(context, expense.notes.trim()),
+                  ),
                 if (expense.createdByName != null)
                   _fact('Requested by', expense.createdByName!),
               ],
@@ -452,6 +456,53 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
     );
   }
 
+  Future<void> _showNotes(BuildContext context, String notes) {
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Notes',
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.sizeOf(ctx).height * 0.5,
+                  ),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      notes,
+                      style: Theme.of(ctx).textTheme.bodyLarge?.copyWith(
+                            height: 1.4,
+                          ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<String?> _askVoidReason(BuildContext context) async {
     final controller = TextEditingController();
     return showDialog<String>(
@@ -476,6 +527,77 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
             child: const Text('Void'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NotesFact extends StatelessWidget {
+  const _NotesFact({required this.notes, required this.onOpen});
+
+  final String notes;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Material(
+        color: AppColors.secondary,
+        borderRadius: BorderRadius.circular(AppColors.radiusSm),
+        child: InkWell(
+          key: const Key('expense_view_notes'),
+          onTap: onOpen,
+          borderRadius: BorderRadius.circular(AppColors.radiusSm),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.notes_outlined,
+                  color: AppColors.accent,
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Notes',
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        notes,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tap to view full notes',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppColors.mutedForeground,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  color: AppColors.mutedForeground,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -611,7 +733,8 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
           const Divider(height: 1),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               children: [
                 if (_error != null)
                   Padding(
@@ -624,6 +747,8 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
                 TextField(
                   key: const Key('expense_description'),
                   controller: _description,
+                  textInputAction: TextInputAction.next,
+                  scrollPadding: const EdgeInsets.only(bottom: 120),
                   decoration: const InputDecoration(
                     labelText: 'Description',
                     border: OutlineInputBorder(),
@@ -633,6 +758,8 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
                 TextField(
                   key: const Key('expense_amount'),
                   controller: _amount,
+                  textInputAction: TextInputAction.next,
+                  scrollPadding: const EdgeInsets.only(bottom: 120),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
@@ -651,6 +778,7 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
                     child: DropdownButton<int>(
                       key: const Key('expense_category'),
                       isExpanded: true,
+                      menuMaxHeight: 280,
                       value: categories.any((c) => c.id == _categoryId)
                           ? _categoryId
                           : null,
@@ -662,7 +790,10 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
                             child: Text(cat.name),
                           ),
                       ],
-                      onChanged: (id) => setState(() => _categoryId = id),
+                      onChanged: (id) {
+                        FocusScope.of(context).unfocus();
+                        setState(() => _categoryId = id);
+                      },
                     ),
                   ),
                 ),
@@ -679,6 +810,8 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
                 if (_showNewCategory) ...[
                   TextField(
                     controller: _newCategory,
+                    textInputAction: TextInputAction.done,
+                    scrollPadding: const EdgeInsets.only(bottom: 120),
                     decoration: const InputDecoration(
                       labelText: 'New category name',
                       border: OutlineInputBorder(),
@@ -736,8 +869,11 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
                             child: Text(entry.value),
                           ),
                       ],
+                      menuMaxHeight: 280,
                       onChanged: (v) {
-                        if (v != null) setState(() => _paymentMethod = v);
+                        if (v == null) return;
+                        FocusScope.of(context).unfocus();
+                        setState(() => _paymentMethod = v);
                       },
                     ),
                   ),
@@ -748,10 +884,15 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
                   title: const Text('Expense date'),
                   subtitle: Text(_expenseDate),
                   trailing: const Icon(Icons.calendar_today_outlined),
-                  onTap: _pickDate,
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    _pickDate();
+                  },
                 ),
                 TextField(
                   controller: _vendor,
+                  textInputAction: TextInputAction.next,
+                  scrollPadding: const EdgeInsets.only(bottom: 120),
                   decoration: const InputDecoration(
                     labelText: 'Vendor (optional)',
                     border: OutlineInputBorder(),
@@ -760,6 +901,8 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _receipt,
+                  textInputAction: TextInputAction.next,
+                  scrollPadding: const EdgeInsets.only(bottom: 120),
                   decoration: const InputDecoration(
                     labelText: 'Receipt number (optional)',
                     border: OutlineInputBorder(),
@@ -768,6 +911,8 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _notes,
+                  textInputAction: TextInputAction.next,
+                  scrollPadding: const EdgeInsets.only(bottom: 140),
                   decoration: const InputDecoration(
                     labelText: 'Notes (optional)',
                     border: OutlineInputBorder(),
@@ -779,6 +924,7 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
                   TextField(
                     key: const Key('expense_proposal_reason'),
                     controller: _reason,
+                    scrollPadding: const EdgeInsets.only(bottom: 140),
                     decoration: const InputDecoration(
                       labelText: 'Reason for this entry',
                       border: OutlineInputBorder(),

@@ -93,6 +93,7 @@ List<_NavItem> _bottomBusinessNav(
 List<_NavItem> _businessMoreNav({
   required PermissionSet? perms,
   required bool canHistory,
+  bool canViewDailySales = false,
   bool includeSalesHistory = false,
 }) {
   return [
@@ -124,7 +125,7 @@ List<_NavItem> _businessMoreNav({
         route: AppRoutes.deliveryRoute,
         key: const Key('more_delivery'),
       ),
-    if (perms?.canViewDailySales ?? false)
+    if (canViewDailySales)
       const _NavItem(
         label: 'Daily sales',
         icon: Icons.calendar_today_outlined,
@@ -179,12 +180,14 @@ List<_NavItem> _moreNav({
   required PermissionSet? perms,
   required bool canHistory,
   required bool canApprove,
+  bool canViewDailySales = false,
   bool includePrimaryDupes = false,
 }) {
   final historyOnBar = !canApprove && (perms == null || perms.canViewSales);
   return _businessMoreNav(
     perms: perms,
     canHistory: canHistory,
+    canViewDailySales: canViewDailySales,
     includeSalesHistory: includePrimaryDupes || !historyOnBar,
   );
 }
@@ -286,6 +289,13 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
           profile: session.profile,
           isSuperuser: session.user.isSuperuser,
         );
+    final canViewDailySales = session != null &&
+        sessionCanViewDailySales(
+          permissions: session.permissions,
+          profile: session.profile,
+          features: session.features,
+          isSuperuser: session.user.isSuperuser,
+        );
 
     final bottom = _bottomBusinessNav(perms, canApprove: canApprove);
     final historyOnBar =
@@ -293,6 +303,7 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
     final businessMore = _businessMoreNav(
       perms: perms,
       canHistory: canHistory,
+      canViewDailySales: canViewDailySales,
       includeSalesHistory: !historyOnBar,
     );
     final overflow = _sideOverflowNav();
@@ -662,6 +673,13 @@ class MorePage extends ConsumerWidget {
           profile: session.profile,
           isSuperuser: session.user.isSuperuser,
         );
+    final canViewDailySales = session != null &&
+        sessionCanViewDailySales(
+          permissions: session.permissions,
+          profile: session.profile,
+          features: session.features,
+          isSuperuser: session.user.isSuperuser,
+        );
     final canApprove =
         (perms?.canApproveSales ?? false) ||
         (perms?.canApproveDebtManagement ?? false) ||
@@ -670,6 +688,7 @@ class MorePage extends ConsumerWidget {
       perms: perms,
       canHistory: canHistory,
       canApprove: canApprove,
+      canViewDailySales: canViewDailySales,
       includePrimaryDupes: true,
     );
     final overflow = _sideOverflowNav();
@@ -735,17 +754,26 @@ class PersonaHomePage extends ConsumerWidget {
       profile: session.profile,
       isSuperuser: session.user.isSuperuser,
     );
+    final canViewDailySales = sessionCanViewDailySales(
+      permissions: session.permissions,
+      profile: session.profile,
+      features: session.features,
+      isSuperuser: session.user.isSuperuser,
+    );
     final canApprove = session.permissions.canApproveSales ||
         session.permissions.canApproveDebtManagement;
+    final canAccessPos = session.permissions.canAccessPos &&
+        session.features.isRetailPosEnabled;
 
     switch (session.persona) {
       case AppPersona.cashier:
         return StoreHomeDashboard(
           title: 'Hi, ${session.user.displayName}',
-          canAccessPos: session.permissions.canAccessPos,
+          canAccessPos: canAccessPos,
           canViewCustomers: session.permissions.canViewCustomers,
-          canViewDailySales: session.permissions.canViewDailySales,
-          canViewSales: session.permissions.canViewSales,
+          canViewDailySales: canViewDailySales,
+          canViewSales: session.permissions.canViewSales &&
+              session.features.isSalesHistoryEnabled,
           canViewDebtors: session.permissions.canViewDebtManagement,
           canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
           canDispatch: session.permissions.canDispatch,
@@ -763,10 +791,11 @@ class PersonaHomePage extends ConsumerWidget {
           title: session.persona == AppPersona.admin
               ? 'Admin · ${session.user.displayName}'
               : 'Manager · ${session.user.displayName}',
-          canAccessPos: session.permissions.canAccessPos,
+          canAccessPos: canAccessPos,
           canViewCustomers: session.permissions.canViewCustomers,
-          canViewDailySales: session.permissions.canViewDailySales,
-          canViewSales: session.permissions.canViewSales,
+          canViewDailySales: canViewDailySales,
+          canViewSales: session.permissions.canViewSales &&
+              session.features.isSalesHistoryEnabled,
           canViewDebtors: session.permissions.canViewDebtManagement,
           canDispatch: session.permissions.canDispatch,
           canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,

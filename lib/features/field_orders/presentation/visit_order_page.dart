@@ -7,6 +7,7 @@ import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/chrome/cb_commit_confirm.dart';
 import '../../../design_system/chrome/cb_flow_header.dart';
+import '../../../design_system/chrome/cb_qty_stepper.dart';
 import '../../../design_system/chrome/cb_search_field.dart';
 import '../../../design_system/chrome/cb_section_label.dart';
 import '../../../design_system/chrome/cb_status_pill.dart';
@@ -1163,19 +1164,11 @@ class _ProductLineCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              IconButton(
-                onPressed: () => onSetQuantity(line.lineKey, line.quantity - 1),
-                icon: const Icon(Icons.remove_circle_outline),
-              ),
-              Text(
-                '${line.quantity.round()}',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              IconButton(
-                onPressed: () => onSetQuantity(line.lineKey, line.quantity + 1),
-                icon: const Icon(Icons.add_circle_outline),
+              CbQtyStepper(
+                quantity: line.quantity,
+                min: 0,
+                max: line.stockQuantity,
+                onChanged: (qty) => onSetQuantity(line.lineKey, qty),
               ),
               IconButton(
                 onPressed: () => onRemove(line.lineKey),

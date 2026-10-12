@@ -149,7 +149,7 @@ void main() {
     expect(find.byKey(const Key('more_daily_sales')), findsNothing);
   });
 
-  testWidgets('daily sales shown with sales.view only (own sales)', (
+  testWidgets('daily sales hidden for manager with sales.view only', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -159,8 +159,21 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('more_daily_sales')), findsOneWidget);
+    expect(find.byKey(const Key('more_daily_sales')), findsNothing);
     expect(find.byKey(const Key('more_sales_history')), findsOneWidget);
+  });
+
+  testWidgets('daily sales shown for cashier with sales.view only', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: seedOverrides(cashierSession()),
+        child: const MaterialApp(home: MorePage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('more_daily_sales')), findsOneWidget);
   });
 
   testWidgets('daily sales shown with permission', (tester) async {

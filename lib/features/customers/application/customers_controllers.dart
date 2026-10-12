@@ -18,7 +18,8 @@ final kenyaAdminUnitsProvider = FutureProvider<KenyaAdminUnits>((ref) async {
   return result.getOrThrow();
 });
 
-/// Disable automatic GPS snap on the register form (widget tests).
+/// When true (production), register form asks snap vs skip on open.
+/// Widget tests override to false so they do not fight the prompt sheet.
 final customerFormAutoSnapLocationProvider = Provider<bool>((ref) => true);
 
 final customersSettingsProvider = FutureProvider<CustomersModuleSettings>((

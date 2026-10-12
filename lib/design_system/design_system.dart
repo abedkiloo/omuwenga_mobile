@@ -9,6 +9,7 @@ export 'chrome/cb_fit_text.dart';
 export 'chrome/cb_info_chunk.dart';
 export 'chrome/cb_password_field.dart';
 export 'chrome/cb_flow_header.dart';
+export 'chrome/cb_qty_stepper.dart';
 export 'chrome/cb_reminder_banner.dart';
 export 'chrome/cb_search_field.dart';
 export 'chrome/cb_section_label.dart';

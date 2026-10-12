@@ -4,6 +4,7 @@ import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
 import '../../../design_system/chrome/cb_bounded_sheet.dart';
+import '../../../design_system/chrome/cb_qty_stepper.dart';
 import '../../../design_system/states/async_states.dart';
 import '../domain/cart.dart';
 import '../domain/product_variant.dart';
@@ -150,27 +151,14 @@ class _VariantPickerSheetState extends State<_VariantPickerSheet> {
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    IconButton(
-                      key: const Key('variant_qty_dec'),
-                      onPressed: _qty <= 1
-                          ? null
-                          : () => setState(() => _qty -= 1),
-                      icon: const Icon(Icons.remove_circle_outline),
-                    ),
-                    Text(
-                      key: const Key('variant_qty'),
-                      _qty.round().toString(),
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    IconButton(
-                      key: const Key('variant_qty_inc'),
-                      onPressed:
-                          _selected == null ||
-                              _selected!.stockQuantity == null ||
-                              _qty >= _selected!.stockQuantity!
-                          ? null
-                          : () => setState(() => _qty += 1),
-                      icon: const Icon(Icons.add_circle_outline),
+                    CbQtyStepper(
+                      quantity: _qty,
+                      min: 1,
+                      max: _selected?.stockQuantity,
+                      decrementKey: const Key('variant_qty_dec'),
+                      incrementKey: const Key('variant_qty_inc'),
+                      valueKey: const Key('variant_qty'),
+                      onChanged: (qty) => setState(() => _qty = qty),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

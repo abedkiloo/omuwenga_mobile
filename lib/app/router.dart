@@ -127,9 +127,16 @@ GoRouter createAppRouter({
           !(permissions?.canViewSales ?? false)) {
         return AppRoutes.home;
       }
-      if (loc.startsWith(AppRoutes.dailySales) &&
-          !(permissions?.canViewDailySales ?? false)) {
-        return AppRoutes.home;
+      if (loc.startsWith(AppRoutes.dailySales)) {
+        final session = auth.session;
+        final canDaily = session != null &&
+            sessionCanViewDailySales(
+              permissions: session.permissions,
+              profile: session.profile,
+              features: session.features,
+              isSuperuser: session.user.isSuperuser,
+            );
+        if (!canDaily) return AppRoutes.home;
       }
       if (loc.startsWith('/visit-orders') &&
           !(permissions?.canPlaceVisitOrders ?? false)) {

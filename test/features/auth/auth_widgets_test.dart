@@ -161,8 +161,8 @@ void main() {
     await pumpManager(managerSession(dailySales: false));
     expect(find.text('Open debtors'), findsNothing);
     expect(find.text('Start New Sale'), findsOneWidget);
-    // sales.view alone opens Daily sales (own sales only).
-    expect(find.byKey(const Key('home_daily_sales')), findsOneWidget);
+    // Managers need sales.daily_sales — sales.view alone is not enough.
+    expect(find.byKey(const Key('home_daily_sales')), findsNothing);
 
     await pumpManager(managerSession(dailySales: true));
     expect(

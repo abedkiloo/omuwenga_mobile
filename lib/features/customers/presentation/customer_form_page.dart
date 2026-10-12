@@ -55,7 +55,9 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   bool _locating = false;
   String? _error;
   bool _seeded = false;
-  bool _autoSnapAttempted = false;
+  bool _locationPromptShown = false;
+  /// Null until user chooses snap / skip on create; edit starts as skipped.
+  bool? _locationSkipped;
   double? _latitude;
   double? _longitude;
   double? _locationAccuracy;
@@ -74,18 +76,79 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
         if (!mounted) return;
         _nameFocus.requestFocus();
       });
+    } else {
+      _locationSkipped = true;
     }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_isEdit &&
-        !_autoSnapAttempted &&
-        ref.read(customerFormAutoSnapLocationProvider)) {
-      _autoSnapAttempted = true;
-      // Quiet first attempt — agent is usually already at the duka.
-      _snapLocation(showErrors: false);
+    if (_isEdit ||
+        _locationPromptShown ||
+        !ref.read(customerFormAutoSnapLocationProvider)) {
+      return;
+    }
+    _locationPromptShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _askLocationChoice();
+    });
+  }
+
+  Future<void> _askLocationChoice() async {
+    if (!mounted || _hasLocationPing || _locationSkipped == true) return;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Add location for this duka?',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'GPS helps deliveries find the shop. You can skip and add it later.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  key: const Key('customer_location_choice_snap'),
+                  onPressed: () => Navigator.pop(ctx, 'snap'),
+                  icon: const Icon(Icons.my_location),
+                  label: const Text('Snap location now'),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton(
+                  key: const Key('customer_location_choice_skip'),
+                  onPressed: () => Navigator.pop(ctx, 'skip'),
+                  child: const Text('Skip for now'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (!mounted) return;
+    if (choice == 'snap') {
+      setState(() => _locationSkipped = false);
+      await _snapLocation(showErrors: true);
+    } else {
+      // Dismiss or explicit skip — location stays optional.
+      setState(() => _locationSkipped = true);
     }
   }
 
@@ -238,13 +301,6 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     final emailErr = emailValidationMessage(_email.text);
     if (emailErr != null) {
       setState(() => _error = emailErr);
-      return;
-    }
-    if (!_isEdit && !_hasLocationPing) {
-      setState(
-        () => _error =
-            'Snap the location at this duka before registering.',
-      );
       return;
     }
     setState(() {
@@ -466,14 +522,23 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                   _sectionLabel(
                     theme,
                     'Location ping',
-                    hint: _isEdit ? '(optional)' : '(required)',
+                    hint: '(optional)',
                   ),
                   _LocationPingCard(
                     locating: _locating,
                     latitude: _latitude,
                     longitude: _longitude,
                     accuracy: _locationAccuracy,
-                    onSnap: _saving ? null : () => _snapLocation(),
+                    skipped: _locationSkipped == true && !_hasLocationPing,
+                    onSnap: _saving
+                        ? null
+                        : () {
+                            setState(() => _locationSkipped = false);
+                            _snapLocation();
+                          },
+                    onSkip: _saving || _hasLocationPing
+                        ? null
+                        : () => setState(() => _locationSkipped = true),
                   ),
                   const SizedBox(height: 20),
                   _sectionLabel(theme, 'Other details', hint: '(optional)'),
@@ -591,6 +656,8 @@ class _LocationPingCard extends StatelessWidget {
     required this.longitude,
     required this.accuracy,
     required this.onSnap,
+    this.onSkip,
+    this.skipped = false,
   });
 
   final bool locating;
@@ -598,6 +665,8 @@ class _LocationPingCard extends StatelessWidget {
   final double? longitude;
   final double? accuracy;
   final VoidCallback? onSnap;
+  final VoidCallback? onSkip;
+  final bool skipped;
 
   bool get _hasPing => latitude != null && longitude != null;
 
@@ -611,9 +680,22 @@ class _LocationPingCard extends StatelessWidget {
         ? null
         : '±${accuracy!.round()} m';
 
+    final String title;
+    final String subtitle;
+    if (_hasPing) {
+      title = 'Location captured';
+      subtitle = [coords, accuracyLabel].whereType<String>().join(' · ');
+    } else if (skipped) {
+      title = 'Location skipped';
+      subtitle = 'You can snap GPS later so deliveries know where to stop.';
+    } else {
+      title = 'Location optional';
+      subtitle = 'Snap GPS so deliveries know where to stop — or skip for now.';
+    }
+
     return Material(
       color: AppColors.secondary,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppColors.radiusSm),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         child: Column(
@@ -622,9 +704,13 @@ class _LocationPingCard extends StatelessWidget {
             Row(
               children: [
                 Icon(
-                  _hasPing ? Icons.location_on : Icons.location_searching,
+                  _hasPing
+                      ? Icons.location_on
+                      : (skipped
+                          ? Icons.location_off_outlined
+                          : Icons.location_searching),
                   color: _hasPing
-                      ? const Color(0xFF15803D)
+                      ? AppColors.brandGreen
                       : AppColors.mutedForeground,
                 ),
                 const SizedBox(width: 10),
@@ -633,19 +719,14 @@ class _LocationPingCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _hasPing ? 'Location captured' : 'Stand at the duka',
+                        title,
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        _hasPing
-                            ? [
-                                ?coords,
-                                ?accuracyLabel,
-                              ].join(' · ')
-                            : 'Snap GPS so deliveries know where to stop.',
+                        subtitle,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppColors.mutedForeground,
                         ),
@@ -672,6 +753,14 @@ class _LocationPingCard extends StatelessWidget {
                     : (_hasPing ? 'Snap again' : 'Snap location'),
               ),
             ),
+            if (!_hasPing && onSkip != null) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                key: const Key('customer_form_skip_location'),
+                onPressed: locating ? null : onSkip,
+                child: Text(skipped ? 'Skipped' : 'Skip location'),
+              ),
+            ],
           ],
         ),
       ),

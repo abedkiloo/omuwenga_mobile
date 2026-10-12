@@ -1,3 +1,4 @@
+import 'module_features.dart';
 import 'permission_set.dart';
 
 /// Mobile home persona — store roles only.
@@ -144,4 +145,30 @@ bool sessionCanAdminReturnSale({
   if (isSuperuser || profile.isSuperAdmin || profile.isAdmin) return true;
   final role = profile.role;
   return role == 'admin' || role == 'super_admin';
+}
+
+/// Store Manager role (not admin / super admin).
+bool isStoreManagerProfile(UserProfileSnapshot profile) {
+  if (profile.isSuperAdmin || profile.isAdmin) return false;
+  if (profile.role == 'manager') return true;
+  final name = (profile.roleDisplay ?? '').trim();
+  return name == 'Manager';
+}
+
+/// Daily sales nav/route: Module Settings flag + role-aware permission.
+///
+/// - Off when Module Settings → Daily sales tracker is disabled.
+/// - Managers need explicit `sales.daily_sales` (not sales.view alone).
+/// - Cashiers / field staff open their own day with `sales.view`.
+bool sessionCanViewDailySales({
+  required PermissionSet permissions,
+  required UserProfileSnapshot profile,
+  ModuleFeatures features = ModuleFeatures.empty,
+  bool isSuperuser = false,
+}) {
+  if (!features.isDailySalesEnabled) return false;
+  if (isSuperuser || profile.isSuperAdmin) return true;
+  if (permissions.has('sales', 'daily_sales')) return true;
+  if (isStoreManagerProfile(profile)) return false;
+  return permissions.has('sales', 'view');
 }

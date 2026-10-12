@@ -544,19 +544,9 @@ class _PosPageState extends ConsumerState<PosPage> {
                         for (final line in cart.lines) ...[
                           _CartLineCard(
                             line: line,
-                            onDec: () => ref
+                            onQuantityChanged: (qty) => ref
                                 .read(cartControllerProvider.notifier)
-                                .setQuantity(line.lineKey, line.quantity - 1),
-                            onInc:
-                                line.stockQuantity == null ||
-                                    line.quantity >= line.stockQuantity!
-                                ? null
-                                : () => ref
-                                      .read(cartControllerProvider.notifier)
-                                      .setQuantity(
-                                        line.lineKey,
-                                        line.quantity + 1,
-                                      ),
+                                .setQuantity(line.lineKey, qty),
                           ),
                           const SizedBox(height: 8),
                         ],
@@ -917,13 +907,11 @@ class _CategoryChip extends StatelessWidget {
 class _CartLineCard extends StatelessWidget {
   const _CartLineCard({
     required this.line,
-    required this.onDec,
-    required this.onInc,
+    required this.onQuantityChanged,
   });
 
   final CartLine line;
-  final VoidCallback onDec;
-  final VoidCallback? onInc;
+  final ValueChanged<double> onQuantityChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1010,42 +998,15 @@ class _CartLineCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Text(
-                'Unit Qty',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppColors.mutedForeground,
-                ),
-              ),
-              const Spacer(),
-              _QtyButton(
-                key: Key('pos_dec_${line.lineKey}'),
-                icon: Icons.remove,
-                onTap: onDec,
-              ),
-              Container(
-                width: 40,
-                height: 36,
-                alignment: Alignment.center,
-                margin: const EdgeInsets.symmetric(horizontal: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.accentSoft,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  line.quantity.round().toString(),
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              _QtyButton(
-                key: Key('pos_inc_${line.lineKey}'),
-                icon: Icons.add,
-                onTap: onInc,
-              ),
-            ],
+          CbQtyStepper(
+            label: 'Unit Qty',
+            quantity: line.quantity,
+            min: 0,
+            max: stock,
+            decrementKey: Key('pos_dec_${line.lineKey}'),
+            incrementKey: Key('pos_inc_${line.lineKey}'),
+            valueKey: Key('pos_qty_${line.lineKey}'),
+            onChanged: onQuantityChanged,
           ),
         ],
       ),
@@ -1158,40 +1119,6 @@ class _CatalogProductCard extends StatelessWidget {
             color: unavailable ? AppColors.mutedForeground : AppColors.primary,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _QtyButton extends StatelessWidget {
-  const _QtyButton({super.key, required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: onTap == null ? AppColors.background : AppColors.surface,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: onTap == null
-                ? AppColors.mutedForeground
-                : AppColors.primary,
-          ),
-        ),
       ),
     );
   }

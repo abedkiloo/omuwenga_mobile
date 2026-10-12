@@ -1,3 +1,4 @@
+import 'module_features.dart';
 import 'permission_set.dart';
 import 'persona.dart';
 
@@ -42,12 +43,16 @@ class AuthSession {
     required this.profile,
     required this.permissions,
     required this.persona,
+    this.features = ModuleFeatures.empty,
   });
 
   final AuthUser user;
   final UserProfileSnapshot profile;
   final PermissionSet permissions;
   final AppPersona persona;
+
+  /// Module Settings toggles from the server (no app rebuild needed).
+  final ModuleFeatures features;
 
   factory AuthSession.fromAuthPayload(Map<String, dynamic> json) {
     final userJson = Map<String, dynamic>.from(json['user'] as Map? ?? {});
@@ -69,6 +74,7 @@ class AuthSession {
       profile: profile,
       permissions: permissions,
       persona: persona,
+      features: ModuleFeatures.fromEnabledModules(json['enabled_modules']),
     );
   }
 }

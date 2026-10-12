@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 
-/// Keyboard-safe height for a modal sheet. Do not pad by [viewInsets]
-/// and also subtract them from height — that double-counts and overflows.
+/// Keyboard-safe height for a modal sheet.
+///
+/// Prefer a **stable** frame ([shrinkForKeyboard] = false): keep
+/// `mediaHeight * heightFactor` and lift content with bottom padding for the
+/// keyboard. Shrinking the whole sheet when the keyboard opens (or when a
+/// dropdown dismisses it) causes a jump.
 double cbSheetFrameHeight({
   required double mediaHeight,
   required double inset,
   required double maxConstraintHeight,
   required double heightFactor,
+  bool shrinkForKeyboard = false,
 }) {
+  final base = mediaHeight * heightFactor;
+  if (!shrinkForKeyboard) {
+    if (!maxConstraintHeight.isFinite) return base.clamp(0.0, mediaHeight);
+    return base.clamp(0.0, maxConstraintHeight);
+  }
   final mqUsable = (mediaHeight - inset).clamp(0.0, mediaHeight);
   final double usable;
   if (!maxConstraintHeight.isFinite) {
@@ -26,10 +36,15 @@ class CbSheetFrame extends StatelessWidget {
     super.key,
     required this.child,
     this.heightFactor = 0.92,
+    this.shrinkForKeyboard = false,
   });
 
   final Widget child;
   final double heightFactor;
+
+  /// When true, sheet height shrinks with the keyboard (legacy). Prefer false
+  /// so dropdowns / focus changes do not jump the sheet.
+  final bool shrinkForKeyboard;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +58,7 @@ class CbSheetFrame extends StatelessWidget {
             inset: inset,
             maxConstraintHeight: constraints.maxHeight,
             heightFactor: heightFactor,
+            shrinkForKeyboard: shrinkForKeyboard,
           ),
           child: child,
         );
@@ -65,17 +81,18 @@ Future<T?> showCbBoundedSheet<T>({
     useSafeArea: true,
     builder: (ctx) {
       final inset = MediaQuery.viewInsetsOf(ctx).bottom;
-      final sheet = CbSheetFrame(
-        heightFactor: heightFactor,
-        child: builder(ctx),
-      );
-      if (inset <= 0) return sheet;
+      // Stable sheet height + bottom pad for keyboard — avoids jump when
+      // dropdowns dismiss the keyboard or fields scroll into view.
       return Padding(
         padding: EdgeInsets.only(bottom: inset),
         child: MediaQuery.removeViewInsets(
           context: ctx,
           removeBottom: true,
-          child: sheet,
+          child: CbSheetFrame(
+            heightFactor: heightFactor,
+            shrinkForKeyboard: false,
+            child: builder(ctx),
+          ),
         ),
       );
     },

@@ -76,6 +76,21 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
     await ref.read(salesHistoryProvider.notifier).load(filters: filters);
   }
 
+  /// Calendar week starting Monday (not a rolling 7 days).
+  Future<void> _setThisWeek() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final monday = today.subtract(Duration(days: today.weekday - DateTime.monday));
+    final filters = ref
+        .read(salesHistoryProvider)
+        .filters
+        .copyWith(
+          dateFrom: formatApiDate(monday),
+          dateTo: formatApiDate(today),
+        );
+    await ref.read(salesHistoryProvider.notifier).load(filters: filters);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(salesHistoryProvider);
@@ -111,7 +126,7 @@ class _SalesHistoryPageState extends ConsumerState<SalesHistoryPage> {
                     filters: filters,
                     onToday: () => _setRange(0),
                     onYesterday: () => _setRange(1),
-                    onWeek: () => _setRange(7),
+                    onWeek: _setThisWeek,
                     onFrom: () => _pickDate(from: true),
                     onTo: () => _pickDate(from: false),
                   ),
@@ -342,9 +357,12 @@ class _RangeSelector extends StatelessWidget {
     final yesterday = formatApiDate(
       DateTime.now().subtract(const Duration(days: 1)),
     );
-    final weekFrom = formatApiDate(
-      DateTime.now().subtract(const Duration(days: 7)),
+    final now = DateTime.now();
+    final todayDate = DateTime(now.year, now.month, now.day);
+    final monday = todayDate.subtract(
+      Duration(days: todayDate.weekday - DateTime.monday),
     );
+    final weekFrom = formatApiDate(monday);
     final from = filters.dateFrom;
     final to = filters.dateTo;
     if (from == today && to == today) return _DatePreset.today;

@@ -118,19 +118,9 @@ class PosCartSheet extends ConsumerWidget {
                         final line = cart.lines[index];
                         return _CartSheetLine(
                           line: line,
-                          onDec: () => ref
+                          onQuantityChanged: (qty) => ref
                               .read(cartControllerProvider.notifier)
-                              .setQuantity(line.lineKey, line.quantity - 1),
-                          onInc:
-                              line.stockQuantity == null ||
-                                  line.quantity >= line.stockQuantity!
-                              ? null
-                              : () => ref
-                                    .read(cartControllerProvider.notifier)
-                                    .setQuantity(
-                                      line.lineKey,
-                                      line.quantity + 1,
-                                    ),
+                              .setQuantity(line.lineKey, qty),
                           onPriceChanged: (raw) {
                             final parsed = double.tryParse(raw.trim());
                             final error = ref
@@ -218,15 +208,13 @@ class PosCartSheet extends ConsumerWidget {
 class _CartSheetLine extends StatefulWidget {
   const _CartSheetLine({
     required this.line,
-    required this.onDec,
-    required this.onInc,
+    required this.onQuantityChanged,
     required this.onPriceChanged,
     required this.onRemove,
   });
 
   final CartLine line;
-  final VoidCallback onDec;
-  final VoidCallback? onInc;
+  final ValueChanged<double> onQuantityChanged;
   final ValueChanged<String> onPriceChanged;
   final VoidCallback onRemove;
 
@@ -354,32 +342,14 @@ class _CartSheetLineState extends State<_CartSheetLine> {
           const SizedBox(height: 10),
           Row(
             children: [
-              _SheetQtyButton(
-                key: Key('pos_cart_sheet_dec_${line.lineKey}'),
-                icon: Icons.remove,
-                onTap: widget.onDec,
-              ),
-              Container(
-                width: 44,
-                height: 36,
-                alignment: Alignment.center,
-                margin: const EdgeInsets.symmetric(horizontal: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.accentSoft,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  key: Key('pos_cart_sheet_qty_${line.lineKey}'),
-                  line.quantity.round().toString(),
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              _SheetQtyButton(
-                key: Key('pos_cart_sheet_inc_${line.lineKey}'),
-                icon: Icons.add,
-                onTap: widget.onInc,
+              CbQtyStepper(
+                quantity: line.quantity,
+                min: 0,
+                max: stock,
+                decrementKey: Key('pos_cart_sheet_dec_${line.lineKey}'),
+                incrementKey: Key('pos_cart_sheet_inc_${line.lineKey}'),
+                valueKey: Key('pos_cart_sheet_qty_${line.lineKey}'),
+                onChanged: widget.onQuantityChanged,
               ),
               const SizedBox(width: 8),
               Text(
@@ -431,39 +401,6 @@ class _CartSheetLineState extends State<_CartSheetLine> {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SheetQtyButton extends StatelessWidget {
-  const _SheetQtyButton({super.key, required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: onTap == null ? AppColors.secondary : AppColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: SizedBox(
-          width: 36,
-          height: 36,
-          child: Icon(
-            icon,
-            size: 18,
-            color: onTap == null
-                ? AppColors.mutedForeground
-                : AppColors.foreground,
-          ),
-        ),
       ),
     );
   }

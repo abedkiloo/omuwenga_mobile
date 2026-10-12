@@ -36,7 +36,7 @@ ApprovalDetails expenseApprovalDetails(Expense expense) {
           if (expense.description.isNotEmpty)
             ApprovalFact(label: 'Description', value: expense.description),
           if (expense.notes.isNotEmpty)
-            ApprovalFact(label: 'Notes', value: expense.notes),
+            ApprovalFact(label: 'Notes', value: expense.notes, kind: 'notes'),
           if (expense.createdByName != null &&
               expense.createdByName!.isNotEmpty)
             ApprovalFact(label: 'Requested by', value: expense.createdByName!),
@@ -248,7 +248,11 @@ class _ApprovalsPageState extends ConsumerState<ApprovalsPage> {
                         value: detail.cashierName!,
                       ),
                     if (detail.notes != null && detail.notes!.isNotEmpty)
-                      ApprovalFact(label: 'Notes', value: detail.notes!),
+                      ApprovalFact(
+                        label: 'Notes',
+                        value: detail.notes!,
+                        kind: 'notes',
+                      ),
                   ],
                 ),
                 ApprovalSection(

@@ -48,7 +48,8 @@ class PermissionSet {
   /// Same as FE: `module.action` name or module+action pair.
   bool has(String module, String action) => _keys.contains('$module.$action');
 
-  /// Anyone who can view sales opens a day (own sales); admins see the store.
+  /// Raw permission for daily sales (own day via sales.view, or tracker grant).
+  /// Prefer [sessionCanViewDailySales] — managers need `sales.daily_sales`.
   bool get canViewDailySales =>
       has('sales', 'view') || has('sales', 'daily_sales');
   bool get canAccessPos => has('pos', 'view') || has('pos', 'create');
