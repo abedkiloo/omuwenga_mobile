@@ -32,10 +32,10 @@ class CbFilterChip extends StatelessWidget {
 
     final child = Material(
       color: bg,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(AppColors.radiusSm),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppColors.radiusSm),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           curve: Curves.easeOut,
@@ -45,7 +45,7 @@ class CbFilterChip extends StatelessWidget {
             vertical: compact ? 7 : 9,
           ),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppColors.radiusSm),
             border: Border.all(color: border),
           ),
           alignment: expand ? Alignment.center : null,

@@ -184,7 +184,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Open navigation menu'));
+    // Expenses lives in the More sheet (business tools), not the side drawer.
+    await tester.tap(find.byKey(const Key('nav_more')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('more_expenses')), findsOneWidget);
     await tester.tap(find.byKey(const Key('more_expenses')));

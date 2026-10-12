@@ -204,8 +204,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Open navigation menu'));
-    await tester.pumpAndSettle();
+    // Approvals is on the primary bottom bar for managers.
     expect(find.byKey(const Key('nav_approvals')), findsOneWidget);
     await tester.tap(find.byKey(const Key('nav_approvals')));
     await tester.pumpAndSettle();

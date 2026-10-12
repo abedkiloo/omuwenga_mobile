@@ -229,14 +229,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('pos-body'), findsOneWidget);
 
-    Future<void> openMenu() async {
-      await tester.tap(find.byTooltip('Open navigation menu'));
+    Future<void> goHome() async {
+      await tester.tap(find.byKey(const Key('nav_home')));
       await tester.pumpAndSettle();
     }
 
-    await openMenu();
-    await tester.tap(find.text('Home'));
-    await tester.pumpAndSettle();
+    Future<void> openMoreSheet() async {
+      await tester.tap(find.byKey(const Key('nav_more')));
+      await tester.pumpAndSettle();
+    }
+
+    await goHome();
     await tester.scrollUntilVisible(
       find.byKey(const Key('home_customers')),
       200,
@@ -244,9 +247,7 @@ void main() {
     await tester.tap(find.byKey(const Key('home_customers')));
     await tester.pumpAndSettle();
     expect(find.text('cust-body'), findsOneWidget);
-    await openMenu();
-    await tester.tap(find.text('Home'));
-    await tester.pumpAndSettle();
+    await goHome();
     await tester.scrollUntilVisible(
       find.byKey(const Key('home_daily_sales')),
       200,
@@ -254,11 +255,13 @@ void main() {
     await tester.tap(find.byKey(const Key('home_daily_sales')));
     await tester.pumpAndSettle();
     expect(find.text('daily-body'), findsOneWidget);
-    await openMenu();
+    await openMoreSheet();
     await tester.tap(find.byKey(const Key('more_daily_sales')));
     await tester.pumpAndSettle();
     expect(find.text('daily-body'), findsOneWidget);
-    await openMenu();
+    // Overflow tools (API health) stay in the side drawer.
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('API health'));
     await tester.pumpAndSettle();
     expect(find.text('health-body'), findsOneWidget);

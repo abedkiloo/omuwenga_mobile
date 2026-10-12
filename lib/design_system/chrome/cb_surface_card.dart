@@ -6,15 +6,17 @@ class CbSurfaceCard extends StatelessWidget {
   const CbSurfaceCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(12),
+    this.padding = const EdgeInsets.all(16),
     this.margin,
     this.onTap,
+    this.elevated = true,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry? margin;
   final VoidCallback? onTap;
+  final bool elevated;
 
   @override
   Widget build(BuildContext context) {
@@ -25,13 +27,7 @@ class CbSurfaceCard extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppColors.radius),
         border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A0F172A),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
+        boxShadow: elevated ? AppColors.cardShadow : null,
       ),
       child: child,
     );

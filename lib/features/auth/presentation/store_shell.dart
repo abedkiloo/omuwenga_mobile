@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
+import '../../../design_system/chrome/cb_atmosphere.dart';
 import '../../../design_system/chrome/cb_bounded_sheet.dart';
 import '../../../design_system/chrome/cb_commit_confirm.dart';
 import '../../../design_system/chrome/cb_surface_card.dart';
@@ -58,6 +59,7 @@ List<_NavItem> _bottomBusinessNav(
       label: 'Home',
       icon: Icons.home_outlined,
       route: AppRoutes.home,
+      key: Key('nav_home'),
     ),
     if (perms == null || perms.canAccessPos)
       const _NavItem(
@@ -378,7 +380,7 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
                             ref.read(authControllerProvider.notifier).logout(),
                       ),
                       const VerticalDivider(width: 1),
-                      Expanded(child: body),
+                      Expanded(child: CbAtmosphere(child: body)),
                     ],
                   ),
                 ),
@@ -389,13 +391,16 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
               backgroundColor: AppColors.background,
               resizeToAvoidBottomInset: false,
               appBar: AppBar(
-                backgroundColor: AppColors.background,
+                backgroundColor: AppColors.surface,
                 elevation: 0,
                 scrolledUnderElevation: 0,
                 titleSpacing: 0,
                 title: Text(
                   _titleFor(location, bottom, [...businessMore, ...overflow]),
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
               ),
               drawer: _SideDrawer(
@@ -405,7 +410,9 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
                 onLogout: () =>
                     ref.read(authControllerProvider.notifier).logout(),
               ),
-              body: SafeArea(bottom: false, child: body),
+              body: CbAtmosphere(
+                child: SafeArea(bottom: false, child: body),
+              ),
               bottomNavigationBar: NavigationBar(
                 key: const Key('shell_bottom_nav'),
                 selectedIndex: selected.clamp(0, bottom.length),

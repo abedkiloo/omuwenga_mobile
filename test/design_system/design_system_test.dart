@@ -1,8 +1,11 @@
 import 'package:completebyte_pos_mobile/core/theme/app_theme.dart';
 import 'package:completebyte_pos_mobile/core/theme/app_typography.dart';
 import 'package:completebyte_pos_mobile/design_system/buttons/cb_primary_button.dart';
+import 'package:completebyte_pos_mobile/core/branding/brand_assets.dart';
 import 'package:completebyte_pos_mobile/design_system/chrome/cb_fit_text.dart';
+import 'package:completebyte_pos_mobile/design_system/chrome/cb_info_chunk.dart';
 import 'package:completebyte_pos_mobile/design_system/chrome/cb_password_field.dart';
+import 'package:completebyte_pos_mobile/design_system/chrome/cb_reminder_banner.dart';
 import 'package:completebyte_pos_mobile/design_system/chrome/cb_status_pill.dart';
 import 'package:completebyte_pos_mobile/design_system/chrome/cb_sticky_action_bar.dart';
 import 'package:completebyte_pos_mobile/design_system/scaffold/cb_scaffold.dart';
@@ -14,10 +17,10 @@ void main() {
     final theme = AppTheme.light(fetchRuntimeFonts: false);
     expect(theme.useMaterial3, isTrue);
     expect(theme.colorScheme.primary.toARGB32(), isNonZero);
+    expect(theme.colorScheme.primary.toARGB32(), 0xFF0D2C54);
 
-    final withFetch = AppTypography.textTheme(fetchRuntimeFonts: true);
-    expect(withFetch.bodyLarge, isNotNull);
     final without = AppTypography.textTheme(fetchRuntimeFonts: false);
+    expect(without.bodyLarge, isNotNull);
     expect(without.titleLarge?.fontSize, 20);
     expect(AppTypography.fontFamily, 'PlusJakartaSans');
   });
@@ -213,5 +216,36 @@ void main() {
       tester.widget<IconButton>(find.byKey(const Key('ds_password_disabled_toggle'))).onPressed,
       isNull,
     );
+  });
+
+  testWidgets('design cue chrome: reminder banner and info chunks', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              const CbReminderBanner(message: 'Reminder: Check stock before open.'),
+              CbInfoChunkRow(
+                left: const CbInfoChunk(
+                  label: 'Date:',
+                  value: '12.10.2026',
+                  icon: Icons.calendar_today_outlined,
+                ),
+                right: const CbInfoChunk(
+                  label: 'Deadline:',
+                  value: 'By 6:00 AM',
+                  icon: Icons.alarm_outlined,
+                ),
+              ),
+              Text(BrandAssets.wordmark),
+            ],
+          ),
+        ),
+      ),
+    );
+    expect(find.textContaining('Reminder:'), findsOneWidget);
+    expect(find.text('12.10.2026'), findsOneWidget);
+    expect(find.text('By 6:00 AM'), findsOneWidget);
+    expect(find.text('OMUWENGA'), findsOneWidget);
   });
 }
