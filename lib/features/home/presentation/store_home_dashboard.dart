@@ -350,10 +350,14 @@ class _QuickActionTile extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppColors.accentSoft,
+              color: AppColors.primary,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(action.icon, color: AppColors.primary, size: 22),
+            child: Icon(
+              action.icon,
+              color: AppColors.primaryForeground,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
