@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../design_system/chrome/cb_commit_confirm.dart';
-import '../../../design_system/states/async_states.dart';
+import '../../../design_system/design_system.dart';
 import '../../pos/application/pos_controllers.dart';
 import '../../pos/domain/cart.dart';
 import '../../pos/presentation/variant_picker_sheet.dart';
@@ -298,16 +297,31 @@ class _FieldOrderCartPageState extends ConsumerState<FieldOrderCartPage> {
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
                     itemCount: cart.lines.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (context, i) {
                       final line = cart.lines[i];
-                      return ListTile(
-                        key: Key('fo_line_${line.lineKey}'),
-                        title: Text(line.displayName),
-                        subtitle: Text(
-                          '${line.quantity} × ${formatGroupedNumber(line.unitPrice)}',
-                        ),
-                        trailing: Text(formatGroupedNumber(line.lineTotal)),
+                      return _FieldOrderLineCard(
+                        line: line,
+                        onSetQuantity: (qty) => ref
+                            .read(fieldOrderCartProvider.notifier)
+                            .setQuantity(line.lineKey, qty),
+                        onSetPrice: (raw) {
+                          final parsed = double.tryParse(raw.trim());
+                          final error = ref
+                              .read(fieldOrderCartProvider.notifier)
+                              .setUnitPrice(
+                                line.lineKey,
+                                parsed ?? double.nan,
+                              );
+                          if (error != null && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(error)),
+                            );
+                          }
+                        },
+                        onRemove: () => ref
+                            .read(fieldOrderCartProvider.notifier)
+                            .removeLine(line.lineKey),
                       );
                     },
                   ),
@@ -328,6 +342,172 @@ class _FieldOrderCartPageState extends ConsumerState<FieldOrderCartPage> {
                     ),
                   ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FieldOrderLineCard extends StatefulWidget {
+  const _FieldOrderLineCard({
+    required this.line,
+    required this.onSetQuantity,
+    required this.onSetPrice,
+    required this.onRemove,
+  });
+
+  final CartLine line;
+  final ValueChanged<double> onSetQuantity;
+  final ValueChanged<String> onSetPrice;
+  final VoidCallback onRemove;
+
+  @override
+  State<_FieldOrderLineCard> createState() => _FieldOrderLineCardState();
+}
+
+class _FieldOrderLineCardState extends State<_FieldOrderLineCard> {
+  late final TextEditingController _priceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _priceController = TextEditingController(
+      text: _formatPrice(widget.line.unitPrice),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _FieldOrderLineCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.line.unitPrice != widget.line.unitPrice) {
+      final next = _formatPrice(widget.line.unitPrice);
+      if (_priceController.text != next) {
+        _priceController.text = next;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  String _formatPrice(double value) {
+    if (value.truncateToDouble() == value) {
+      return value.toStringAsFixed(0);
+    }
+    return value.toStringAsFixed(2);
+  }
+
+  void _commitPrice() {
+    widget.onSetPrice(_priceController.text);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _priceController.text = _formatPrice(widget.line.unitPrice);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final line = widget.line;
+    final markedUp = line.unitPrice > line.catalogPrice + 0.009;
+
+    return Card(
+      key: Key('fo_line_${line.lineKey}'),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        line.displayName,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (markedUp)
+                        Text(
+                          'Custom price',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Text(
+                  formatKes(line.lineTotal),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                IconButton(
+                  onPressed: widget.onRemove,
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: AppColors.destructive,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  '@',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                SizedBox(
+                  width: 88,
+                  height: 36,
+                  child: TextField(
+                    key: Key('fo_line_price_${line.lineKey}'),
+                    controller: _priceController,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    textAlign: TextAlign.right,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      hintText: _formatPrice(line.catalogPrice),
+                    ),
+                    onEditingComplete: _commitPrice,
+                    onSubmitted: (_) => _commitPrice(),
+                    onTapOutside: (_) => _commitPrice(),
+                  ),
+                ),
+                const Spacer(),
+                CbQtyStepper(
+                  quantity: line.quantity,
+                  min: 0,
+                  max: line.stockQuantity,
+                  onChanged: widget.onSetQuantity,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

@@ -296,6 +296,18 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
           onSelectProduct: _selectProduct,
           onSetQuantity: (key, qty) =>
               ref.read(visitOrderProvider.notifier).setQuantity(key, qty),
+          onSetPrice: (key, raw) {
+            final parsed = double.tryParse(raw.trim());
+            final error = ref.read(visitOrderProvider.notifier).setUnitPrice(
+              key,
+              parsed ?? double.nan,
+            );
+            if (error != null && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(error)),
+              );
+            }
+          },
           onRemove: (key) =>
               ref.read(visitOrderProvider.notifier).removeLine(key),
         );
@@ -858,6 +870,7 @@ class _ProductsStep extends ConsumerStatefulWidget {
     required this.lines,
     required this.onSelectProduct,
     required this.onSetQuantity,
+    required this.onSetPrice,
     required this.onRemove,
   });
 
@@ -865,6 +878,7 @@ class _ProductsStep extends ConsumerStatefulWidget {
   final List<CartLine> lines;
   final ValueChanged<CatalogProduct> onSelectProduct;
   final void Function(String lineKey, double qty) onSetQuantity;
+  final void Function(String lineKey, String rawPrice) onSetPrice;
   final ValueChanged<String> onRemove;
 
   @override
@@ -1005,6 +1019,7 @@ class _ProductsStepState extends ConsumerState<_ProductsStep> {
                           _ProductLineCard(
                             line: line,
                             onSetQuantity: widget.onSetQuantity,
+                            onSetPrice: widget.onSetPrice,
                             onRemove: widget.onRemove,
                           ),
                           const SizedBox(height: 8),
@@ -1090,20 +1105,71 @@ class _ProductsStepState extends ConsumerState<_ProductsStep> {
   }
 }
 
-class _ProductLineCard extends StatelessWidget {
+class _ProductLineCard extends StatefulWidget {
   const _ProductLineCard({
     required this.line,
     required this.onSetQuantity,
+    required this.onSetPrice,
     required this.onRemove,
   });
 
   final CartLine line;
   final void Function(String lineKey, double qty) onSetQuantity;
+  final void Function(String lineKey, String rawPrice) onSetPrice;
   final ValueChanged<String> onRemove;
+
+  @override
+  State<_ProductLineCard> createState() => _ProductLineCardState();
+}
+
+class _ProductLineCardState extends State<_ProductLineCard> {
+  late final TextEditingController _priceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _priceController = TextEditingController(
+      text: _formatPrice(widget.line.unitPrice),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProductLineCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.line.unitPrice != widget.line.unitPrice) {
+      final next = _formatPrice(widget.line.unitPrice);
+      if (_priceController.text != next) {
+        _priceController.text = next;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  String _formatPrice(double value) {
+    if (value.truncateToDouble() == value) {
+      return value.toStringAsFixed(0);
+    }
+    return value.toStringAsFixed(2);
+  }
+
+  void _commitPrice() {
+    widget.onSetPrice(widget.line.lineKey, _priceController.text);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _priceController.text = _formatPrice(widget.line.unitPrice);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final line = widget.line;
+    final markedUp = line.unitPrice > line.catalogPrice + 0.009;
     return CbSurfaceCard(
       key: Key('visit_line_${line.lineKey}'),
       child: Column(
@@ -1128,6 +1194,16 @@ class _ProductLineCard extends StatelessWidget {
                         line.sku!,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppColors.mutedForeground,
+                        ),
+                      ),
+                    ],
+                    if (markedUp) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Custom price',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
@@ -1158,7 +1234,44 @@ class _ProductLineCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                '${formatKes(line.unitPrice)} / unit',
+                '@',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+              const SizedBox(width: 4),
+              SizedBox(
+                width: 88,
+                height: 36,
+                child: TextField(
+                  key: Key('visit_line_price_${line.lineKey}'),
+                  controller: _priceController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textAlign: TextAlign.right,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    hintText: _formatPrice(line.catalogPrice),
+                  ),
+                  onEditingComplete: _commitPrice,
+                  onSubmitted: (_) => _commitPrice(),
+                  onTapOutside: (_) => _commitPrice(),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '/ unit',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: AppColors.mutedForeground,
                 ),
@@ -1168,10 +1281,10 @@ class _ProductLineCard extends StatelessWidget {
                 quantity: line.quantity,
                 min: 0,
                 max: line.stockQuantity,
-                onChanged: (qty) => onSetQuantity(line.lineKey, qty),
+                onChanged: (qty) => widget.onSetQuantity(line.lineKey, qty),
               ),
               IconButton(
-                onPressed: () => onRemove(line.lineKey),
+                onPressed: () => widget.onRemove(line.lineKey),
                 icon: const Icon(
                   Icons.delete_outline,
                   color: AppColors.destructive,

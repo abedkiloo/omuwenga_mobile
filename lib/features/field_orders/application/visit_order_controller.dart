@@ -4,6 +4,7 @@ import '../domain/site_pin.dart';
 import '../../customers/domain/customer.dart';
 import '../../pos/domain/cart.dart';
 import '../../pos/domain/product_variant.dart';
+import '../../pos/domain/sale_unit_price.dart';
 import '../data/field_orders_api.dart';
 import 'field_order_controllers.dart';
 
@@ -119,11 +120,13 @@ class VisitOrderController extends StateNotifier<VisitOrderState> {
         quantity: next[existing].quantity + qty,
       );
     } else {
+      final price = variant?.effectivePrice ?? product.price;
       next.add(
         CartLine(
           productId: product.id,
           name: product.name,
-          unitPrice: variant?.effectivePrice ?? product.price,
+          unitPrice: price,
+          catalogPrice: price,
           quantity: qty,
           sku: variant?.sku ?? product.sku,
           stockQuantity: variant?.stockQuantity ?? product.stockQuantity,
@@ -133,6 +136,22 @@ class VisitOrderController extends StateNotifier<VisitOrderState> {
       );
     }
     state = state.copyWith(lines: next, clearError: true);
+  }
+
+  /// Same floor as web/POS: catalog selling price or higher.
+  String? setUnitPrice(String lineKey, double unitPrice) {
+    final index = state.lines.indexWhere((l) => l.lineKey == lineKey);
+    if (index < 0) return 'Line not found.';
+    final line = state.lines[index];
+    final error = saleUnitPriceOverrideError(
+      catalogPrice: line.catalogPrice,
+      requestedPrice: unitPrice,
+    );
+    if (error != null) return error;
+    final next = [...state.lines];
+    next[index] = line.copyWith(unitPrice: unitPrice);
+    state = state.copyWith(lines: next, clearError: true);
+    return null;
   }
 
   void setQuantity(String lineKey, double quantity) {

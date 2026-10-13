@@ -547,6 +547,20 @@ class _PosPageState extends ConsumerState<PosPage> {
                             onQuantityChanged: (qty) => ref
                                 .read(cartControllerProvider.notifier)
                                 .setQuantity(line.lineKey, qty),
+                            onPriceChanged: (raw) {
+                              final parsed = double.tryParse(raw.trim());
+                              final error = ref
+                                  .read(cartControllerProvider.notifier)
+                                  .setUnitPrice(
+                                    line.lineKey,
+                                    parsed ?? double.nan,
+                                  );
+                              if (error != null && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(error)),
+                                );
+                              }
+                            },
                           ),
                           const SizedBox(height: 8),
                         ],
@@ -904,20 +918,71 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-class _CartLineCard extends StatelessWidget {
+class _CartLineCard extends StatefulWidget {
   const _CartLineCard({
     required this.line,
     required this.onQuantityChanged,
+    required this.onPriceChanged,
   });
 
   final CartLine line;
   final ValueChanged<double> onQuantityChanged;
+  final ValueChanged<String> onPriceChanged;
+
+  @override
+  State<_CartLineCard> createState() => _CartLineCardState();
+}
+
+class _CartLineCardState extends State<_CartLineCard> {
+  late final TextEditingController _priceController;
+
+  @override
+  void initState() {
+    super.initState();
+    _priceController = TextEditingController(
+      text: _formatPrice(widget.line.unitPrice),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _CartLineCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.line.unitPrice != widget.line.unitPrice) {
+      final next = _formatPrice(widget.line.unitPrice);
+      if (_priceController.text != next) {
+        _priceController.text = next;
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  String _formatPrice(double value) {
+    if (value.truncateToDouble() == value) {
+      return value.toStringAsFixed(0);
+    }
+    return value.toStringAsFixed(2);
+  }
+
+  void _commitPrice() {
+    widget.onPriceChanged(_priceController.text);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _priceController.text = _formatPrice(widget.line.unitPrice);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final line = widget.line;
     final stock = line.stockQuantity;
     final lowStock = stock != null && stock > 0 && stock <= 50;
+    final markedUp = line.unitPrice > line.catalogPrice + 0.009;
 
     return CbSurfaceCard(
       padding: const EdgeInsets.all(10),
@@ -969,44 +1034,85 @@ class _CartLineCard extends StatelessWidget {
                             : CbStatusPillVariant.success,
                       ),
                     ],
+                    if (markedUp) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Custom price',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(width: 8),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 96),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    CbFitMoney(
-                      formatKes(line.lineTotal),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    CbEllipsisText(
-                      '@ ${formatGroupedNumber(line.unitPrice)}',
-                      textAlign: TextAlign.right,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.mutedForeground,
-                      ),
-                    ),
-                  ],
+                child: CbFitMoney(
+                  formatKes(line.lineTotal),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          CbQtyStepper(
-            label: 'Unit Qty',
-            quantity: line.quantity,
-            min: 0,
-            max: stock,
-            decrementKey: Key('pos_dec_${line.lineKey}'),
-            incrementKey: Key('pos_inc_${line.lineKey}'),
-            valueKey: Key('pos_qty_${line.lineKey}'),
-            onChanged: onQuantityChanged,
+          Row(
+            children: [
+              Expanded(
+                child: CbQtyStepper(
+                  label: 'Unit Qty',
+                  quantity: line.quantity,
+                  min: 0,
+                  max: stock,
+                  decrementKey: Key('pos_dec_${line.lineKey}'),
+                  incrementKey: Key('pos_inc_${line.lineKey}'),
+                  valueKey: Key('pos_qty_${line.lineKey}'),
+                  onChanged: widget.onQuantityChanged,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '@',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+              const SizedBox(width: 4),
+              SizedBox(
+                width: 72,
+                height: 36,
+                child: TextField(
+                  key: Key('pos_line_price_${line.lineKey}'),
+                  controller: _priceController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textAlign: TextAlign.right,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    hintText: _formatPrice(line.catalogPrice),
+                  ),
+                  onEditingComplete: _commitPrice,
+                  onSubmitted: (_) => _commitPrice(),
+                  onTapOutside: (_) => _commitPrice(),
+                ),
+              ),
+            ],
           ),
         ],
       ),

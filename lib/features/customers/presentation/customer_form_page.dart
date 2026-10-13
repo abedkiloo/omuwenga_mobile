@@ -565,20 +565,24 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                         setState(() => _subCounty = value),
                     onWardChanged: (value) => setState(() => _ward = value),
                   ),
-                  const SizedBox(height: 20),
-                  _sectionLabel(theme, 'Notes'),
+                  const SizedBox(height: 12),
                   TextField(
                     key: const Key('customer_form_landmark'),
                     controller: _landmark,
+                    textCapitalization: TextCapitalization.words,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      labelText: 'Landmark',
-                      hintText: 'Next to the market, opposite the bus stage…',
+                      labelText: 'Location name',
+                      hintText:
+                          'Estate, market, or area — e.g. Gikomba, Pipeline',
+                      helperText:
+                          'Optional. County / sub-county / ward selection stays above.',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.place_outlined),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
+                  _sectionLabel(theme, 'Notes'),
                   TextField(
                     key: const Key('customer_form_contact_person'),
                     controller: _contactPerson,

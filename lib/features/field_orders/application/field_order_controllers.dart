@@ -5,6 +5,7 @@ import '../../../core/notifications/push_notifier.dart';
 import '../../../core/result/result.dart';
 import '../../pos/domain/cart.dart';
 import '../../pos/domain/product_variant.dart';
+import '../../pos/domain/sale_unit_price.dart';
 import '../data/field_orders_api.dart';
 import '../domain/field_order.dart';
 
@@ -81,6 +82,53 @@ class FieldOrderCartController extends StateNotifier<FieldOrderCartState> {
     state = state.copyWith(
       cart: state.cart.addProduct(product, variant: variant, qty: qty),
       clearError: true,
+    );
+  }
+
+  /// Same floor as web/POS/visit order: catalog selling price or higher.
+  String? setUnitPrice(String lineKey, double unitPrice) {
+    final lines = state.cart.lines;
+    final index = lines.indexWhere((l) => l.lineKey == lineKey);
+    if (index < 0) return 'Line not found.';
+    final line = lines[index];
+    final error = saleUnitPriceOverrideError(
+      catalogPrice: line.catalogPrice,
+      requestedPrice: unitPrice,
+    );
+    if (error != null) return error;
+    final next = [...lines];
+    next[index] = line.copyWith(unitPrice: unitPrice);
+    state = state.copyWith(
+      cart: state.cart.copyWith(lines: next),
+      clearError: true,
+    );
+    return null;
+  }
+
+  void setQuantity(String lineKey, double quantity) {
+    if (quantity <= 0) {
+      state = state.copyWith(
+        cart: state.cart.copyWith(
+          lines: state.cart.lines.where((l) => l.lineKey != lineKey).toList(),
+        ),
+      );
+      return;
+    }
+    state = state.copyWith(
+      cart: state.cart.copyWith(
+        lines: [
+          for (final l in state.cart.lines)
+            if (l.lineKey == lineKey) l.copyWith(quantity: quantity) else l,
+        ],
+      ),
+    );
+  }
+
+  void removeLine(String lineKey) {
+    state = state.copyWith(
+      cart: state.cart.copyWith(
+        lines: state.cart.lines.where((l) => l.lineKey != lineKey).toList(),
+      ),
     );
   }
 

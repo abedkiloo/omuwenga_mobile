@@ -106,6 +106,7 @@ class FieldOrderCart {
           productId: product.id,
           name: product.name,
           unitPrice: variant?.effectivePrice ?? product.price,
+          catalogPrice: variant?.effectivePrice ?? product.price,
           quantity: qty,
           sku: variant?.sku ?? product.sku,
           stockQuantity: variant?.stockQuantity ?? product.stockQuantity,
