@@ -259,6 +259,18 @@ class _PosPageState extends ConsumerState<PosPage> {
     return false;
   }
 
+  Future<void> _clearSearchAfterSelect() async {
+    _search.clear();
+    _searchFocus.unfocus();
+    await _catalog.refresh(
+      ref.read(posApiProvider),
+      search: '',
+      onUpdate: () {
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
   Future<void> _selectProduct(CatalogProduct product) async {
     if (product.hasVariants) {
       final pick = await showVariantPickerSheet(
@@ -283,6 +295,7 @@ class _PosPageState extends ConsumerState<PosPage> {
       ref
           .read(cartControllerProvider.notifier)
           .addProduct(pick.product, variant: pick.variant, qty: pick.quantity);
+      await _clearSearchAfterSelect();
     } else {
       final stock = product.stockQuantity;
       if (stock == null || stock <= 0) {
@@ -290,6 +303,7 @@ class _PosPageState extends ConsumerState<PosPage> {
         return;
       }
       ref.read(cartControllerProvider.notifier).addProduct(product);
+      await _clearSearchAfterSelect();
     }
   }
 
