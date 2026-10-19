@@ -209,6 +209,24 @@ class PosApi {
     return Success(_parseCatalogPage(res.body, page: page, pageSize: pageSize));
   }
 
+  /// Open holding for this user; returned-for-correction carts are preferred.
+  Future<Result<Map<String, dynamic>?>> fetchActiveHolding() async {
+    final response = await _client.get('sales/active-holding/');
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(PosApiException(_safeError(res.body)));
+    }
+    final decoded = jsonDecode(res.body);
+    if (decoded is! Map) return const Success(null);
+    final holding = decoded['holding'];
+    if (holding is! Map) return const Success(null);
+    return Success(Map<String, dynamic>.from(holding));
+  }
+
   /// Active top-level categories for POS chips (`GET /products/categories/`).
   Future<Result<List<ProductCategory>>> listCategories() async {
     final response = await _client.get('products/categories/?is_active=true');

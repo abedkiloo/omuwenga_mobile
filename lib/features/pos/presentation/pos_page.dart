@@ -49,6 +49,9 @@ class _PosPageState extends ConsumerState<PosPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Future.wait([_loadCatalog(), _loadCategories()]);
       await _loadReturnedSale();
+      if (widget.resumeSaleId == null) {
+        await _loadActiveReturnedHolding();
+      }
     });
   }
 
@@ -128,6 +131,78 @@ class _PosPageState extends ConsumerState<PosPage> {
           SnackBar(content: Text('Could not open this sale: $error')),
         );
       },
+    );
+  }
+
+  /// When POS opens without a deep link, resume a returned-for-correction cart
+  /// (including sales that were already completed then sent back).
+  Future<void> _loadActiveReturnedHolding() async {
+    final result = await ref.read(posApiProvider).fetchActiveHolding();
+    if (!mounted) return;
+    result.when(
+      success: (holding) {
+        if (holding == null) return;
+        final needsAction = holding['needs_salesperson_action'] == true;
+        final status = holding['status']?.toString() ?? '';
+        if (!needsAction && status != 'holding') return;
+        if (!needsAction) return;
+        final id = (holding['id'] as num?)?.toInt();
+        if (id == null) return;
+        double asDouble(Object? v) {
+          if (v is num) return v.toDouble();
+          return double.tryParse(v?.toString() ?? '') ?? 0;
+        }
+
+        final rawItems = holding['items'];
+        final lines = <CartLine>[];
+        if (rawItems is List) {
+          for (final item in rawItems) {
+            if (item is! Map) continue;
+            final map = Map<String, dynamic>.from(item);
+            final productId = (map['product_id'] as num?)?.toInt() ?? 0;
+            if (productId <= 0) continue;
+            final qty = asDouble(map['quantity']);
+            lines.add(
+              CartLine(
+                productId: productId,
+                name: (map['product_name'] ?? map['name'] ?? 'Item').toString(),
+                sku: map['product_sku']?.toString() ?? map['sku']?.toString(),
+                unitPrice: asDouble(map['unit_price']),
+                catalogPrice: asDouble(map['unit_price']),
+                quantity: qty < 1 ? 1 : qty,
+                variantLabel: map['variant_name']?.toString(),
+              ),
+            );
+          }
+        }
+        final comment = (holding['rejection_reason']?.toString() ?? '').trim();
+        final customerId = (holding['customer_id'] as num?)?.toInt();
+        ref.read(cartControllerProvider.notifier).loadReturnedSale(
+          holdingId: id,
+          lines: lines,
+          customerId: customerId,
+          customerName: holding['customer_name']?.toString(),
+          taxAmount: asDouble(holding['tax_amount']),
+          discountAmount: asDouble(holding['discount_amount']),
+          returnComment: comment.isEmpty
+              ? 'Update this sale, then send it back for approval.'
+              : comment,
+        );
+        final method =
+            PosPaymentMethodX.tryParse(holding['payment_method']?.toString() ?? '') ??
+            PosPaymentMethod.cash;
+        final paid = asDouble(holding['amount_paid']);
+        final total = asDouble(holding['total']);
+        ref.read(checkoutControllerProvider.notifier).setDraft(
+          CheckoutDraft(
+            method: method,
+            amountPaid: paid < 0 ? 0 : paid,
+            paymentReference: holding['payment_reference']?.toString() ?? '',
+            paymentOnAccount: paid + 1e-9 < total && customerId != null,
+          ),
+        );
+      },
+      failure: (_, _) {},
     );
   }
 

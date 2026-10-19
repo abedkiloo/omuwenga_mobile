@@ -190,4 +190,44 @@ void main() {
     final settings = (await api.loadSettings()).getOrThrow();
     expect(settings.enabledPaymentMethods, isNotEmpty);
   });
+
+  test('fetchActiveHolding maps returned-for-correction cart', () async {
+    final api = apiWith(
+      MockClient((request) async {
+        expect(request.url.path, contains('/sales/active-holding/'));
+        return http.Response(
+          jsonEncode({
+            'holding': {
+              'id': 77,
+              'status': 'holding',
+              'needs_salesperson_action': true,
+              'rejection_reason': 'Wrong customer',
+              'items': [
+                {
+                  'product_id': 3,
+                  'product_name': 'Nail',
+                  'quantity': 2,
+                  'unit_price': '50.00',
+                },
+              ],
+            },
+          }),
+          200,
+        );
+      }),
+    );
+    final holding = (await api.fetchActiveHolding()).getOrThrow();
+    expect(holding, isNotNull);
+    expect(holding!['id'], 77);
+    expect(holding['needs_salesperson_action'], isTrue);
+  });
+
+  test('fetchActiveHolding returns null when no draft', () async {
+    final api = apiWith(
+      MockClient(
+        (_) async => http.Response(jsonEncode({'holding': null}), 200),
+      ),
+    );
+    expect((await api.fetchActiveHolding()).getOrThrow(), isNull);
+  });
 }
