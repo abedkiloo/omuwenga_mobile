@@ -16,7 +16,12 @@ class CatalogProduct {
     this.hasVariants = false,
     this.categoryId,
     this.categoryName,
+    this.subcategoryId,
+    this.subcategoryName,
     this.imageUrl,
+    this.trackStock = true,
+    this.isLowStock = false,
+    this.hasOutOfStock = false,
   });
 
   final int id;
@@ -29,7 +34,15 @@ class CatalogProduct {
   final bool hasVariants;
   final int? categoryId;
   final String? categoryName;
+  final int? subcategoryId;
+  final String? subcategoryName;
   final String? imageUrl;
+  final bool trackStock;
+  final bool isLowStock;
+  final bool hasOutOfStock;
+
+  bool get isUnavailable =>
+      !hasVariants && trackStock && (stockQuantity == null || stockQuantity! <= 0);
 
   factory CatalogProduct.fromJson(Map<String, dynamic> json) {
     double? asDouble(Object? v) {
@@ -44,6 +57,14 @@ class CatalogProduct {
       return int.tryParse(v.toString());
     }
 
+    final stock = asDouble(json['stock_quantity']);
+    final trackStock = json['track_stock'] != false;
+    final apiLow = json['is_low_stock'] == true;
+    // Prefer server alert; fall back only when the flag is absent.
+    final lowStock = json.containsKey('is_low_stock')
+        ? apiLow
+        : (trackStock && stock != null && stock > 0 && stock <= 5);
+
     return CatalogProduct(
       id: (json['id'] as num).toInt(),
       name: (json['name'] ?? '').toString(),
@@ -51,14 +72,35 @@ class CatalogProduct {
           asDouble(json['selling_price'] ?? json['price'] ?? json['mrp']) ?? 0,
       sku: json['sku']?.toString(),
       barcode: json['barcode']?.toString(),
-      stockQuantity: asDouble(json['stock_quantity']),
+      stockQuantity: stock,
       unit: json['unit']?.toString(),
       hasVariants: json['has_variants'] == true,
       categoryId: asInt(json['category']),
       categoryName: json['category_name']?.toString(),
+      subcategoryId: asInt(json['subcategory']),
+      subcategoryName: json['subcategory_name']?.toString(),
       imageUrl: json['image_url']?.toString(),
+      trackStock: trackStock,
+      isLowStock: lowStock,
+      hasOutOfStock: json['has_out_of_stock'] == true ||
+          (trackStock && !json.containsKey('has_out_of_stock') && stock != null && stock <= 0),
     );
   }
+}
+
+/// Stock alert filter for catalog browse (mirrors web Products / POS).
+enum CatalogStockFilter {
+  all,
+  lowStock,
+  outOfStock,
+}
+
+extension CatalogStockFilterX on CatalogStockFilter {
+  String get label => switch (this) {
+    CatalogStockFilter.all => 'All stock',
+    CatalogStockFilter.lowStock => 'Low stock',
+    CatalogStockFilter.outOfStock => 'Out of stock',
+  };
 }
 
 @immutable

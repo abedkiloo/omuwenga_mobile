@@ -181,6 +181,8 @@ class PosApi {
     int page = 1,
     int pageSize = 10,
     int? categoryId,
+    int? subcategoryId,
+    CatalogStockFilter stockFilter = CatalogStockFilter.all,
   }) async {
     final params = <String, String>{
       'page': '$page',
@@ -189,7 +191,19 @@ class PosApi {
     };
     final q = search.trim();
     if (q.isNotEmpty) params['search'] = q;
-    if (categoryId != null) params['category'] = '$categoryId';
+    if (subcategoryId != null) {
+      params['subcategory'] = '$subcategoryId';
+    } else if (categoryId != null) {
+      params['category'] = '$categoryId';
+    }
+    switch (stockFilter) {
+      case CatalogStockFilter.lowStock:
+        params['low_stock'] = 'true';
+      case CatalogStockFilter.outOfStock:
+        params['out_of_stock'] = 'true';
+      case CatalogStockFilter.all:
+        break;
+    }
 
     final query = params.entries
         .map(
@@ -249,11 +263,10 @@ class PosApi {
         if (item is Map) rows.add(Map<String, dynamic>.from(item));
       }
     }
-    return Success(
-      [
-        for (final row in rows) ProductCategory.fromJson(row),
-      ].where((c) => c.isActive && c.parentId == null).toList(),
-    );
+    // Keep parents and children — POS shows top-level chips + subcategory row.
+    return Success([
+      for (final row in rows) ProductCategory.fromJson(row),
+    ].where((c) => c.isActive).toList());
   }
 
   /// Quick POS search (`GET /products/search/?q=`). Prefer [listProducts] when

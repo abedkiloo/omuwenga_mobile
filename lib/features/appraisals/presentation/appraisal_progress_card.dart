@@ -119,6 +119,35 @@ class AppraisalProgressCard extends StatelessWidget {
             tone: snapshot.month.fourStarMonth ? 'emerald' : snapshot.month.tone,
             thick: emphasis,
           ),
+          if (!snapshot.month.bonusQualified &&
+              snapshot.month.bonusEarned > 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: emphasis ? 0.22 : 0.14),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: Colors.amber.withValues(alpha: 0.45),
+                ),
+              ),
+              child: Text(
+                snapshot.month.bonusBlockReasons.isNotEmpty
+                    ? snapshot.month.bonusBlockReasons.first
+                    : 'Bonus on hold — collect at least '
+                        '${(snapshot.month.collectionRequiredRatio * 100).round()}% '
+                        'of goods sold (now '
+                        '${(snapshot.month.collectionRatio * 100).round()}%).',
+                style: TextStyle(
+                  color: emphasis ? Colors.white : const Color(0xFF92400E),
+                  fontSize: 12,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
           if (snapshot.showYearEndIncrement) ...[
             const SizedBox(height: 10),
             _Bar(

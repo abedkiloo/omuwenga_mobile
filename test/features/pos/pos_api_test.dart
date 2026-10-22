@@ -89,6 +89,41 @@ void main() {
     expect(page.page, 1);
   });
 
+  test('list products passes stock and subcategory filters', () async {
+    final api = apiWith(
+      MockClient((request) async {
+        expect(request.url.queryParameters['low_stock'], 'true');
+        expect(request.url.queryParameters['subcategory'], '9');
+        expect(request.url.queryParameters.containsKey('category'), isFalse);
+        return http.Response(
+          jsonEncode({
+            'count': 1,
+            'next': null,
+            'previous': null,
+            'results': [
+              {
+                'id': 2,
+                'name': 'Low oil',
+                'selling_price': '50.00',
+                'stock_quantity': 2,
+                'is_low_stock': true,
+                'has_out_of_stock': false,
+                'track_stock': true,
+              },
+            ],
+          }),
+          200,
+        );
+      }),
+    );
+    final page = (await api.listProducts(
+      subcategoryId: 9,
+      stockFilter: CatalogStockFilter.lowStock,
+    )).getOrThrow();
+    expect(page.results.single.isLowStock, isTrue);
+    expect(page.results.single.stockQuantity, 2);
+  });
+
   test('fetchVariants maps paginated results', () async {
     final api = apiWith(
       MockClient((request) async {

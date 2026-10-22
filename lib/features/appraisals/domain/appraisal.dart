@@ -58,6 +58,11 @@ class AppraisalMonth {
     required this.sales,
     this.amountToNextBonus = 0,
     this.nextBonusMin,
+    this.bonusEarned = 0,
+    this.bonusQualified = true,
+    this.collectionRatio = 1,
+    this.collectionRequiredRatio = 0.8,
+    this.bonusBlockReasons = const [],
   });
 
   final double officialAverage;
@@ -69,8 +74,22 @@ class AppraisalMonth {
   final double sales;
   final double amountToNextBonus;
   final double? nextBonusMin;
+  final double bonusEarned;
+  final bool bonusQualified;
+  final double collectionRatio;
+  final double collectionRequiredRatio;
+  final List<String> bonusBlockReasons;
 
   factory AppraisalMonth.fromJson(Map<String, dynamic> json) {
+    final reasons = <String>[];
+    final rawReasons = json['bonus_block_reasons'];
+    if (rawReasons is List) {
+      for (final item in rawReasons) {
+        if (item != null && item.toString().trim().isNotEmpty) {
+          reasons.add(item.toString().trim());
+        }
+      }
+    }
     return AppraisalMonth(
       officialAverage: _d(json['official_average']),
       fourStarMonth: json['four_star_month'] == true,
@@ -83,6 +102,11 @@ class AppraisalMonth {
       nextBonusMin: json['next_bonus_min'] == null
           ? null
           : _d(json['next_bonus_min']),
+      bonusEarned: _d(json['bonus_earned'] ?? json['bonus']),
+      bonusQualified: json['bonus_qualified'] != false,
+      collectionRatio: _d(json['collection_ratio'] ?? 1),
+      collectionRequiredRatio: _d(json['collection_required_ratio'] ?? 0.8),
+      bonusBlockReasons: reasons,
     );
   }
 }

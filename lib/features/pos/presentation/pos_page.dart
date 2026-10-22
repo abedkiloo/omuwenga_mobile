@@ -15,13 +15,13 @@ import '../application/product_catalog_paging.dart';
 import '../data/pos_api.dart';
 import '../domain/cart.dart';
 import '../domain/payment.dart';
-import '../domain/product_variant.dart';
 import '../../sales_history/application/sales_history_controllers.dart';
 import '../../../core/validation/field_types.dart';
 import '../domain/pos_commit.dart';
 import 'receipt_layout.dart';
 import 'receipt_page.dart';
 import 'pos_cart_sheet.dart';
+import 'product_image_lightbox.dart';
 import 'variant_picker_sheet.dart';
 import '../../../core/format/money.dart';
 
@@ -233,6 +233,35 @@ class _PosPageState extends ConsumerState<PosPage> {
         if (mounted) setState(() {});
       },
     );
+  }
+
+  Future<void> _selectSubcategory(int? id) async {
+    await _catalog.setSubcategory(
+      ref.read(posApiProvider),
+      subcategoryId: id,
+      onUpdate: () {
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  Future<void> _setStockFilter(CatalogStockFilter filter) async {
+    await _catalog.setStockFilter(
+      ref.read(posApiProvider),
+      stockFilter: filter,
+      onUpdate: () {
+        if (mounted) setState(() {});
+      },
+    );
+  }
+
+  List<ProductCategory> get _topCategories =>
+      _categories.where((c) => c.parentId == null).toList();
+
+  List<ProductCategory> get _subcategories {
+    final parentId = _catalog.categoryId;
+    if (parentId == null) return const [];
+    return _categories.where((c) => c.parentId == parentId).toList();
   }
 
   Future<void> _loadMore() async {
@@ -561,7 +590,7 @@ class _PosPageState extends ConsumerState<PosPage> {
                               _catalog.loading ? null : () => _loadCatalog(),
                         ),
                       ),
-                      if (_categories.isNotEmpty)
+                      if (_topCategories.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 12),
                           child: SizedBox(
@@ -579,7 +608,7 @@ class _PosPageState extends ConsumerState<PosPage> {
                                   onTap: () => _selectCategory(null),
                                 ),
                                 const SizedBox(width: 8),
-                                for (final c in _categories) ...[
+                                for (final c in _topCategories) ...[
                                   _CategoryChip(
                                     label: c.name,
                                     count: c.productCount > 0
@@ -594,6 +623,61 @@ class _PosPageState extends ConsumerState<PosPage> {
                             ),
                           ),
                         ),
+                      if (_subcategories.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: SizedBox(
+                            height: 36,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              children: [
+                                _CategoryChip(
+                                  label: 'All in category',
+                                  count: null,
+                                  selected: _catalog.subcategoryId == null,
+                                  onTap: () => _selectSubcategory(null),
+                                ),
+                                const SizedBox(width: 8),
+                                for (final c in _subcategories) ...[
+                                  _CategoryChip(
+                                    label: c.name,
+                                    count: c.productCount > 0
+                                        ? c.productCount
+                                        : null,
+                                    selected: _catalog.subcategoryId == c.id,
+                                    onTap: () => _selectSubcategory(c.id),
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: SizedBox(
+                          height: 36,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            children: [
+                              for (final filter in CatalogStockFilter.values) ...[
+                                if (filter != CatalogStockFilter.values.first)
+                                  const SizedBox(width: 8),
+                                _CategoryChip(
+                                  label: filter.label,
+                                  count: null,
+                                  selected: _catalog.stockFilter == filter,
+                                  onTap: () => _setStockFilter(filter),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
                         child: Column(
@@ -680,11 +764,23 @@ class _PosPageState extends ConsumerState<PosPage> {
                         for (final p in _catalog.items) ...[
                           _CatalogProductCard(
                             product: p,
-                            onTap:
-                                p.hasVariants ||
-                                    (p.stockQuantity != null &&
-                                        p.stockQuantity! > 0)
+                            onTap: p.hasVariants || !p.isUnavailable
                                 ? () => _selectProduct(p)
+                                : null,
+                            onImageTap:
+                                p.imageUrl != null && p.imageUrl!.isNotEmpty
+                                ? () => showProductImageLightbox(
+                                    context,
+                                    imageUrl: p.imageUrl!,
+                                    title: p.name,
+                                    subtitle: [
+                                      if (p.sku != null && p.sku!.isNotEmpty)
+                                        p.sku!,
+                                      if (p.categoryName != null &&
+                                          p.categoryName!.isNotEmpty)
+                                        p.categoryName!,
+                                    ].join(' · '),
+                                  )
                                 : null,
                           ),
                           const SizedBox(height: 8),
@@ -1070,7 +1166,8 @@ class _CartLineCardState extends State<_CartLineCard> {
     final theme = Theme.of(context);
     final line = widget.line;
     final stock = line.stockQuantity;
-    final lowStock = stock != null && stock > 0 && stock <= 50;
+    // Cart lines do not carry catalog thresholds; use a conservative cue.
+    final lowStock = stock != null && stock > 0 && stock <= 5;
     final markedUp = line.unitPrice > line.catalogPrice + 0.009;
 
     return CbSurfaceCard(
@@ -1210,17 +1307,22 @@ class _CartLineCardState extends State<_CartLineCard> {
 }
 
 class _CatalogProductCard extends StatelessWidget {
-  const _CatalogProductCard({required this.product, required this.onTap});
+  const _CatalogProductCard({
+    required this.product,
+    required this.onTap,
+    this.onImageTap,
+  });
 
   final CatalogProduct product;
   final VoidCallback? onTap;
+  final VoidCallback? onImageTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final stock = product.stockQuantity;
-    final lowStock = stock != null && stock > 0 && stock <= 50;
-    final unavailable = !product.hasVariants && (stock == null || stock <= 0);
+    final unavailable = product.isUnavailable;
+    final lowStock = product.isLowStock && !unavailable;
 
     return CbSurfaceCard(
       key: Key('pos_product_card_${product.id}'),
@@ -1228,29 +1330,61 @@ class _CatalogProductCard extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.accentSoft,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                ? Image.network(
-                    product.imageUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const Icon(
-                      Icons.inventory_2_outlined,
-                      color: AppColors.primary,
-                      size: 20,
+          Builder(
+            builder: (context) {
+              final thumb = Stack(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentSoft,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  )
-                : const Icon(
-                    Icons.inventory_2_outlined,
-                    color: AppColors.primary,
-                    size: 20,
+                    clipBehavior: Clip.antiAlias,
+                    child:
+                        product.imageUrl != null && product.imageUrl!.isNotEmpty
+                        ? Image.network(
+                            product.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => const Icon(
+                              Icons.inventory_2_outlined,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.inventory_2_outlined,
+                            color: AppColors.primary,
+                            size: 22,
+                          ),
                   ),
+                  if (onImageTap != null)
+                    Positioned(
+                      right: 2,
+                      bottom: 2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Icon(
+                          Icons.zoom_in,
+                          size: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+              if (onImageTap == null) return thumb;
+              return GestureDetector(
+                onTap: onImageTap,
+                behavior: HitTestBehavior.opaque,
+                child: thumb,
+              );
+            },
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -1273,24 +1407,35 @@ class _CatalogProductCard extends StatelessWidget {
                       product.sku!,
                     if (product.unit != null && product.unit!.isNotEmpty)
                       product.unit!,
+                    if (product.subcategoryName != null &&
+                        product.subcategoryName!.isNotEmpty)
+                      product.subcategoryName!,
                   ].where((s) => s.isNotEmpty).join(' · '),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppColors.mutedForeground,
                   ),
                 ),
-                if (unavailable) ...[
+                if (unavailable || product.hasOutOfStock) ...[
                   const SizedBox(height: 4),
-                  const CbStatusPill(
-                    label: 'Stock unavailable',
+                  CbStatusPill(
+                    label: product.hasVariants
+                        ? 'Some variants out of stock'
+                        : 'Out of stock',
                     variant: CbStatusPillVariant.neutral,
                   ),
-                ] else if (stock != null) ...[
+                ] else if (lowStock) ...[
+                  const SizedBox(height: 4),
+                  CbStatusPill(
+                    label: stock != null
+                        ? 'Low: ${stock.round()}'
+                        : 'Low stock',
+                    variant: CbStatusPillVariant.warning,
+                  ),
+                ] else if (stock != null && product.trackStock) ...[
                   const SizedBox(height: 4),
                   CbStatusPill(
                     label: 'Stock ${stock.round()}',
-                    variant: lowStock
-                        ? CbStatusPillVariant.warning
-                        : CbStatusPillVariant.success,
+                    variant: CbStatusPillVariant.success,
                   ),
                 ],
               ],

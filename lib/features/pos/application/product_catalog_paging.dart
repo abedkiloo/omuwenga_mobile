@@ -10,6 +10,8 @@ class ProductCatalogPaging {
   List<CatalogProduct> items = const [];
   String query = '';
   int? categoryId;
+  int? subcategoryId;
+  CatalogStockFilter stockFilter = CatalogStockFilter.all;
   int _page = 0;
   bool hasMore = true;
   bool loading = false;
@@ -36,6 +38,8 @@ class ProductCatalogPaging {
       page: 1,
       pageSize: pageSize,
       categoryId: categoryId,
+      subcategoryId: subcategoryId,
+      stockFilter: stockFilter,
     );
     result.when(
       success: (page) {
@@ -62,6 +66,25 @@ class ProductCatalogPaging {
     void Function()? onUpdate,
   }) async {
     this.categoryId = categoryId;
+    subcategoryId = null;
+    await refresh(api, onUpdate: onUpdate);
+  }
+
+  Future<void> setSubcategory(
+    PosApi api, {
+    required int? subcategoryId,
+    void Function()? onUpdate,
+  }) async {
+    this.subcategoryId = subcategoryId;
+    await refresh(api, onUpdate: onUpdate);
+  }
+
+  Future<void> setStockFilter(
+    PosApi api, {
+    required CatalogStockFilter stockFilter,
+    void Function()? onUpdate,
+  }) async {
+    this.stockFilter = stockFilter;
     await refresh(api, onUpdate: onUpdate);
   }
 
@@ -77,6 +100,8 @@ class ProductCatalogPaging {
       page: nextPage,
       pageSize: pageSize,
       categoryId: categoryId,
+      subcategoryId: subcategoryId,
+      stockFilter: stockFilter,
     );
     result.when(
       success: (page) {
