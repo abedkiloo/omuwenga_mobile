@@ -12,6 +12,12 @@ class AppraisalBandProgress {
     this.amountToNext = 0,
     this.nextMin,
     this.nextBonus = 0,
+    this.collected = 0,
+    this.debt = 0,
+    this.collectionRatio = 1,
+    this.uncollectedPct = 0,
+    this.collectionTargetProgress = 0,
+    this.collectionRequiredRatio = 0.8,
   });
 
   final double sales;
@@ -26,6 +32,12 @@ class AppraisalBandProgress {
   final double amountToNext;
   final double? nextMin;
   final double nextBonus;
+  final double collected;
+  final double debt;
+  final double collectionRatio;
+  final double uncollectedPct;
+  final double collectionTargetProgress;
+  final double collectionRequiredRatio;
 
   factory AppraisalBandProgress.fromJson(Map<String, dynamic> json) {
     return AppraisalBandProgress(
@@ -43,6 +55,12 @@ class AppraisalBandProgress {
           ? null
           : _d(json['next_min'] ?? json['next_bonus_min']),
       nextBonus: _d(json['next_bonus']),
+      collected: _d(json['collected']),
+      debt: _d(json['debt']),
+      collectionRatio: _d(json['collection_ratio'] ?? 1),
+      uncollectedPct: _d(json['uncollected_pct']),
+      collectionTargetProgress: _d(json['collection_target_progress']),
+      collectionRequiredRatio: _d(json['collection_required_ratio'] ?? 0.8),
     );
   }
 }
@@ -62,6 +80,8 @@ class AppraisalMonth {
     this.bonusQualified = true,
     this.collectionRatio = 1,
     this.collectionRequiredRatio = 0.8,
+    this.collectionCollected = 0,
+    this.uncollectedPct = 0,
     this.bonusBlockReasons = const [],
   });
 
@@ -78,6 +98,8 @@ class AppraisalMonth {
   final bool bonusQualified;
   final double collectionRatio;
   final double collectionRequiredRatio;
+  final double collectionCollected;
+  final double uncollectedPct;
   final List<String> bonusBlockReasons;
 
   factory AppraisalMonth.fromJson(Map<String, dynamic> json) {
@@ -90,6 +112,11 @@ class AppraisalMonth {
         }
       }
     }
+    final sales = _d(json['sales']);
+    final ratio = _d(json['collection_ratio'] ?? 1);
+    final uncollected = json['uncollected_pct'] != null
+        ? _d(json['uncollected_pct'])
+        : (sales > 0 ? (1 - ratio).clamp(0, 1) : 0.0);
     return AppraisalMonth(
       officialAverage: _d(json['official_average']),
       fourStarMonth: json['four_star_month'] == true,
@@ -97,15 +124,17 @@ class AppraisalMonth {
       bonus: _d(json['bonus']),
       stars: _d(json['stars']),
       tone: (json['tone'] ?? 'rose').toString(),
-      sales: _d(json['sales']),
+      sales: sales,
       amountToNextBonus: _d(json['amount_to_next_bonus']),
       nextBonusMin: json['next_bonus_min'] == null
           ? null
           : _d(json['next_bonus_min']),
       bonusEarned: _d(json['bonus_earned'] ?? json['bonus']),
       bonusQualified: json['bonus_qualified'] != false,
-      collectionRatio: _d(json['collection_ratio'] ?? 1),
+      collectionRatio: ratio,
       collectionRequiredRatio: _d(json['collection_required_ratio'] ?? 0.8),
+      collectionCollected: _d(json['collection_collected']),
+      uncollectedPct: uncollected.toDouble(),
       bonusBlockReasons: reasons,
     );
   }

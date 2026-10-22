@@ -106,11 +106,29 @@ class AppraisalProgressCard extends StatelessWidget {
           SizedBox(height: emphasis ? 16 : 12),
           _Bar(
             label:
-                'Today ${formatKes(snapshot.today.sales.round(), dropTrailingZeros: true)} of ${formatGroupedNumber(snapshot.today.target.round(), fractionDigits: 0)} daily target',
+                'Today sales ${formatKes(snapshot.today.sales.round(), dropTrailingZeros: true)} of ${formatGroupedNumber(snapshot.today.target.round(), fractionDigits: 0)} daily target',
             progress: snapshot.today.targetProgress,
             tone: snapshot.today.tone,
             thick: emphasis,
           ),
+          const SizedBox(height: 10),
+          _Bar(
+            label:
+                'Today collected ${formatKes(snapshot.today.collected.round(), dropTrailingZeros: true)} toward ${formatGroupedNumber(snapshot.today.target.round(), fractionDigits: 0)} daily target',
+            progress: snapshot.today.collectionTargetProgress,
+            tone: 'emerald',
+            thick: emphasis,
+          ),
+          if (snapshot.today.sales > 0) ...[
+            const SizedBox(height: 10),
+            _PaidDebtMixBar(
+              paidPct: snapshot.today.collectionRatio * 100,
+              debtPct: snapshot.today.uncollectedPct * 100,
+              label:
+                  'Today · ${(snapshot.today.uncollectedPct * 100).round()}% still on credit',
+              emphasis: emphasis,
+            ),
+          ],
           const SizedBox(height: 10),
           _Bar(
             label:
@@ -133,12 +151,11 @@ class AppraisalProgressCard extends StatelessWidget {
                 ),
               ),
               child: Text(
-                snapshot.month.bonusBlockReasons.isNotEmpty
-                    ? snapshot.month.bonusBlockReasons.first
-                    : 'Bonus on hold — collect at least '
-                        '${(snapshot.month.collectionRequiredRatio * 100).round()}% '
-                        'of goods sold (now '
-                        '${(snapshot.month.collectionRatio * 100).round()}%).',
+                '${(snapshot.month.uncollectedPct * 100).round()}% of this month’s sales '
+                'are still on credit — holding the '
+                '${formatKes(snapshot.month.bonusEarned.round(), dropTrailingZeros: true)} bonus '
+                '(need ${(snapshot.month.collectionRequiredRatio * 100).round()}% collected; now '
+                '${(snapshot.month.collectionRatio * 100).round()}%).',
                 style: TextStyle(
                   color: emphasis ? Colors.white : const Color(0xFF92400E),
                   fontSize: 12,
@@ -248,6 +265,64 @@ class _Bar extends StatelessWidget {
                     child: const SizedBox.expand(),
                   ),
                 ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PaidDebtMixBar extends StatelessWidget {
+  const _PaidDebtMixBar({
+    required this.paidPct,
+    required this.debtPct,
+    required this.label,
+    this.emphasis = false,
+  });
+
+  final double paidPct;
+  final double debtPct;
+  final String label;
+  final bool emphasis;
+
+  @override
+  Widget build(BuildContext context) {
+    final paid = paidPct.clamp(0, 100);
+    final debt = debtPct.clamp(0, 100 - paid);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.88),
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: SizedBox(
+            height: emphasis ? 14 : 10,
+            child: Row(
+              children: [
+                if (paid > 0)
+                  Expanded(
+                    flex: (paid * 10).round().clamp(1, 1000),
+                    child: const ColoredBox(color: AppColors.success),
+                  ),
+                if (debt > 0)
+                  Expanded(
+                    flex: (debt * 10).round().clamp(1, 1000),
+                    child: const ColoredBox(color: AppColors.destructive),
+                  ),
+                if (paid <= 0 && debt <= 0)
+                  const Expanded(
+                    child: ColoredBox(color: Color(0x33FFFFFF)),
+                  ),
               ],
             ),
           ),

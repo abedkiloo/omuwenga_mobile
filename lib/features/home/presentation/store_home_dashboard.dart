@@ -429,30 +429,90 @@ class _SummarySection extends StatelessWidget {
       );
     }
 
+    final paidAmount = summary.totalPaid > 0
+        ? summary.totalPaid
+        : (summary.totalSales - summary.totalDebtIncurred).clamp(0, double.infinity);
+    final debtAmount = summary.totalDebtIncurred;
+    final mixTotal = summary.totalSales > 0 ? summary.totalSales : (paidAmount + debtAmount);
+    final paidPct = mixTotal > 0
+        ? ((paidAmount / mixTotal) * 100).clamp(0, 100).toDouble()
+        : 0.0;
+    final debtPct = mixTotal > 0
+        ? ((debtAmount / mixTotal) * 100).clamp(0, 100 - paidPct).toDouble()
+        : 0.0;
+
     return Column(
       key: const Key('home_daily_summary'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _MetricCard(
-          label: 'Gross Collections',
+          label: 'Gross sales',
           value: summary.totalSales,
           subtitle: '${summary.ordersCount} orders today',
         ),
         const SizedBox(height: 10),
+        if (paidPct > 0 || debtPct > 0) ...[
+          CbSurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Paid vs debt',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: SizedBox(
+                    height: 8,
+                    child: Row(
+                      children: [
+                        if (paidPct > 0)
+                          Expanded(
+                            flex: (paidPct * 10).round().clamp(1, 1000),
+                            child: const ColoredBox(color: AppColors.success),
+                          ),
+                        if (debtPct > 0)
+                          Expanded(
+                            flex: (debtPct * 10).round().clamp(1, 1000),
+                            child: const ColoredBox(color: AppColors.destructive),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${paidPct.round()}% paid · ${debtPct.round()}% debt',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.mutedForeground,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
         LayoutBuilder(
           builder: (context, constraints) {
             final paid = _MetricCard(
-              label: 'Paid / Collected',
-              value: (summary.totalSales - summary.totalDebtIncurred)
-                  .clamp(0, double.infinity),
+              label: 'Paid at checkout',
+              value: paidAmount.toDouble(),
               subtitle: '${summary.paidOrdersCount} paid',
+              valueColor: AppColors.success,
+              labelColor: AppColors.success,
             );
             final credit = _MetricCard(
-              label: 'Credit Slips',
-              value: summary.totalDebtIncurred,
+              label: 'Taken as debt',
+              value: debtAmount,
               subtitle: summary.debtOrdersCount > 0
                   ? '${summary.debtOrdersCount} pending'
                   : 'None today',
+              valueColor: debtAmount > 0 ? AppColors.destructive : AppColors.primary,
+              labelColor: debtAmount > 0 ? AppColors.destructive : null,
               trailing: summary.debtOrdersCount > 0
                   ? CbStatusPill(
                       label: '${summary.debtOrdersCount} Pending',
@@ -491,12 +551,16 @@ class _MetricCard extends StatelessWidget {
     required this.value,
     this.subtitle,
     this.trailing,
+    this.valueColor,
+    this.labelColor,
   });
 
   final String label;
   final double value;
   final String? subtitle;
   final Widget? trailing;
+  final Color? valueColor;
+  final Color? labelColor;
 
   @override
   Widget build(BuildContext context) {
@@ -510,7 +574,7 @@ class _MetricCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: AppColors.mutedForeground,
+              color: labelColor ?? AppColors.mutedForeground,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -531,7 +595,7 @@ class _MetricCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
-              color: AppColors.primary,
+              color: valueColor ?? AppColors.primary,
             ),
           ),
           if (subtitle != null) ...[
