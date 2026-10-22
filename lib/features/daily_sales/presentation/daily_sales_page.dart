@@ -267,6 +267,16 @@ class DailySalesPage extends ConsumerWidget {
         separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, i) {
           final order = orders[i];
+          final mix = DailyPaidDebtMix.fromAmounts(
+            total: order.total,
+            paid: order.amountPaid,
+            debt: order.debtAmount,
+          );
+          final payColor = switch (order.paymentStatus) {
+            PaymentStatusDisplay.paid => AppColors.success,
+            PaymentStatusDisplay.partial => AppColors.warning,
+            PaymentStatusDisplay.debt => AppColors.destructive,
+          };
           return ListTile(
             key: Key('daily_order_${order.id}'),
             contentPadding: EdgeInsets.zero,
@@ -290,14 +300,60 @@ class DailySalesPage extends ConsumerWidget {
                 ),
               ],
             ),
-            subtitle: Text(
-              [
-                if (order.customerName != null && order.customerName!.isNotEmpty)
-                  order.customerName,
-                order.lifecycle.label,
-              ].whereType<String>().join(' · '),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  [
+                    if (order.customerName != null &&
+                        order.customerName!.isNotEmpty)
+                      order.customerName,
+                    paymentStatusLabel(order.paymentStatus),
+                  ].whereType<String>().join(' · '),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: payColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                _PaidDebtMixBar(
+                  paidPct: mix.paidPct,
+                  debtPct: mix.debtPct,
+                  height: 5,
+                ),
+                if (order.debtAmount > 0) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Debt ${formatGroupedNumber(order.debtAmount)}'
+                    '${order.amountPaid > 0 ? ' · paid ${formatGroupedNumber(order.amountPaid)}' : ''}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.destructive,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ] else if (order.amountPaid > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Paid ${formatGroupedNumber(order.amountPaid)}',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            trailing: Text(formatGroupedNumber(order.total)),
+            isThreeLine: true,
+            trailing: Text(
+              formatGroupedNumber(order.total),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: order.debtAmount > 0
+                    ? AppColors.destructive
+                    : AppColors.success,
+              ),
+            ),
             onTap: () =>
                 context.push(dailyOrderRoute(order, date: state.dateApi)),
           );
@@ -353,6 +409,7 @@ class _SummaryStrip extends StatelessWidget {
     final muted = Theme.of(
       context,
     ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground);
+    final mix = DailyPaidDebtMix.fromSummary(summary);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -361,6 +418,12 @@ class _SummaryStrip extends StatelessWidget {
           'Sales ${formatGroupedNumber(summary.totalSales)} · ${summary.ordersCount} orders',
           style: Theme.of(context).textTheme.titleSmall,
         ),
+        const SizedBox(height: 8),
+        _PaidDebtMixBar(
+          key: const Key('daily_paid_debt_bar'),
+          paidPct: mix.paidPct,
+          debtPct: mix.debtPct,
+        ),
         const SizedBox(height: 6),
         Wrap(
           spacing: 8,
@@ -368,17 +431,23 @@ class _SummaryStrip extends StatelessWidget {
           children: [
             _SummaryLink(
               key: const Key('daily_summary_paid'),
-              label:
-                  'Paid ${formatGroupedNumber(summary.totalPaid)}',
+              label: 'Paid ${formatGroupedNumber(summary.totalPaid)}',
               onTap: onPaidTap,
-              style: muted,
+              style: muted?.copyWith(
+                color: AppColors.success,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             _SummaryLink(
               key: const Key('daily_summary_debt'),
-              label:
-                  'Debt ${formatGroupedNumber(summary.totalDebtIncurred)}',
+              label: 'Debt ${formatGroupedNumber(summary.totalDebtIncurred)}',
               onTap: onDebtTap,
-              style: muted,
+              style: muted?.copyWith(
+                color: summary.totalDebtIncurred > 0
+                    ? AppColors.destructive
+                    : AppColors.mutedForeground,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             _SummaryLink(
               key: const Key('daily_summary_collected'),
@@ -398,6 +467,78 @@ class _SummaryStrip extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class DailyPaidDebtMix {
+  const DailyPaidDebtMix({
+    required this.paidPct,
+    required this.debtPct,
+  });
+
+  final double paidPct;
+  final double debtPct;
+
+  factory DailyPaidDebtMix.fromSummary(DailySummary summary) {
+    return DailyPaidDebtMix.fromAmounts(
+      total: summary.totalSales,
+      paid: summary.totalPaid,
+      debt: summary.totalDebtIncurred,
+    );
+  }
+
+  factory DailyPaidDebtMix.fromAmounts({
+    required double total,
+    required double paid,
+    required double debt,
+  }) {
+    if (total <= 0) {
+      return const DailyPaidDebtMix(paidPct: 0, debtPct: 0);
+    }
+    final paidPct = ((paid / total) * 100).clamp(0, 100).toDouble();
+    final debtPct = ((debt / total) * 100).clamp(0, 100 - paidPct).toDouble();
+    return DailyPaidDebtMix(paidPct: paidPct, debtPct: debtPct);
+  }
+}
+
+class _PaidDebtMixBar extends StatelessWidget {
+  const _PaidDebtMixBar({
+    super.key,
+    required this.paidPct,
+    required this.debtPct,
+    this.height = 8,
+  });
+
+  final double paidPct;
+  final double debtPct;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: SizedBox(
+        height: height,
+        child: Row(
+          children: [
+            if (paidPct > 0)
+              Expanded(
+                flex: (paidPct * 10).round().clamp(1, 1000),
+                child: const ColoredBox(color: AppColors.success),
+              ),
+            if (debtPct > 0)
+              Expanded(
+                flex: (debtPct * 10).round().clamp(1, 1000),
+                child: const ColoredBox(color: AppColors.destructive),
+              ),
+            if (paidPct <= 0 && debtPct <= 0)
+              const Expanded(
+                child: ColoredBox(color: AppColors.secondary),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
