@@ -6,6 +6,7 @@ import '../../../sync/domain/client_uuid.dart';
 import '../../auth/application/auth_controller.dart';
 import '../data/customers_api.dart';
 import '../domain/customer.dart';
+import '../domain/customer_intelligence.dart';
 import '../domain/kenya_admin_units.dart';
 import 'customer_list_paging.dart';
 
@@ -37,6 +38,8 @@ class CustomersListState {
     this.hasMore = true,
     this.count = 0,
     this.query = '',
+    this.engagementTier = EngagementTier.all,
+    this.buyerSegment = BuyerSegment.any,
     this.error,
   });
 
@@ -46,6 +49,8 @@ class CustomersListState {
   final bool hasMore;
   final int count;
   final String query;
+  final EngagementTier engagementTier;
+  final BuyerSegment buyerSegment;
   final String? error;
 
   CustomersListState copyWith({
@@ -55,6 +60,8 @@ class CustomersListState {
     bool? hasMore,
     int? count,
     String? query,
+    EngagementTier? engagementTier,
+    BuyerSegment? buyerSegment,
     String? error,
     bool clearError = false,
   }) {
@@ -65,6 +72,8 @@ class CustomersListState {
       hasMore: hasMore ?? this.hasMore,
       count: count ?? this.count,
       query: query ?? this.query,
+      engagementTier: engagementTier ?? this.engagementTier,
+      buyerSegment: buyerSegment ?? this.buyerSegment,
       error: clearError ? null : (error ?? this.error),
     );
   }
@@ -84,12 +93,44 @@ class CustomersListController extends StateNotifier<CustomersListState> {
       hasMore: _paging.hasMore,
       count: _paging.count,
       query: _paging.query,
+      engagementTier: _paging.engagementTier,
+      buyerSegment: _paging.buyerSegment,
       error: _paging.error,
     );
   }
 
-  Future<void> load({String? search}) {
-    return _paging.refresh(_api, search: search, onUpdate: _sync);
+  Future<void> load({
+    String? search,
+    EngagementTier? engagementTier,
+    BuyerSegment? buyerSegment,
+  }) {
+    return _paging.refresh(
+      _api,
+      search: search,
+      engagementTier: engagementTier,
+      buyerSegment: buyerSegment,
+      onUpdate: _sync,
+    );
+  }
+
+  Future<void> setEngagementTier(EngagementTier tier) {
+    final segment = tier == EngagementTier.prospect
+        ? BuyerSegment.any
+        : _paging.buyerSegment;
+    return _paging.refresh(
+      _api,
+      engagementTier: tier,
+      buyerSegment: segment,
+      onUpdate: _sync,
+    );
+  }
+
+  Future<void> setBuyerSegment(BuyerSegment segment) {
+    return _paging.refresh(
+      _api,
+      buyerSegment: segment,
+      onUpdate: _sync,
+    );
   }
 
   Future<void> loadMore() {

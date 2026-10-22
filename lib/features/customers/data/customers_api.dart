@@ -64,6 +64,8 @@ class CustomersApi {
     String search = '',
     int page = 1,
     int pageSize = 25,
+    String engagementTier = '',
+    String buyerSegment = '',
   }) async {
     final params = <String, String>{
       'page': '$page',
@@ -71,6 +73,10 @@ class CustomersApi {
     };
     final q = search.trim();
     if (q.isNotEmpty) params['search'] = q;
+    final tier = engagementTier.trim();
+    if (tier.isNotEmpty) params['engagement_tier'] = tier;
+    final segment = buyerSegment.trim();
+    if (segment.isNotEmpty) params['buyer_segment'] = segment;
     final query = params.entries
         .map(
           (e) =>

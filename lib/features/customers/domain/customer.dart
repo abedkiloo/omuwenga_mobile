@@ -1,3 +1,4 @@
+import 'customer_intelligence.dart';
 import 'wallet_debt.dart';
 
 double? _asDouble(Object? v) {
@@ -25,6 +26,11 @@ class CustomerSummary {
     this.walletBalance,
     this.totalOutstanding,
     this.isActive = true,
+    this.engagementTier = EngagementTier.prospect,
+    this.buyerSegment = BuyerSegment.any,
+    this.purchaseCount = 0,
+    this.lifetimeSalesValue,
+    this.lastPurchasedAt,
   });
 
   final int id;
@@ -35,9 +41,16 @@ class CustomerSummary {
   final double? walletBalance;
   final double? totalOutstanding;
   final bool isActive;
+  final EngagementTier engagementTier;
+  final BuyerSegment buyerSegment;
+  final int purchaseCount;
+  final double? lifetimeSalesValue;
+  final String? lastPurchasedAt;
 
   double get debtAmount => debtAmountFromWalletBalance(walletBalance);
   CustomerStanding get standing => standingFromWallet(walletBalance);
+
+  bool get isBuyer => engagementTier == EngagementTier.buyer;
 
   factory CustomerSummary.fromJson(Map<String, dynamic> json) {
     return CustomerSummary(
@@ -49,6 +62,11 @@ class CustomerSummary {
       walletBalance: _asDouble(json['wallet_balance']),
       totalOutstanding: _asDouble(json['total_outstanding']),
       isActive: json['is_active'] != false,
+      engagementTier: EngagementTierX.fromApi(json['engagement_tier']?.toString()),
+      buyerSegment: BuyerSegmentX.fromApi(json['buyer_segment']?.toString()),
+      purchaseCount: (json['purchase_count'] as num?)?.toInt() ?? 0,
+      lifetimeSalesValue: _asDouble(json['lifetime_sales_value']),
+      lastPurchasedAt: json['last_purchased_at']?.toString(),
     );
   }
 }
@@ -126,6 +144,11 @@ class CustomerDetail {
     this.recentOrders = const [],
     this.ledger = const [],
     this.isActive = true,
+    this.engagementTier = EngagementTier.prospect,
+    this.buyerSegment = BuyerSegment.any,
+    this.purchaseCount = 0,
+    this.lifetimeSalesValue,
+    this.lastPurchasedAt,
   });
 
   final int id;
@@ -152,6 +175,13 @@ class CustomerDetail {
   final List<CustomerOrderLite> recentOrders;
   final List<CustomerLedgerEntry> ledger;
   final bool isActive;
+  final EngagementTier engagementTier;
+  final BuyerSegment buyerSegment;
+  final int purchaseCount;
+  final double? lifetimeSalesValue;
+  final String? lastPurchasedAt;
+
+  bool get isBuyer => engagementTier == EngagementTier.buyer;
 
   bool get hasLocationPing => latitude != null && longitude != null;
 
@@ -256,6 +286,15 @@ class CustomerDetail {
       recentOrders: orders,
       ledger: ledger,
       isActive: customer['is_active'] != false,
+      engagementTier: EngagementTierX.fromApi(
+        customer['engagement_tier']?.toString(),
+      ),
+      buyerSegment: BuyerSegmentX.fromApi(
+        customer['buyer_segment']?.toString(),
+      ),
+      purchaseCount: (customer['purchase_count'] as num?)?.toInt() ?? 0,
+      lifetimeSalesValue: _asDouble(customer['lifetime_sales_value']),
+      lastPurchasedAt: customer['last_purchased_at']?.toString(),
     );
   }
 }

@@ -15,6 +15,7 @@ class CbFilterChip extends StatelessWidget {
     this.leading,
     this.compact = false,
     this.expand = false,
+    this.tooltip,
   });
 
   final String label;
@@ -23,6 +24,7 @@ class CbFilterChip extends StatelessWidget {
   final Widget? leading;
   final bool compact;
   final bool expand;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +32,7 @@ class CbFilterChip extends StatelessWidget {
     final bg = selected ? AppColors.primary : AppColors.surface;
     final border = selected ? AppColors.primary : AppColors.border;
 
-    final child = Material(
+    Widget child = Material(
       color: bg,
       borderRadius: BorderRadius.circular(AppColors.radiusSm),
       child: InkWell(
@@ -95,6 +97,9 @@ class CbFilterChip extends StatelessWidget {
       ),
     );
 
+    if (tooltip != null && tooltip!.trim().isNotEmpty) {
+      child = Tooltip(message: tooltip!, child: child);
+    }
     return child;
   }
 }

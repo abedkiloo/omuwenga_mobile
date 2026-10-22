@@ -1,5 +1,6 @@
 import '../data/customers_api.dart';
 import '../domain/customer.dart';
+import '../domain/customer_intelligence.dart';
 
 /// Loads the customer directory in pages (backend `page` / `page_size`).
 class CustomerListPaging {
@@ -9,6 +10,8 @@ class CustomerListPaging {
 
   List<CustomerSummary> items = const [];
   String query = '';
+  EngagementTier engagementTier = EngagementTier.all;
+  BuyerSegment buyerSegment = BuyerSegment.any;
   int count = 0;
   int _page = 0;
   int _generation = 0;
@@ -22,9 +25,16 @@ class CustomerListPaging {
   Future<void> refresh(
     CustomersApi api, {
     String? search,
+    EngagementTier? engagementTier,
+    BuyerSegment? buyerSegment,
     void Function()? onUpdate,
   }) async {
     if (search != null) query = search.trim();
+    if (engagementTier != null) this.engagementTier = engagementTier;
+    if (buyerSegment != null) this.buyerSegment = buyerSegment;
+    if (this.engagementTier == EngagementTier.prospect) {
+      this.buyerSegment = BuyerSegment.any;
+    }
     final gen = ++_generation;
     loading = true;
     loadingMore = false;
@@ -33,7 +43,13 @@ class CustomerListPaging {
     _page = 0;
     onUpdate?.call();
 
-    final result = await api.list(search: query, page: 1, pageSize: pageSize);
+    final result = await api.list(
+      search: query,
+      page: 1,
+      pageSize: pageSize,
+      engagementTier: this.engagementTier.apiValue,
+      buyerSegment: this.buyerSegment.apiValue,
+    );
     if (gen != _generation) return;
     result.when(
       success: (page) {
@@ -68,6 +84,8 @@ class CustomerListPaging {
       search: query,
       page: nextPage,
       pageSize: pageSize,
+      engagementTier: engagementTier.apiValue,
+      buyerSegment: buyerSegment.apiValue,
     );
     if (gen != _generation) return;
     result.when(

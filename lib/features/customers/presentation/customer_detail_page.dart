@@ -10,8 +10,10 @@ import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/customers_controllers.dart';
 import '../domain/customer.dart';
+import '../domain/customer_intelligence.dart';
 import '../domain/wallet_debt.dart';
 import '../../../core/format/money.dart';
+import 'classification_badges.dart';
 
 
 String _shortDate(String? raw) {
@@ -314,6 +316,24 @@ class _ProfileCard extends StatelessWidget {
                       detail.notes!.trim(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                ClassificationBadges(
+                  engagementTier: detail.engagementTier,
+                  buyerSegment: detail.buyerSegment,
+                  purchaseCount: detail.purchaseCount,
+                  showPurchaseCount: true,
+                  compact: false,
+                ),
+                if (detail.engagementTier == EngagementTier.prospect)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'No completed Omuwenga purchases yet',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: AppColors.mutedForeground,
                       ),

@@ -7,4 +7,3 @@ abstract final class BrandAssets {
   static const tagline = 'Think Furniture, Think Omuwenga';
   static const operationsFooter = 'Omuwenga Operations';
 }
-s

@@ -61,6 +61,39 @@ void main() {
     expect(page.hasNext, isFalse);
   });
 
+  test('list passes engagement_tier and buyer_segment', () async {
+    final api = apiWith(
+      MockClient((request) async {
+        expect(request.url.queryParameters['engagement_tier'], 'buyer');
+        expect(request.url.queryParameters['buyer_segment'], 'at_risk');
+        return http.Response(
+          jsonEncode({
+            'count': 1,
+            'next': null,
+            'previous': null,
+            'results': [
+              {
+                'id': 9,
+                'name': 'Cooling',
+                'engagement_tier': 'buyer',
+                'buyer_segment': 'at_risk',
+                'purchase_count': 2,
+                'wallet_balance': '0',
+              },
+            ],
+          }),
+          200,
+        );
+      }),
+    );
+    final page = (await api.list(
+      engagementTier: 'buyer',
+      buyerSegment: 'at_risk',
+    )).getOrThrow();
+    expect(page.results.single.isBuyer, isTrue);
+    expect(page.results.single.buyerSegment.name, 'coolingOff');
+  });
+
   test('list pagination follows next page', () async {
     final api = apiWith(
       MockClient((request) async {

@@ -11,9 +11,10 @@ import '../../pos/application/pos_controllers.dart';
 import '../application/customer_list_paging.dart';
 import '../application/customers_controllers.dart';
 import '../domain/customer.dart';
+import '../domain/customer_intelligence.dart';
 import '../domain/wallet_debt.dart';
 import '../../../core/format/money.dart';
-
+import 'classification_badges.dart';
 
 enum _CustomerFilter { all, debtors, credit, good }
 
@@ -193,14 +194,62 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                   ref.read(customersListProvider.notifier).load(search: q),
             ),
           ),
-          filters: (state.items.isNotEmpty || state.loading)
-              ? Column(
+          filters: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: SizedBox(
+                        height: 36,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          children: [
+                            for (final tier in EngagementTier.values) ...[
+                              if (tier != EngagementTier.values.first)
+                                const SizedBox(width: 8),
+                              _FilterChip(
+                                label: tier.label,
+                                selected: state.engagementTier == tier,
+                                tooltip: tier.tip,
+                                onTap: () => ref
+                                    .read(customersListProvider.notifier)
+                                    .setEngagementTier(tier),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (state.engagementTier != EngagementTier.prospect)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: SizedBox(
+                          height: 36,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            children: [
+                              for (final seg in BuyerSegment.values) ...[
+                                if (seg != BuyerSegment.values.first)
+                                  const SizedBox(width: 8),
+                                _FilterChip(
+                                  label: seg.label,
+                                  selected: state.buyerSegment == seg,
+                                  tooltip: seg.tip,
+                                  onTap: () => ref
+                                      .read(customersListProvider.notifier)
+                                      .setBuyerSegment(seg),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
                     if (state.items.isNotEmpty) ...[
                       Padding(
-                        padding: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.only(top: 8),
                         child: SizedBox(
                           height: 36,
                           child: ListView(
@@ -209,7 +258,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                             children: [
                               _FilterChip(
                                 label:
-                                    'All (${state.count > 0 ? state.count : state.items.length})',
+                                    'Standing · All (${state.count > 0 ? state.count : state.items.length})',
                                 selected: _filter == _CustomerFilter.all,
                                 onTap: () => setState(
                                   () => _filter = _CustomerFilter.all,
@@ -217,7 +266,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                               ),
                               const SizedBox(width: 8),
                               _FilterChip(
-                                label: 'All Debtors ($debtorCount)',
+                                label: 'Debtors ($debtorCount)',
                                 selected: _filter == _CustomerFilter.debtors,
                                 onTap: () => setState(
                                   () => _filter = _CustomerFilter.debtors,
@@ -289,8 +338,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                     if (state.loading)
                       const LinearProgressIndicator(minHeight: 2),
                   ],
-                )
-              : null,
+                ),
           body: NotificationListener<ScrollNotification>(
             onNotification: _onListScroll,
             child: _buildBody(
@@ -365,14 +413,41 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
       );
     }
     if (state.items.isEmpty) {
+      final tier = state.engagementTier;
+      final segment = state.buyerSegment;
+      String title = 'No customers';
+      String message = state.query.isEmpty
+          ? 'Add a customer or search by name or phone.'
+          : 'No matches for “${state.query}”.';
+      if (state.query.isEmpty && tier == EngagementTier.buyer) {
+        if (segment != BuyerSegment.any) {
+          title = 'No customers in “${segment.label}”';
+          message =
+              'Buyers move into this segment based on how recently and how often they purchase.';
+        } else {
+          title = 'No buyers yet';
+          message =
+              'Customers who complete a sale from Omuwenga show up here as buyers.';
+        }
+      } else if (state.query.isEmpty && tier == EngagementTier.prospect) {
+        title = 'No registered-only customers';
+        message =
+            'Everyone here has already bought — switch to All or Bought from Omuwenga.';
+      }
       return EmptyState(
         key: const Key('customers_empty'),
-        title: 'No customers',
-        message: state.query.isEmpty
-            ? 'Add a customer or search by name or phone.'
-            : 'No matches for “${state.query}”.',
-        primaryLabel: 'Refresh',
-        onPrimary: () => ref.read(customersListProvider.notifier).load(),
+        title: title,
+        message: message,
+        primaryLabel: tier != EngagementTier.all ? 'Show all' : 'Refresh',
+        onPrimary: () {
+          if (tier != EngagementTier.all) {
+            ref
+                .read(customersListProvider.notifier)
+                .setEngagementTier(EngagementTier.all);
+          } else {
+            ref.read(customersListProvider.notifier).load();
+          }
+        },
       );
     }
     if (visible.isEmpty) {
@@ -668,11 +743,13 @@ class _FilterChip extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.tooltip,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -680,6 +757,7 @@ class _FilterChip extends StatelessWidget {
       label: label,
       selected: selected,
       compact: true,
+      tooltip: tooltip,
       onTap: onTap,
     );
   }
@@ -829,6 +907,13 @@ class _CustomerExpandableCard extends StatelessWidget {
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      ClassificationBadges(
+                        engagementTier: customer.engagementTier,
+                        buyerSegment: customer.buyerSegment,
+                        purchaseCount: customer.purchaseCount,
+                        showPurchaseCount: true,
                       ),
                     ],
                   ),
