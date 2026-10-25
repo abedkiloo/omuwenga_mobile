@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../features/approvals/presentation/approvals_page.dart';
 import '../features/daily_notes/presentation/daily_notes_page.dart';
 import '../features/appraisals/presentation/appraisals_page.dart';
+import '../features/payroll/presentation/payroll_page.dart';
 import '../features/expenses/presentation/expenses_list_page.dart';
 import '../features/dispatch/presentation/dispatch_queue_page.dart';
 import '../features/delivery/presentation/delivery_route_page.dart';
@@ -328,6 +329,10 @@ GoRouter createAppRouter({
           GoRoute(
             path: AppRoutes.appraisals,
             builder: (context, state) => const AppraisalsPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.payroll,
+            builder: (context, state) => const PayrollPage(),
           ),
         ],
       ),

@@ -153,6 +153,13 @@ List<_NavItem> _businessMoreNav({
         route: AppRoutes.appraisals,
         key: Key('more_appraisals'),
       ),
+    if (perms?.canViewPayroll ?? false)
+      const _NavItem(
+        label: 'My pay',
+        icon: Icons.receipt_long_outlined,
+        route: AppRoutes.payroll,
+        key: Key('more_payroll'),
+      ),
     if (perms?.canViewExpenses ?? false)
       const _NavItem(
         label: 'Expenses',

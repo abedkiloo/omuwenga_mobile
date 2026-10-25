@@ -92,6 +92,10 @@ class PermissionSet {
   bool get canManageAppraisals => has('appraisals', 'manage');
   bool get canViewAllAppraisals => has('appraisals', 'view_all');
 
+  /// Own pay / locked payslips (`payroll.view_own`) or full payroll view.
+  bool get canViewPayroll =>
+      has('payroll', 'view_own') || has('payroll', 'view');
+
   bool get canViewExpenses => has('expenses', 'view');
   bool get canCreateExpenses => has('expenses', 'create');
   bool get canUpdateExpenses => has('expenses', 'update');

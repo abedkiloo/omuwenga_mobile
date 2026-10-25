@@ -18,6 +18,7 @@ abstract final class AppRoutes {
   static const deliveryRoute = '/delivery';
   static const dailyNotes = '/daily-notes';
   static const appraisals = '/appraisals';
+  static const payroll = '/payroll';
   static const approvals = '/approvals';
   static const expenses = '/expenses';
 
