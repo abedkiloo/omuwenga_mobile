@@ -109,7 +109,7 @@ GoRouter createAppRouter({
         return AppRoutes.home;
       }
       if (RegExp(r'^/customers/\d+/edit$').hasMatch(loc) &&
-          !(permissions?.canUpdateCustomers ?? false)) {
+          !(permissions?.canEditCustomers ?? false)) {
         return AppRoutes.home;
       }
       if (RegExp(r'^/customers/\d+/settle$').hasMatch(loc)) {

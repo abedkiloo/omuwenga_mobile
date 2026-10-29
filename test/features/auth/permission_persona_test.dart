@@ -24,6 +24,7 @@ void main() {
       expect(set.canApproveDebtManagement, isFalse);
       expect(set.canCreateCustomers, isFalse);
       expect(set.canUpdateCustomers, isFalse);
+      expect(set.canEditCustomers, isFalse);
       expect(set.has('sales', 'view'), isFalse);
       expect(set.length, 5);
     });
@@ -35,6 +36,13 @@ void main() {
       ]);
       expect(set.canCreateCustomers, isTrue);
       expect(set.canUpdateCustomers, isTrue);
+      expect(set.canEditCustomers, isTrue);
+      expect(
+        PermissionSet.fromJsonList([
+          {'module': 'customers', 'action': 'create'},
+        ]).canEditCustomers,
+        isTrue,
+      );
       expect(
         PermissionSet([
           const PermissionGrant(module: 'sales', action: 'refund'),

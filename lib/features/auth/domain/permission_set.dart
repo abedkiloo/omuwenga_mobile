@@ -56,6 +56,9 @@ class PermissionSet {
   bool get canViewCustomers => has('customers', 'view');
   bool get canCreateCustomers => has('customers', 'create');
   bool get canUpdateCustomers => has('customers', 'update');
+
+  /// Field staff who can register dukas can also fix details from the app.
+  bool get canEditCustomers => canUpdateCustomers || canCreateCustomers;
   bool get canViewDebtManagement => has('debt_management', 'view');
   bool get canUpdateDebtManagement => has('debt_management', 'update');
   bool get canApproveDebtManagement => has('debt_management', 'approve');

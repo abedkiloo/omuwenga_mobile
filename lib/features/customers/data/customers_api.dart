@@ -192,7 +192,7 @@ class CustomersApi {
   }
 
   Future<Result<CustomerSummary>> update(int id, CustomerDraft draft) async {
-    final response = await _client.put(
+    final response = await _client.patch(
       'sales/customers/$id/',
       body: draft.toJson(),
     );

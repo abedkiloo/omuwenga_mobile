@@ -132,6 +132,7 @@ class CustomerDetail {
     this.ward,
     this.notes,
     this.ownerName,
+    this.gender,
     this.contactPerson,
     this.typicalGoods = const [],
     this.latitude,
@@ -163,6 +164,8 @@ class CustomerDetail {
   final String? ward;
   final String? notes;
   final String? ownerName;
+  /// `male` / `female`, or null/empty for legacy records.
+  final String? gender;
   final String? contactPerson;
   final List<String> typicalGoods;
   final double? latitude;
@@ -274,6 +277,10 @@ class CustomerDetail {
       ward: customer['ward']?.toString(),
       notes: customer['notes']?.toString(),
       ownerName: customer['owner_name']?.toString(),
+      gender: () {
+        final raw = customer['gender']?.toString().trim().toLowerCase() ?? '';
+        return raw.isEmpty ? null : raw;
+      }(),
       contactPerson: customer['contact_person']?.toString(),
       typicalGoods: _stringList(customer['typical_goods']),
       latitude: _asDouble(customer['latitude']),
@@ -466,6 +473,7 @@ class CustomerDraft {
     this.email = '',
     this.notes = '',
     this.ownerName = '',
+    this.gender = '',
     this.contactPerson = '',
     this.city = '',
     this.county = '',
@@ -483,6 +491,7 @@ class CustomerDraft {
   final String email;
   final String notes;
   final String ownerName;
+  final String gender;
   final String contactPerson;
   final String city;
   final String county;
@@ -502,6 +511,7 @@ class CustomerDraft {
     'email': email.trim(),
     'notes': notes.trim(),
     'owner_name': ownerName.trim(),
+    'gender': gender.trim().toLowerCase(),
     'contact_person': contactPerson.trim(),
     'city': (county.trim().isNotEmpty ? county : city).trim(),
     'county': county.trim(),

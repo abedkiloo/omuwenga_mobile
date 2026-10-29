@@ -74,7 +74,7 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           debtAmount: detail.debtAmount,
         );
     final canEdit =
-        (auth.session?.permissions.canUpdateCustomers ?? false) &&
+        (auth.session?.permissions.canEditCustomers ?? false) &&
         settings.enableCustomerEdit;
     final canVisit = auth.session?.permissions.canPlaceVisitOrders ?? false;
 
@@ -98,25 +98,33 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
           if (canEdit && detail != null)
             IconButton(
               key: const Key('customer_edit'),
+              tooltip: 'Edit customer',
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => context.push(AppRoutes.customerEdit(detail.id)),
             ),
         ],
       ),
-      body: _body(context, ref, state),
+      body: _body(context, ref, state, canEdit: canEdit),
       bottomNavigationBar: detail == null
           ? null
           : _LedgerBottomBar(
               showSettle: showSettle,
               canVisit: canVisit,
+              canEdit: canEdit,
               debtAmount: detail.debtAmount,
               onVisit: () => context.go(AppRoutes.siteVisit),
+              onEdit: () => context.push(AppRoutes.customerEdit(detail.id)),
               onSettle: () => context.push(AppRoutes.customerSettle(detail.id)),
             ),
     );
   }
 
-  Widget _body(BuildContext context, WidgetRef ref, CustomerDetailState state) {
+  Widget _body(
+    BuildContext context,
+    WidgetRef ref,
+    CustomerDetailState state, {
+    required bool canEdit,
+  }) {
     if (state.loading && state.detail == null) {
       return const LoadingState(label: 'Loading customer…');
     }
@@ -150,7 +158,12 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _ProfileCard(detail: detail),
+          _ProfileCard(
+            detail: detail,
+            onEdit: canEdit
+                ? () => context.push(AppRoutes.customerEdit(detail.id))
+                : null,
+          ),
           const SizedBox(height: 12),
           Text(
             key: const Key('customer_standing_hero'),
@@ -186,20 +199,24 @@ class _LedgerBottomBar extends StatelessWidget {
   const _LedgerBottomBar({
     required this.showSettle,
     required this.canVisit,
+    required this.canEdit,
     required this.debtAmount,
     required this.onVisit,
+    required this.onEdit,
     required this.onSettle,
   });
 
   final bool showSettle;
   final bool canVisit;
+  final bool canEdit;
   final double debtAmount;
   final VoidCallback onVisit;
+  final VoidCallback onEdit;
   final VoidCallback onSettle;
 
   @override
   Widget build(BuildContext context) {
-    if (!showSettle && !canVisit) return const SizedBox.shrink();
+    if (!showSettle && !canVisit && !canEdit) return const SizedBox.shrink();
     return Material(
       color: AppColors.surface,
       elevation: 8,
@@ -211,6 +228,18 @@ class _LedgerBottomBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
           child: Row(
             children: [
+              if (canEdit) ...[
+                SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    key: const Key('customer_edit_bottom'),
+                    onPressed: onEdit,
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: const Text('Edit'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               if (canVisit) ...[
                 SizedBox(
                   height: 48,
@@ -259,9 +288,10 @@ class _LedgerBottomBar extends StatelessWidget {
 }
 
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({required this.detail});
+  const _ProfileCard({required this.detail, this.onEdit});
 
   final CustomerDetail detail;
+  final VoidCallback? onEdit;
 
   String get _initials {
     final parts = detail.name
@@ -393,6 +423,16 @@ class _ProfileCard extends StatelessWidget {
           ),
           Column(
             children: [
+              if (onEdit != null)
+                IconButton(
+                  key: const Key('customer_edit_profile'),
+                  tooltip: 'Edit details',
+                  onPressed: onEdit,
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: AppColors.primary,
+                  ),
+                ),
               IconButton(
                 tooltip: 'Copy phone',
                 onPressed: () async {

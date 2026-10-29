@@ -58,6 +58,8 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
   bool _locationPromptShown = false;
   /// Null until user chooses snap / skip on create; edit starts as skipped.
   bool? _locationSkipped;
+  /// `male` / `female` / null when unset (legacy edits may stay blank).
+  String? _gender;
   double? _latitude;
   double? _longitude;
   double? _locationAccuracy;
@@ -200,6 +202,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     _seeded = true;
     _name.text = detail.name;
     _ownerName.text = detail.ownerName ?? '';
+    _gender = detail.gender;
     _phone.text = detail.phone ?? '';
     _email.text = detail.email ?? '';
     _county =
@@ -293,6 +296,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
       _nameFocus.requestFocus();
       return;
     }
+    // Gender stays optional until the released app build always shows the field.
     final phoneErr = phoneValidationMessage(_phone.text);
     if (phoneErr != null) {
       setState(() => _error = phoneErr);
@@ -310,6 +314,7 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
     final draft = CustomerDraft(
       name: name,
       ownerName: _ownerName.text,
+      gender: _gender ?? '',
       phone: _phone.text,
       email: _email.text,
       city: _county,
@@ -499,6 +504,30 @@ class _CustomerFormPageState extends ConsumerState<CustomerFormPage> {
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.person_outline),
                     ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Gender (optional)',
+                    style: theme.textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<String>(
+                    key: const Key('customer_form_gender'),
+                    segments: const [
+                      ButtonSegment(value: 'male', label: Text('Male')),
+                      ButtonSegment(value: 'female', label: Text('Female')),
+                    ],
+                    emptySelectionAllowed: true,
+                    multiSelectionEnabled: false,
+                    selected: {
+                      if (_gender == 'male' || _gender == 'female') _gender!,
+                    },
+                    onSelectionChanged: (next) {
+                      setState(() {
+                        _gender = next.isEmpty ? null : next.first;
+                        _error = null;
+                      });
+                    },
                   ),
                   const SizedBox(height: 12),
                   TextField(
