@@ -23,6 +23,12 @@ class CustomerSummary {
     this.customerCode,
     this.phone,
     this.email,
+    this.city,
+    this.county,
+    this.subCounty,
+    this.ward,
+    this.locationValid,
+    this.locationIssue = '',
     this.walletBalance,
     this.totalOutstanding,
     this.isActive = true,
@@ -38,6 +44,13 @@ class CustomerSummary {
   final String? customerCode;
   final String? phone;
   final String? email;
+  final String? city;
+  final String? county;
+  final String? subCounty;
+  final String? ward;
+  /// When false, county/sub-county/ward is blank or not in the Kenya catalog.
+  final bool? locationValid;
+  final String locationIssue;
   final double? walletBalance;
   final double? totalOutstanding;
   final bool isActive;
@@ -52,6 +65,25 @@ class CustomerSummary {
 
   bool get isBuyer => engagementTier == EngagementTier.buyer;
 
+  bool get needsLocationFix => locationValid == false;
+
+  String get locationLine {
+    final parts = [
+      ward,
+      subCounty,
+      county ?? city,
+    ].map((p) => (p ?? '').trim()).where((p) => p.isNotEmpty);
+    return parts.toSet().join(' · ');
+  }
+
+  String get locationIssueLabel => switch (locationIssue) {
+        'missing' => 'Missing location',
+        'invalid_county' => 'Unknown county',
+        'invalid_sub_county' => 'Sub-county mismatch',
+        'invalid_ward' => 'Ward mismatch',
+        _ => needsLocationFix ? 'Fix location' : '',
+      };
+
   factory CustomerSummary.fromJson(Map<String, dynamic> json) {
     return CustomerSummary(
       id: (json['id'] as num).toInt(),
@@ -59,6 +91,14 @@ class CustomerSummary {
       customerCode: json['customer_code']?.toString(),
       phone: json['phone']?.toString(),
       email: json['email']?.toString(),
+      city: json['city']?.toString(),
+      county: json['county']?.toString(),
+      subCounty: json['sub_county']?.toString(),
+      ward: json['ward']?.toString(),
+      locationValid: json.containsKey('location_valid')
+          ? json['location_valid'] == true
+          : null,
+      locationIssue: (json['location_issue'] ?? '').toString(),
       walletBalance: _asDouble(json['wallet_balance']),
       totalOutstanding: _asDouble(json['total_outstanding']),
       isActive: json['is_active'] != false,
@@ -69,6 +109,27 @@ class CustomerSummary {
       lastPurchasedAt: json['last_purchased_at']?.toString(),
     );
   }
+}
+
+/// Server `location_status` query for customer directory filters.
+enum CustomerLocationStatus {
+  any,
+  valid,
+  invalid,
+}
+
+extension CustomerLocationStatusX on CustomerLocationStatus {
+  String get apiValue => switch (this) {
+        CustomerLocationStatus.any => '',
+        CustomerLocationStatus.valid => 'valid',
+        CustomerLocationStatus.invalid => 'invalid',
+      };
+
+  String get label => switch (this) {
+        CustomerLocationStatus.any => 'Any location',
+        CustomerLocationStatus.valid => 'Location OK',
+        CustomerLocationStatus.invalid => 'Needs location fix',
+      };
 }
 
 class CustomerStandingSummary {

@@ -12,6 +12,10 @@ class CustomerListPaging {
   String query = '';
   EngagementTier engagementTier = EngagementTier.all;
   BuyerSegment buyerSegment = BuyerSegment.any;
+  CustomerLocationStatus locationStatus = CustomerLocationStatus.any;
+  String county = '';
+  String subCounty = '';
+  String ward = '';
   int count = 0;
   int _page = 0;
   int _generation = 0;
@@ -27,11 +31,19 @@ class CustomerListPaging {
     String? search,
     EngagementTier? engagementTier,
     BuyerSegment? buyerSegment,
+    CustomerLocationStatus? locationStatus,
+    String? county,
+    String? subCounty,
+    String? ward,
     void Function()? onUpdate,
   }) async {
     if (search != null) query = search.trim();
     if (engagementTier != null) this.engagementTier = engagementTier;
     if (buyerSegment != null) this.buyerSegment = buyerSegment;
+    if (locationStatus != null) this.locationStatus = locationStatus;
+    if (county != null) this.county = county.trim();
+    if (subCounty != null) this.subCounty = subCounty.trim();
+    if (ward != null) this.ward = ward.trim();
     if (this.engagementTier == EngagementTier.prospect) {
       this.buyerSegment = BuyerSegment.any;
     }
@@ -49,6 +61,10 @@ class CustomerListPaging {
       pageSize: pageSize,
       engagementTier: this.engagementTier.apiValue,
       buyerSegment: this.buyerSegment.apiValue,
+      county: this.county,
+      subCounty: this.subCounty,
+      ward: this.ward,
+      locationStatus: this.locationStatus.apiValue,
     );
     if (gen != _generation) return;
     result.when(
@@ -86,6 +102,10 @@ class CustomerListPaging {
       pageSize: pageSize,
       engagementTier: engagementTier.apiValue,
       buyerSegment: buyerSegment.apiValue,
+      county: county,
+      subCounty: subCounty,
+      ward: ward,
+      locationStatus: locationStatus.apiValue,
     );
     if (gen != _generation) return;
     result.when(

@@ -247,6 +247,48 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                           ),
                         ),
                       ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: SizedBox(
+                        height: 36,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          children: [
+                            for (final loc in CustomerLocationStatus.values) ...[
+                              if (loc != CustomerLocationStatus.values.first)
+                                const SizedBox(width: 8),
+                              _FilterChip(
+                                label: loc.label,
+                                selected: state.locationStatus == loc,
+                                tooltip: loc == CustomerLocationStatus.valid
+                                    ? 'County, sub-county, and ward match our list'
+                                    : loc == CustomerLocationStatus.invalid
+                                        ? 'Blank or mismatched Kenya admin location'
+                                        : 'All location qualities',
+                                onTap: () => ref
+                                    .read(customersListProvider.notifier)
+                                    .setLocationStatus(loc),
+                              ),
+                            ],
+                            if (state.hasLocationFilter) ...[
+                              const SizedBox(width: 8),
+                              _FilterChip(
+                                label: 'Clear location',
+                                selected: false,
+                                onTap: () => ref
+                                    .read(customersListProvider.notifier)
+                                    .clearLocationFilters(),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                      child: _LocationLevelFilters(state: state),
+                    ),
                     if (state.items.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
@@ -433,14 +475,36 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
         title = 'No registered-only customers';
         message =
             'Everyone here has already bought — switch to All or Bought from Omuwenga.';
+      } else if (state.query.isEmpty && state.hasLocationFilter) {
+        if (state.locationStatus == CustomerLocationStatus.invalid) {
+          title = 'No customers need a location fix';
+          message =
+              'Everyone${state.county.isNotEmpty ? ' in ${state.county}' : ''} already has a county, sub-county, and ward from our list.';
+        } else if (state.locationStatus == CustomerLocationStatus.valid) {
+          title =
+              'No customers with a fixed location${state.county.isNotEmpty ? ' in ${state.county}' : ''}';
+          message =
+              'Try another county, sub-county, or ward — or clear Location OK.';
+        } else {
+          title = state.county.isNotEmpty
+              ? 'No customers in ${state.county}'
+              : 'No customers for this location';
+          message = 'Clear or change the location filters to see more.';
+        }
       }
       return EmptyState(
         key: const Key('customers_empty'),
         title: title,
         message: message,
-        primaryLabel: tier != EngagementTier.all ? 'Show all' : 'Refresh',
+        primaryLabel: state.hasLocationFilter
+            ? 'Clear location'
+            : tier != EngagementTier.all
+                ? 'Show all'
+                : 'Refresh',
         onPrimary: () {
-          if (tier != EngagementTier.all) {
+          if (state.hasLocationFilter) {
+            ref.read(customersListProvider.notifier).clearLocationFilters();
+          } else if (tier != EngagementTier.all) {
             ref
                 .read(customersListProvider.notifier)
                 .setEngagementTier(EngagementTier.all);
@@ -530,6 +594,110 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
               ).showSnackBar(SnackBar(content: Text('Copied $phone')));
             },
           ),
+        );
+      },
+    );
+  }
+}
+
+class _LocationLevelFilters extends ConsumerWidget {
+  const _LocationLevelFilters({required this.state});
+
+  final CustomersListState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unitsAsync = ref.watch(kenyaAdminUnitsProvider);
+    return unitsAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (units) {
+        final counties = units.sortedCounties();
+        final subs = state.county.isEmpty
+            ? const <String>[]
+            : units.subCountiesFor(state.county);
+        final wards = state.county.isEmpty || state.subCounty.isEmpty
+            ? const <String>[]
+            : units.wardsFor(state.county, state.subCounty);
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    key: const Key('customers_filter_county'),
+                    isDense: true,
+                    value: state.county.isEmpty ? '' : state.county,
+                    decoration: const InputDecoration(
+                      labelText: 'County',
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                    ),
+                    items: [
+                      const DropdownMenuItem(value: '', child: Text('All')),
+                      for (final name in counties)
+                        DropdownMenuItem(value: name, child: Text(name)),
+                    ],
+                    onChanged: (v) => ref
+                        .read(customersListProvider.notifier)
+                        .setCounty(v ?? ''),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    key: const Key('customers_filter_sub_county'),
+                    isDense: true,
+                    value: state.subCounty.isEmpty ? '' : state.subCounty,
+                    decoration: const InputDecoration(
+                      labelText: 'Sub-county',
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                    ),
+                    items: [
+                      const DropdownMenuItem(value: '', child: Text('All')),
+                      for (final name in subs)
+                        DropdownMenuItem(value: name, child: Text(name)),
+                    ],
+                    onChanged: state.county.isEmpty
+                        ? null
+                        : (v) => ref
+                            .read(customersListProvider.notifier)
+                            .setSubCounty(v ?? ''),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              key: const Key('customers_filter_ward'),
+              isDense: true,
+              value: state.ward.isEmpty ? '' : state.ward,
+              decoration: const InputDecoration(
+                labelText: 'Ward',
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+              ),
+              items: [
+                const DropdownMenuItem(value: '', child: Text('All')),
+                for (final name in wards)
+                  DropdownMenuItem(value: name, child: Text(name)),
+              ],
+              onChanged: state.county.isEmpty || state.subCounty.isEmpty
+                  ? null
+                  : (v) =>
+                      ref.read(customersListProvider.notifier).setWard(v ?? ''),
+            ),
+          ],
         );
       },
     );
@@ -915,6 +1083,55 @@ class _CustomerExpandableCard extends StatelessWidget {
                         purchaseCount: customer.purchaseCount,
                         showPurchaseCount: true,
                       ),
+                      if (customer.locationLine.isNotEmpty ||
+                          customer.needsLocationFix) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 14,
+                              color: AppColors.mutedForeground,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                customer.locationLine.isNotEmpty
+                                    ? customer.locationLine
+                                    : '—',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AppColors.mutedForeground,
+                                ),
+                              ),
+                            ),
+                            if (customer.locationIssueLabel.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF7ED),
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: const Color(0xFFFDBA74),
+                                  ),
+                                ),
+                                child: Text(
+                                  customer.locationIssueLabel,
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: const Color(0xFFC2410C),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

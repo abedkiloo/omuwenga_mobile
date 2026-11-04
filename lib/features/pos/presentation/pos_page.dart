@@ -321,9 +321,12 @@ class _PosPageState extends ConsumerState<PosPage> {
         _showStockUnavailable(pick.variant.sku ?? pick.product.name);
         return;
       }
-      ref
-          .read(cartControllerProvider.notifier)
-          .addProduct(pick.product, variant: pick.variant, qty: pick.quantity);
+      ref.read(cartControllerProvider.notifier).addProduct(
+            pick.product,
+            variant: pick.variant,
+            qty: pick.quantity,
+            fromPicker: true,
+          );
       await _clearSearchAfterSelect();
     } else {
       final stock = product.stockQuantity;

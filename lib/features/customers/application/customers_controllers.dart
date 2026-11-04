@@ -40,6 +40,10 @@ class CustomersListState {
     this.query = '',
     this.engagementTier = EngagementTier.all,
     this.buyerSegment = BuyerSegment.any,
+    this.locationStatus = CustomerLocationStatus.any,
+    this.county = '',
+    this.subCounty = '',
+    this.ward = '',
     this.error,
   });
 
@@ -51,7 +55,17 @@ class CustomersListState {
   final String query;
   final EngagementTier engagementTier;
   final BuyerSegment buyerSegment;
+  final CustomerLocationStatus locationStatus;
+  final String county;
+  final String subCounty;
+  final String ward;
   final String? error;
+
+  bool get hasLocationFilter =>
+      locationStatus != CustomerLocationStatus.any ||
+      county.isNotEmpty ||
+      subCounty.isNotEmpty ||
+      ward.isNotEmpty;
 
   CustomersListState copyWith({
     List<CustomerSummary>? items,
@@ -62,6 +76,10 @@ class CustomersListState {
     String? query,
     EngagementTier? engagementTier,
     BuyerSegment? buyerSegment,
+    CustomerLocationStatus? locationStatus,
+    String? county,
+    String? subCounty,
+    String? ward,
     String? error,
     bool clearError = false,
   }) {
@@ -74,6 +92,10 @@ class CustomersListState {
       query: query ?? this.query,
       engagementTier: engagementTier ?? this.engagementTier,
       buyerSegment: buyerSegment ?? this.buyerSegment,
+      locationStatus: locationStatus ?? this.locationStatus,
+      county: county ?? this.county,
+      subCounty: subCounty ?? this.subCounty,
+      ward: ward ?? this.ward,
       error: clearError ? null : (error ?? this.error),
     );
   }
@@ -95,6 +117,10 @@ class CustomersListController extends StateNotifier<CustomersListState> {
       query: _paging.query,
       engagementTier: _paging.engagementTier,
       buyerSegment: _paging.buyerSegment,
+      locationStatus: _paging.locationStatus,
+      county: _paging.county,
+      subCounty: _paging.subCounty,
+      ward: _paging.ward,
       error: _paging.error,
     );
   }
@@ -103,12 +129,20 @@ class CustomersListController extends StateNotifier<CustomersListState> {
     String? search,
     EngagementTier? engagementTier,
     BuyerSegment? buyerSegment,
+    CustomerLocationStatus? locationStatus,
+    String? county,
+    String? subCounty,
+    String? ward,
   }) {
     return _paging.refresh(
       _api,
       search: search,
       engagementTier: engagementTier,
       buyerSegment: buyerSegment,
+      locationStatus: locationStatus,
+      county: county,
+      subCounty: subCounty,
+      ward: ward,
       onUpdate: _sync,
     );
   }
@@ -129,6 +163,52 @@ class CustomersListController extends StateNotifier<CustomersListState> {
     return _paging.refresh(
       _api,
       buyerSegment: segment,
+      onUpdate: _sync,
+    );
+  }
+
+  Future<void> setLocationStatus(CustomerLocationStatus status) {
+    return _paging.refresh(
+      _api,
+      locationStatus: status,
+      onUpdate: _sync,
+    );
+  }
+
+  Future<void> setCounty(String county) {
+    return _paging.refresh(
+      _api,
+      county: county,
+      subCounty: '',
+      ward: '',
+      onUpdate: _sync,
+    );
+  }
+
+  Future<void> setSubCounty(String subCounty) {
+    return _paging.refresh(
+      _api,
+      subCounty: subCounty,
+      ward: '',
+      onUpdate: _sync,
+    );
+  }
+
+  Future<void> setWard(String ward) {
+    return _paging.refresh(
+      _api,
+      ward: ward,
+      onUpdate: _sync,
+    );
+  }
+
+  Future<void> clearLocationFilters() {
+    return _paging.refresh(
+      _api,
+      locationStatus: CustomerLocationStatus.any,
+      county: '',
+      subCounty: '',
+      ward: '',
       onUpdate: _sync,
     );
   }

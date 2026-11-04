@@ -60,12 +60,19 @@ class CustomersApi {
   final ApiClient _client;
 
   /// Paginated customer directory. Backend default page size is 10.
+  ///
+  /// Location filters (`county` / `sub_county` / `ward` / `location_status`)
+  /// match the web Customers list and Kenya admin catalog.
   Future<Result<CustomerPage>> list({
     String search = '',
     int page = 1,
     int pageSize = 25,
     String engagementTier = '',
     String buyerSegment = '',
+    String county = '',
+    String subCounty = '',
+    String ward = '',
+    String locationStatus = '',
   }) async {
     final params = <String, String>{
       'page': '$page',
@@ -77,6 +84,14 @@ class CustomersApi {
     if (tier.isNotEmpty) params['engagement_tier'] = tier;
     final segment = buyerSegment.trim();
     if (segment.isNotEmpty) params['buyer_segment'] = segment;
+    final countyQ = county.trim();
+    if (countyQ.isNotEmpty) params['county'] = countyQ;
+    final subQ = subCounty.trim();
+    if (subQ.isNotEmpty) params['sub_county'] = subQ;
+    final wardQ = ward.trim();
+    if (wardQ.isNotEmpty) params['ward'] = wardQ;
+    final locStatus = locationStatus.trim();
+    if (locStatus.isNotEmpty) params['location_status'] = locStatus;
     final query = params.entries
         .map(
           (e) =>

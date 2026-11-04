@@ -24,13 +24,44 @@ final posSettingsProvider = FutureProvider<PosSettings>((ref) async {
 });
 
 class CartController extends StateNotifier<PosCart> {
-  CartController() : super(const PosCart());
+  CartController({DateTime Function()? now})
+      : _now = now ?? DateTime.now,
+        super(const PosCart());
 
+  final DateTime Function() _now;
+
+  /// Same-line explicit qty double-fire window (mirrors web POS 500ms guard).
+  static const Duration pickerDebounce = Duration(milliseconds: 500);
+
+  String? _lastPickerStamp;
+  DateTime? _lastPickerAt;
+
+  /// Adds [product] to the cart, merging quantity for the same line key.
+  ///
+  /// When [qty] is an explicit picker amount (not the default 1 from a simple
+  /// tap), a second identical add within [pickerDebounce] is ignored so
+  /// double-tap / double-fire cannot turn 1→2 or 3→6.
   void addProduct(
     CatalogProduct product, {
     ProductVariant? variant,
     double qty = 1,
+    bool fromPicker = false,
   }) {
+    final lineKey = variant == null
+        ? '${product.id}'
+        : '${product.id}-${variant.id}';
+    if (fromPicker || qty != 1) {
+      final stamp = '$lineKey:$qty';
+      final now = _now();
+      final lastAt = _lastPickerAt;
+      if (_lastPickerStamp == stamp &&
+          lastAt != null &&
+          now.difference(lastAt) < pickerDebounce) {
+        return;
+      }
+      _lastPickerStamp = stamp;
+      _lastPickerAt = now;
+    }
     state = state.addProduct(product, variant: variant, qty: qty);
   }
 
