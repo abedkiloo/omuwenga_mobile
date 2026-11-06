@@ -268,10 +268,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Stock unavailable'), findsNWidgets(2));
+    expect(find.byKey(const Key('pos_product_card_20')), findsOneWidget);
+    expect(find.byKey(const Key('pos_product_card_21')), findsOneWidget);
     expect(find.byKey(const Key('pos_cart_icon')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('pos_product_20')));
-    await tester.tap(find.byKey(const Key('pos_product_21')));
+    // Out-of-stock rows are not tappable; cart stays empty.
+    await tester.tap(find.byKey(const Key('pos_product_card_20')));
+    await tester.tap(find.byKey(const Key('pos_product_card_21')));
     await tester.pumpAndSettle();
 
     final payBtn = tester.widget<FilledButton>(

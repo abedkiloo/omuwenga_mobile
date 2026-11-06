@@ -254,6 +254,7 @@ String _noteMeta(DailyNote note) {
   final audience = noteAudienceLabel(note);
   final carry = carriedOverLabel(note.daysCarriedOver);
   final parts = <String>[
+    priorityLabel(note.priority),
     if (audience.isEmpty) note.kindLabel else '${note.kindLabel} · $audience',
     if (carry.isNotEmpty) carry,
   ];
@@ -526,6 +527,7 @@ class _NoteEditorSheet extends ConsumerStatefulWidget {
 class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
   late final TextEditingController _content;
   late final TextEditingController _title;
+  late String _priority;
   late bool _sticky;
   late bool _assignToRole;
   late bool _assignToAll;
@@ -538,6 +540,7 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
     final existing = widget.existing;
     _content = TextEditingController(text: existing?.content ?? '');
     _title = TextEditingController(text: existing?.title ?? '');
+    _priority = normalizePriority(existing?.priority);
     _sticky = existing?.isSticky ?? false;
     _assignToAll = widget.assignEveryone && existing == null;
     _assignToRole = !_assignToAll && (existing?.assignedRoleId != null);
@@ -586,6 +589,35 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
                 controller: _content,
                 maxLines: 4,
                 decoration: const InputDecoration(labelText: 'Note'),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Priority',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final entry in const [
+                    (kPriorityHigh, 'Highest', Icons.priority_high),
+                    (kPriorityMedium, 'Medium', Icons.radio_button_checked),
+                    (kPriorityLow, 'Less', Icons.arrow_downward),
+                  ])
+                    ChoiceChip(
+                      key: Key('daily_note_priority_${entry.$1}'),
+                      avatar: Icon(entry.$3, size: 16),
+                      label: Text(entry.$2),
+                      selected: _priority == entry.$1,
+                      selectedColor: entry.$1 == kPriorityHigh
+                          ? const Color(0xFFFFCDD2)
+                          : entry.$1 == kPriorityLow
+                              ? const Color(0xFFCFD8DC)
+                              : const Color(0xFFFFE0B2),
+                      onSelected: (_) => setState(() => _priority = entry.$1),
+                    ),
+                ],
               ),
               SwitchListTile(
                 key: const Key('daily_note_sticky'),
@@ -734,6 +766,7 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
                               id: widget.existing!.id,
                               content: _content.text,
                               title: _title.text,
+                              priority: _priority,
                               isSticky: _sticky,
                               assignedTo: _assignToRole ? null : _assignedTo,
                               assignedRole: _assignToRole
@@ -743,6 +776,7 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
                           : await notifier.createNote(
                               content: _content.text,
                               title: _title.text,
+                              priority: _priority,
                               isSticky: _sticky,
                               assignedTo: _assignToRole || _assignToAll
                                   ? null

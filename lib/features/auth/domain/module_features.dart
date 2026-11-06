@@ -87,4 +87,8 @@ class ModuleFeatures {
   bool get isDailySalesEnabled => isEnabled('sales', 'daily_sales');
   bool get isRetailPosEnabled => isEnabled('sales', 'pos');
   bool get isSalesHistoryEnabled => isEnabled('sales', 'sales_history');
+
+  /// Phone-camera barcode scan on native / web Retail POS.
+  bool get isCameraBarcodeScanEnabled =>
+      isEnabled('sales', 'camera_barcode_scan');
 }

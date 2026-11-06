@@ -1,11 +1,35 @@
 import 'approval_return.dart';
 
+const kPriorityHigh = 'high';
+const kPriorityMedium = 'medium';
+const kPriorityLow = 'low';
+
+String normalizePriority(dynamic value) {
+  final raw = (value ?? '').toString().trim().toLowerCase();
+  if (raw == kPriorityHigh || raw == kPriorityMedium || raw == kPriorityLow) {
+    return raw;
+  }
+  return kPriorityMedium;
+}
+
+String priorityLabel(String priority) {
+  switch (normalizePriority(priority)) {
+    case kPriorityHigh:
+      return 'Highest';
+    case kPriorityLow:
+      return 'Less';
+    default:
+      return 'Medium';
+  }
+}
+
 class DailyNote {
   const DailyNote({
     required this.id,
     required this.noteDate,
     this.title = '',
     required this.content,
+    this.priority = kPriorityMedium,
     this.isSticky = false,
     this.isDone = false,
     this.inProgress = false,
@@ -24,6 +48,7 @@ class DailyNote {
   final String noteDate;
   final String title;
   final String content;
+  final String priority;
   final bool isSticky;
   final bool isDone;
   final bool inProgress;
@@ -54,6 +79,7 @@ class DailyNote {
       noteDate: (json['note_date'] ?? '').toString(),
       title: (json['title'] ?? '').toString(),
       content: (json['content'] ?? '').toString(),
+      priority: normalizePriority(json['priority']),
       isSticky: json['is_sticky'] == true,
       isDone: json['is_done'] == true,
       inProgress: json['in_progress'] == true,
@@ -79,6 +105,7 @@ class DailyTaskItem {
     required this.taskDate,
     required this.title,
     this.description = '',
+    this.priority = kPriorityMedium,
     this.isDone = false,
     this.authorId,
     this.assignedToId,
@@ -90,6 +117,7 @@ class DailyTaskItem {
   final String taskDate;
   final String title;
   final String description;
+  final String priority;
   final bool isDone;
   final int? authorId;
   final int? assignedToId;
@@ -108,6 +136,7 @@ class DailyTaskItem {
       taskDate: (json['task_date'] ?? '').toString(),
       title: (json['title'] ?? '').toString(),
       description: (json['description'] ?? '').toString(),
+      priority: normalizePriority(json['priority']),
       isDone: json['is_done'] == true,
       authorId: (json['author'] as num?)?.toInt(),
       assignedToId: (json['assigned_to'] as num?)?.toInt(),
@@ -245,6 +274,7 @@ Map<String, dynamic> createNotePayload({
   required String noteDate,
   required String content,
   String title = '',
+  String priority = kPriorityMedium,
   bool isSticky = false,
   int? assignedTo,
   int? assignedRole,
@@ -255,6 +285,7 @@ Map<String, dynamic> createNotePayload({
     'note_date': noteDate,
     'title': title.trim(),
     'content': content.trim(),
+    'priority': normalizePriority(priority),
     'is_sticky': isSticky,
     if (assignedTo != null) 'assigned_to': assignedTo,
     if (assignedRole != null) 'assigned_role': assignedRole,

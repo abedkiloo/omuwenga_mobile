@@ -8,6 +8,7 @@ void main() {
     test('defaults daily sales on when payload is empty', () {
       expect(ModuleFeatures.empty.isDailySalesEnabled, isTrue);
       expect(ModuleFeatures.empty.isRetailPosEnabled, isTrue);
+      expect(ModuleFeatures.empty.isCameraBarcodeScanEnabled, isTrue);
     });
 
     test('reads enabled_modules feature rows', () {
@@ -17,16 +18,25 @@ void main() {
           'features': {
             'daily_sales': {'feature_key': 'daily_sales', 'is_enabled': false},
             'pos': {'is_enabled': true},
+            'camera_barcode_scan': {'is_enabled': false},
+            'sales_history': true,
           },
         },
         'registry': {
           'feature_defaults': {
-            'sales': {'daily_sales': true, 'pos': true},
+            'sales': {
+              'daily_sales': true,
+              'pos': true,
+              'camera_barcode_scan': true,
+              'sales_history': true,
+            },
           },
         },
       });
       expect(features.isDailySalesEnabled, isFalse);
       expect(features.isRetailPosEnabled, isTrue);
+      expect(features.isCameraBarcodeScanEnabled, isFalse);
+      expect(features.isSalesHistoryEnabled, isTrue);
     });
 
     test('disabled module turns all features off', () {

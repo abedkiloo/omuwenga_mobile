@@ -10,14 +10,17 @@ import '../../customers/presentation/customer_picker_sheet.dart';
 import '../../payments/presentation/stk_wait_page.dart';
 import '../../payments/domain/mpesa_capture.dart';
 import '../../payments/presentation/mpesa_capture.dart';
+import '../application/barcode_scan_lookup.dart';
 import '../application/pos_controllers.dart';
 import '../application/product_catalog_paging.dart';
 import '../data/pos_api.dart';
+import '../domain/barcode_scan.dart';
 import '../domain/cart.dart';
 import '../domain/payment.dart';
 import '../../sales_history/application/sales_history_controllers.dart';
 import '../../../core/validation/field_types.dart';
 import '../domain/pos_commit.dart';
+import 'barcode_scanner_page.dart';
 import 'receipt_layout.dart';
 import 'receipt_page.dart';
 import 'pos_cart_sheet.dart';
@@ -42,6 +45,8 @@ class _PosPageState extends ConsumerState<PosPage> {
   final _catalog = ProductCatalogPaging();
   List<ProductCategory> _categories = const [];
   bool _chromeCollapsed = false;
+  ScanStamp? _lastScan;
+  bool _scanBusy = false;
 
   @override
   void initState() {
@@ -339,6 +344,76 @@ class _PosPageState extends ConsumerState<PosPage> {
     }
   }
 
+  /// Exact barcode/SKU add from camera or Bluetooth HID (search Enter).
+  Future<bool> _addByScanCode(String rawCode) async {
+    final code = normalizeScanCode(rawCode);
+    if (code.isEmpty || _scanBusy) return false;
+    if (isDuplicateScan(_lastScan, code)) return false;
+    _lastScan = ScanStamp(code: code, at: DateTime.now());
+    setState(() => _scanBusy = true);
+    try {
+      final pick = await lookupScanProductWithApi(
+        ref.read(posApiProvider),
+        code,
+      );
+      if (!mounted) return false;
+      if (pick.product == null) {
+        final message = switch (pick.reason) {
+          ScanPickReason.ambiguous =>
+            'Several products share that code — pick from the list.',
+          ScanPickReason.empty => 'Enter a barcode to scan.',
+          _ => 'No product for "$code". Check the barcode or add it in Products.',
+        };
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+        if (pick.reason == ScanPickReason.ambiguous) {
+          _search.text = code;
+          await _loadCatalog(code);
+        }
+        return false;
+      }
+      await _selectProduct(pick.product!);
+      if (!mounted) return true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${pick.product!.name} added')),
+      );
+      return true;
+    } finally {
+      if (mounted) setState(() => _scanBusy = false);
+    }
+  }
+
+  Future<void> _onSearchSubmitted(String raw) async {
+    if (looksLikeScanCode(raw)) {
+      await _addByScanCode(raw);
+      return;
+    }
+    await _loadCatalog(raw);
+  }
+
+  Future<void> _onScanButtonTap() async {
+    final features =
+        ref.read(authControllerProvider).session?.features;
+    final cameraOn = features?.isCameraBarcodeScanEnabled ?? true;
+    if (!cameraOn) {
+      _searchFocus.requestFocus();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Camera scan is off for this store. Focus search and use a Bluetooth gun, or type a SKU.',
+          ),
+        ),
+      );
+      return;
+    }
+    final code = await openBarcodeScanner(context);
+    if (!mounted || code == null || code.isEmpty) return;
+    await _addByScanCode(code);
+    if (mounted) _searchFocus.requestFocus();
+  }
+
   void _showStockUnavailable(String product) {
     ScaffoldMessenger.of(
       context,
@@ -588,9 +663,17 @@ class _PosPageState extends ConsumerState<PosPage> {
                         child: _PosSearchRow(
                           controller: _search,
                           focusNode: _searchFocus,
-                          onSubmitted: _loadCatalog,
+                          onSubmitted: _onSearchSubmitted,
                           onSearchTap:
-                              _catalog.loading ? null : () => _loadCatalog(),
+                              _catalog.loading || _scanBusy
+                                  ? null
+                                  : _onScanButtonTap,
+                          cameraScanEnabled: ref
+                                  .watch(authControllerProvider)
+                                  .session
+                                  ?.features
+                                  .isCameraBarcodeScanEnabled ??
+                              true,
                         ),
                       ),
                       if (_topCategories.isNotEmpty)
@@ -1003,12 +1086,14 @@ class _PosSearchRow extends StatelessWidget {
     required this.focusNode,
     required this.onSubmitted,
     required this.onSearchTap,
+    this.cameraScanEnabled = true,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onSubmitted;
   final VoidCallback? onSearchTap;
+  final bool cameraScanEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -1021,7 +1106,9 @@ class _PosSearchRow extends StatelessWidget {
             focusNode: focusNode,
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
-              hintText: 'Search SKU, Brand or Scan…',
+              hintText: cameraScanEnabled
+                  ? 'Search SKU or scan… (camera / Bluetooth gun)'
+                  : 'Search SKU or scan with Bluetooth gun…',
               prefixIcon: const Icon(
                 Icons.search,
                 color: AppColors.mutedForeground,
@@ -1042,16 +1129,23 @@ class _PosSearchRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Material(
-          color: AppColors.accentSoft,
+          color: cameraScanEnabled
+              ? AppColors.accentSoft
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(AppColors.radius),
           child: InkWell(
             key: const Key('pos_search_button'),
             onTap: onSearchTap,
             borderRadius: BorderRadius.circular(AppColors.radius),
-            child: const SizedBox(
+            child: SizedBox(
               width: 48,
               height: 48,
-              child: Icon(Icons.qr_code_scanner, color: AppColors.primary),
+              child: Icon(
+                Icons.qr_code_scanner,
+                color: cameraScanEnabled
+                    ? AppColors.primary
+                    : AppColors.mutedForeground,
+              ),
             ),
           ),
         ),
