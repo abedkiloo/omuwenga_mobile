@@ -213,6 +213,8 @@ void main() {
         final body = jsonDecode(request.body) as Map;
         expect(body['amount'], 40);
         expect(body['payment_method'], 'cash');
+        expect(body['payer_name'], 'Ann');
+        expect(body['payer_phone'], '0712345678');
         return http.Response(
           jsonEncode({
             'wallet_balance': '-60.00',
@@ -226,11 +228,43 @@ void main() {
       customerId: 3,
       amount: 40,
       paymentMethod: 'cash',
+      payerName: 'Ann',
+      payerPhone: '0712345678',
       idempotencyKey: 'idem-1',
     );
     expect(result.getOrThrow().walletBalance, -60);
     expect(result.getOrThrow().transactionId, 12);
     expect(result.getOrThrow().pendingApproval, isFalse);
+  });
+
+  test('receive wallet payment sends till destination with mpesa code', () async {
+    final api = apiWith(
+      MockClient((request) async {
+        final body = jsonDecode(request.body) as Map;
+        expect(body['payment_method'], 'mpesa');
+        expect(body['reference'], 'QHX7K2L9M1');
+        expect(body['mpesa_destination'], 'till');
+        expect(body['payer_name'], 'Mary');
+        return http.Response(
+          jsonEncode({
+            'wallet_balance': '-20.00',
+            'transaction': {'id': 44},
+          }),
+          200,
+        );
+      }),
+    );
+    final result = await api.receiveWalletPayment(
+      customerId: 3,
+      amount: 80,
+      paymentMethod: 'mpesa',
+      reference: 'QHX7K2L9M1',
+      payerName: 'Mary',
+      payerPhone: '0700111222',
+      mpesaDestination: 'till',
+      idempotencyKey: 'idem-till',
+    );
+    expect(result.getOrThrow().transactionId, 44);
   });
 
   test('receiveWalletPayment maps queued 202 as pending approval', () async {

@@ -103,6 +103,53 @@ class ApiClient {
     bool auth = true,
     String? idempotencyKey,
   }) {
+    return _multipart(
+      path,
+      method: 'POST',
+      fields: fields,
+      fileField: fileField,
+      fileBytes: fileBytes,
+      fileName: fileName,
+      contentType: contentType,
+      auth: auth,
+      idempotencyKey: idempotencyKey,
+    );
+  }
+
+  Future<Result<http.Response>> putMultipart(
+    String path, {
+    required Map<String, String> fields,
+    required String fileField,
+    required List<int> fileBytes,
+    required String fileName,
+    String contentType = 'application/octet-stream',
+    bool auth = true,
+    String? idempotencyKey,
+  }) {
+    return _multipart(
+      path,
+      method: 'PUT',
+      fields: fields,
+      fileField: fileField,
+      fileBytes: fileBytes,
+      fileName: fileName,
+      contentType: contentType,
+      auth: auth,
+      idempotencyKey: idempotencyKey,
+    );
+  }
+
+  Future<Result<http.Response>> _multipart(
+    String path, {
+    required String method,
+    required Map<String, String> fields,
+    required String fileField,
+    required List<int> fileBytes,
+    required String fileName,
+    String contentType = 'application/octet-stream',
+    bool auth = true,
+    String? idempotencyKey,
+  }) {
     return _send(() async {
       final headers = await _headers(
         json: false,
@@ -111,7 +158,7 @@ class ApiClient {
       if (!auth) {
         headers.remove('Authorization');
       }
-      final request = http.MultipartRequest('POST', resolve(path));
+      final request = http.MultipartRequest(method, resolve(path));
       request.headers.addAll(headers);
       request.fields.addAll(fields);
       request.files.add(

@@ -66,6 +66,7 @@ class Expense {
     this.receiptNumber = '',
     this.expenseDate = '',
     this.notes = '',
+    this.imageUrl,
     this.createdById,
     this.createdByName,
     this.approvedById,
@@ -86,12 +87,15 @@ class Expense {
   final String receiptNumber;
   final String expenseDate;
   final String notes;
+  final String? imageUrl;
   final int? createdById;
   final String? createdByName;
   final int? approvedById;
   final String? approvedByName;
   final String? createdAt;
   final String? updatedAt;
+
+  bool get hasImage => (imageUrl ?? '').trim().isNotEmpty;
 
   bool get isPending => status == 'pending';
   bool get isRejected => status == 'rejected';
@@ -123,6 +127,7 @@ class Expense {
       receiptNumber: (json['receipt_number'] ?? '').toString(),
       expenseDate: (json['expense_date'] ?? '').toString(),
       notes: (json['notes'] ?? '').toString(),
+      imageUrl: json['image_url']?.toString(),
       createdById: _asInt(json['created_by']),
       createdByName: json['created_by_name']?.toString(),
       approvedById: _asInt(json['approved_by']),
@@ -147,6 +152,15 @@ class Expense {
       body['proposal_reason'] = proposalReason.trim();
     }
     return body;
+  }
+
+  /// String fields for multipart create/update (optional image attached separately).
+  Map<String, String> toMultipartFields({String? proposalReason}) {
+    final body = toWriteBody(proposalReason: proposalReason);
+    return {
+      for (final e in body.entries)
+        if (e.value != null) e.key: e.value.toString(),
+    };
   }
 }
 

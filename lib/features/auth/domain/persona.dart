@@ -117,6 +117,14 @@ String? _roleDisplay(Map<String, dynamic> json) {
   return display;
 }
 
+/// True when the signed-in job is Field Sales (API scopes customers to ones they onboarded).
+bool isFieldSalesProfile(UserProfileSnapshot profile) {
+  final display = (profile.roleDisplay ?? '').trim().toLowerCase();
+  if (display == 'field sales' || display == 'field agent') return true;
+  final legacy = profile.role.trim().toLowerCase();
+  return legacy == 'field_sales' || legacy == 'field_agent';
+}
+
 const _deliveryHistoryRoles = {
   'Super Admin',
   'Manager',

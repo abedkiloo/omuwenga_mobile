@@ -91,4 +91,8 @@ class ModuleFeatures {
   /// Phone-camera barcode scan on native / web Retail POS.
   bool get isCameraBarcodeScanEnabled =>
       isEnabled('sales', 'camera_barcode_scan');
+
+  /// Require who paid + till/bank on debt collections.
+  bool get isCollectionPayerDetailsEnabled =>
+      isEnabled('customers', 'collection_payer_details');
 }

@@ -6,6 +6,7 @@ import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../auth/domain/persona.dart';
 import '../application/customers_controllers.dart';
 import '../application/debt_management_controller.dart';
 import '../domain/customer.dart';
@@ -194,6 +195,9 @@ class _DebtManagementPageState extends ConsumerState<DebtManagementPage> {
       );
     }
     if (state.debtors.isEmpty && !state.showCollections) {
+      final profile = ref.read(authControllerProvider).session?.profile;
+      final fieldSalesOnly =
+          profile != null && isFieldSalesProfile(profile);
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
@@ -203,7 +207,9 @@ class _DebtManagementPageState extends ConsumerState<DebtManagementPage> {
               title: 'No customers with debt',
               message: state.search.isNotEmpty || state.agingBucket.isNotEmpty
                   ? 'Try clearing search or age filters.'
-                  : 'When sales are put on account, debtors will appear here.',
+                  : (fieldSalesOnly
+                      ? 'Only debt for dukas you registered appears here.'
+                      : 'When sales are put on account, debtors will appear here.'),
               primaryLabel: 'Refresh',
               onPrimary: () =>
                   ref.read(debtManagementControllerProvider.notifier).load(),

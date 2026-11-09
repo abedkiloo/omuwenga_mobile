@@ -240,6 +240,9 @@ class CustomersApi {
     required String paymentMethod,
     String reference = '',
     String notes = '',
+    String payerName = '',
+    String payerPhone = '',
+    String mpesaDestination = '',
     required String idempotencyKey,
   }) async {
     final response = await _client.post(
@@ -249,6 +252,10 @@ class CustomersApi {
         'payment_method': paymentMethod,
         if (reference.trim().isNotEmpty) 'reference': reference.trim(),
         if (notes.trim().isNotEmpty) 'notes': notes.trim(),
+        if (payerName.trim().isNotEmpty) 'payer_name': payerName.trim(),
+        if (payerPhone.trim().isNotEmpty) 'payer_phone': payerPhone.trim(),
+        if (mpesaDestination.trim().isNotEmpty)
+          'mpesa_destination': mpesaDestination.trim(),
       },
       idempotencyKey: idempotencyKey,
     );

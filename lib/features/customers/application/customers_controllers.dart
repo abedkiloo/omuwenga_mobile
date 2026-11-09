@@ -279,6 +279,9 @@ class CustomerDetailController extends StateNotifier<CustomerDetailState> {
     required String paymentMethod,
     String reference = '',
     String notes = '',
+    String payerName = '',
+    String payerPhone = '',
+    String mpesaDestination = '',
   }) async {
     final detail = state.detail;
     if (detail == null) return false;
@@ -293,6 +296,9 @@ class CustomerDetailController extends StateNotifier<CustomerDetailState> {
       paymentMethod: paymentMethod,
       reference: reference,
       notes: notes,
+      payerName: payerName,
+      payerPhone: payerPhone,
+      mpesaDestination: mpesaDestination,
       idempotencyKey: _ids.next(),
     );
     if (result.isFailure) {

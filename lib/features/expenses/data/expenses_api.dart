@@ -32,16 +32,61 @@ class ExpensesApi {
     return _getOne('expenses/$id/', Expense.fromJson);
   }
 
-  Future<Result<Expense>> create(Map<String, dynamic> body) {
-    return _sendMap('expenses/', body, Expense.fromJson, 'Could not save expense');
+  Future<Result<Expense>> create(
+    Map<String, dynamic> body, {
+    List<int>? imageBytes,
+    String imageFileName = 'expense.jpg',
+    String imageContentType = 'image/jpeg',
+  }) {
+    if (imageBytes == null || imageBytes.isEmpty) {
+      return _sendMap(
+        'expenses/',
+        body,
+        Expense.fromJson,
+        'Could not save expense',
+      );
+    }
+    return _sendMultipart(
+      'expenses/',
+      fields: {
+        for (final e in body.entries)
+          if (e.value != null) e.key: e.value.toString(),
+      },
+      fileBytes: imageBytes,
+      fileName: imageFileName,
+      contentType: imageContentType,
+      parse: Expense.fromJson,
+      label: 'Could not save expense',
+    );
   }
 
-  Future<Result<Expense>> update(int id, Map<String, dynamic> body) {
-    return _sendMap(
+  Future<Result<Expense>> update(
+    int id,
+    Map<String, dynamic> body, {
+    List<int>? imageBytes,
+    String imageFileName = 'expense.jpg',
+    String imageContentType = 'image/jpeg',
+  }) {
+    if (imageBytes == null || imageBytes.isEmpty) {
+      return _sendMap(
+        'expenses/$id/',
+        body,
+        Expense.fromJson,
+        'Could not update expense',
+        put: true,
+      );
+    }
+    return _sendMultipart(
       'expenses/$id/',
-      body,
-      Expense.fromJson,
-      'Could not update expense',
+      fields: {
+        for (final e in body.entries)
+          if (e.value != null) e.key: e.value.toString(),
+      },
+      fileBytes: imageBytes,
+      fileName: imageFileName,
+      contentType: imageContentType,
+      parse: Expense.fromJson,
+      label: 'Could not update expense',
       put: true,
     );
   }
@@ -184,6 +229,49 @@ class ExpensesApi {
     final res = put
         ? await _client.put(path, body: body)
         : await _client.post(path, body: body);
+    if (res.isFailure) return Failure((res as Failure).error);
+    final response = res.getOrThrow();
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return Failure(ExpensesApiException(_errorMessage(response.body, label)));
+    }
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        return Failure(ExpensesApiException(label));
+      }
+      return Success(parse(Map<String, dynamic>.from(decoded)));
+    } on Object catch (e, st) {
+      return Failure(e, st);
+    }
+  }
+
+  Future<Result<T>> _sendMultipart<T>(
+    String path, {
+    required Map<String, String> fields,
+    required List<int> fileBytes,
+    required String fileName,
+    required String contentType,
+    required T Function(Map<String, dynamic>) parse,
+    required String label,
+    bool put = false,
+  }) async {
+    final res = put
+        ? await _client.putMultipart(
+            path,
+            fields: fields,
+            fileField: 'image',
+            fileBytes: fileBytes,
+            fileName: fileName,
+            contentType: contentType,
+          )
+        : await _client.postMultipart(
+            path,
+            fields: fields,
+            fileField: 'image',
+            fileBytes: fileBytes,
+            fileName: fileName,
+            contentType: contentType,
+          );
     if (res.isFailure) return Failure((res as Failure).error);
     final response = res.getOrThrow();
     if (response.statusCode < 200 || response.statusCode >= 300) {

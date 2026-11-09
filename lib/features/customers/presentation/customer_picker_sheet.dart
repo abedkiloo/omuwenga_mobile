@@ -10,6 +10,7 @@ import '../../../design_system/chrome/cb_bounded_sheet.dart';
 import '../../../design_system/chrome/cb_sticky_action_bar.dart';
 import '../../../design_system/chrome/cb_surface_card.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../auth/domain/persona.dart';
 import '../../pos/application/pos_controllers.dart';
 import '../application/customer_list_paging.dart';
 import '../application/customers_controllers.dart';
@@ -160,7 +161,9 @@ class _CustomerPickerSheetState extends ConsumerState<CustomerPickerSheet> {
           Text('Select duka', style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
-            'Search existing dukas or register a new one.',
+            auth.session != null && isFieldSalesProfile(auth.session!.profile)
+                ? 'Only dukas you registered. Search yours or register a new one.'
+                : 'Search existing dukas or register a new one.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: AppColors.mutedForeground,
             ),

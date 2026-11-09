@@ -106,6 +106,9 @@ class ExpensesController extends StateNotifier<ExpensesState> {
     required Expense draft,
     int? existingId,
     String? proposalReason,
+    List<int>? imageBytes,
+    String imageFileName = 'expense.jpg',
+    String imageContentType = 'image/jpeg',
   }) async {
     if (draft.description.trim().isEmpty) {
       return 'Enter a description, e.g. Shop rent for September';
@@ -123,8 +126,19 @@ class ExpensesController extends StateNotifier<ExpensesState> {
     state = state.copyWith(saving: true, clearError: true);
     final body = draft.toWriteBody(proposalReason: proposalReason);
     final result = existingId == null
-        ? await _api.create(body)
-        : await _api.update(existingId, body);
+        ? await _api.create(
+            body,
+            imageBytes: imageBytes,
+            imageFileName: imageFileName,
+            imageContentType: imageContentType,
+          )
+        : await _api.update(
+            existingId,
+            body,
+            imageBytes: imageBytes,
+            imageFileName: imageFileName,
+            imageContentType: imageContentType,
+          );
     state = state.copyWith(saving: false);
     if (result.isFailure) {
       return result.when(

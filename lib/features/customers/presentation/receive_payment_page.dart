@@ -28,8 +28,11 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
   late final TextEditingController _amount;
   late final TextEditingController _reference;
   late final TextEditingController _phone;
+  late final TextEditingController _payerName;
+  late final TextEditingController _payerPhone;
   PosPaymentMethod _method = PosPaymentMethod.cash;
   MpesaCaptureMode _mpesaCapture = MpesaCaptureMode.code;
+  String _mpesaDestination = '';
   bool _initialized = false;
   bool _attempted = false;
 
@@ -39,6 +42,8 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     _amount = TextEditingController();
     _reference = TextEditingController();
     _phone = TextEditingController();
+    _payerName = TextEditingController();
+    _payerPhone = TextEditingController();
   }
 
   @override
@@ -46,10 +51,12 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     _amount.dispose();
     _reference.dispose();
     _phone.dispose();
+    _payerName.dispose();
+    _payerPhone.dispose();
     super.dispose();
   }
 
-  void _seedAmount(double debt, {String? phone}) {
+  void _seedAmount(double debt, {String? phone, String? name}) {
     if (_initialized) return;
     _initialized = true;
     if (debt > 0) {
@@ -57,6 +64,10 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     }
     if (phone != null && phone.trim().isNotEmpty) {
       _phone.text = phone;
+      _payerPhone.text = phone;
+    }
+    if (name != null && name.trim().isNotEmpty) {
+      _payerName.text = name;
     }
   }
 
@@ -65,10 +76,46 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     return paymentAmountValidationMessage(_amount.text);
   }
 
+  bool get _requirePayer {
+    final features = ref.read(authControllerProvider).session?.features;
+    return features?.isCollectionPayerDetailsEnabled ?? true;
+  }
+
+  bool get _needsDestinationBeforeCode =>
+      _requirePayer &&
+      _method == PosPaymentMethod.mpesa &&
+      !isLiveMpesaPrompt(_mpesaCapture);
+
+  bool get _codeUnlocked =>
+      !_needsDestinationBeforeCode || _mpesaDestination.isNotEmpty;
+
+  String? get _payerNameError {
+    if (!_requirePayer || (!_attempted && _payerName.text.trim().isEmpty)) {
+      return null;
+    }
+    if (_payerName.text.trim().isEmpty) return 'Enter the name of who paid.';
+    return null;
+  }
+
+  String? get _payerPhoneError {
+    if (!_requirePayer || (!_attempted && _payerPhone.text.trim().isEmpty)) {
+      return null;
+    }
+    final digits = _payerPhone.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return 'Enter the phone number of who paid.';
+    if (digits.length < 9) {
+      return 'Enter a valid phone number (at least 9 digits).';
+    }
+    return null;
+  }
+
   Future<void> _confirm() async {
     setState(() => _attempted = true);
     final amountError = paymentAmountValidationMessage(_amount.text);
     if (amountError != null) return;
+    if (_requirePayer) {
+      if (_payerNameError != null || _payerPhoneError != null) return;
+    }
     final amount = parsePaymentAmount(_amount.text)!;
 
     var reference = _reference.text;
@@ -77,6 +124,9 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
         final phoneErr = phoneValidationMessage(_phone.text, required: true);
         if (phoneErr != null) return;
       } else {
+        if (_needsDestinationBeforeCode && _mpesaDestination.isEmpty) {
+          return;
+        }
         if (mpesaReceiptValidationMessage(reference) != null) return;
         reference = normalizeMpesaReceipt(reference);
       }
@@ -100,6 +150,15 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
         CommitSummaryRow(label: 'Customer', value: detail.name),
         CommitSummaryRow(label: 'Amount', value: formatKes(amount), emphasis: true),
         CommitSummaryRow(label: 'Method', value: _method.label),
+        if (_requirePayer && _payerName.text.trim().isNotEmpty)
+          CommitSummaryRow(label: 'Paid by', value: _payerName.text.trim()),
+        if (_requirePayer && _payerPhone.text.trim().isNotEmpty)
+          CommitSummaryRow(label: 'Payer phone', value: _payerPhone.text.trim()),
+        if (_mpesaDestination.isNotEmpty)
+          CommitSummaryRow(
+            label: 'M-Pesa via',
+            value: _mpesaDestination == 'bank' ? 'Bank' : 'Till',
+          ),
         if (_method == PosPaymentMethod.mpesa &&
             isLiveMpesaPrompt(_mpesaCapture))
           CommitSummaryRow(label: 'Phone', value: _phone.text.trim())
@@ -145,6 +204,11 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
           amount: amount,
           paymentMethod: _method.apiValue,
           reference: reference,
+          payerName: _requirePayer ? _payerName.text.trim() : '',
+          payerPhone: _requirePayer ? _payerPhone.text.trim() : '',
+          mpesaDestination: _requirePayer && _method == PosPaymentMethod.mpesa
+              ? _mpesaDestination
+              : '',
         );
     if (!mounted) return;
     if (ok) {
@@ -180,8 +244,9 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     final state = ref.watch(customerDetailProvider(widget.customerId));
     final detail = state.detail;
     if (detail != null) {
-      _seedAmount(detail.debtAmount, phone: detail.phone);
+      _seedAmount(detail.debtAmount, phone: detail.phone, name: detail.name);
     }
+    final requirePayer = _requirePayer;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Collect payment')),
@@ -240,6 +305,34 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
+                if (requirePayer) ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    key: const Key('settle_payer_name'),
+                    controller: _payerName,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(
+                      labelText: 'Who paid *',
+                      hintText: 'Name of the person who paid',
+                      errorText: _payerNameError,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    key: const Key('settle_payer_phone'),
+                    controller: _payerPhone,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: 'Payer phone *',
+                      hintText: '07… or +254…',
+                      errorText: _payerPhoneError,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Text('Method', style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 8),
@@ -258,28 +351,70 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                           _method = m;
                           if (m != PosPaymentMethod.mpesa) {
                             _mpesaCapture = MpesaCaptureMode.code;
+                            _mpesaDestination = '';
                           }
                         }),
                       ),
                   ],
                 ),
                 if (_method == PosPaymentMethod.mpesa) ...[
-                  const SizedBox(height: 16),
-                  MpesaCapture(
-                    mode: _mpesaCapture,
-                    onModeChanged: (next) => setState(() {
-                      _mpesaCapture = next;
-                      _attempted = false;
-                    }),
-                    phoneController: _phone,
-                    codeController: _reference,
-                    phoneFieldKey: const Key('settle_mpesa_phone'),
-                    codeFieldKey: const Key('settle_reference'),
-                    promptKey: const Key('settle_mpesa_capture_prompt'),
-                    codeModeKey: const Key('settle_mpesa_capture_code'),
-                    showErrors: _attempted,
-                    onChanged: () => setState(() {}),
-                  ),
+                  if (_needsDestinationBeforeCode) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      'Did the payment come via till or bank?',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        ChoiceChip(
+                          key: const Key('settle_mpesa_via_till'),
+                          label: const Text('Till'),
+                          selected: _mpesaDestination == 'till',
+                          onSelected: (_) => setState(() {
+                            _mpesaDestination = 'till';
+                          }),
+                        ),
+                        ChoiceChip(
+                          key: const Key('settle_mpesa_via_bank'),
+                          label: const Text('Bank'),
+                          selected: _mpesaDestination == 'bank',
+                          onSelected: (_) => setState(() {
+                            _mpesaDestination = 'bank';
+                          }),
+                        ),
+                      ],
+                    ),
+                    if (_attempted && _mpesaDestination.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Choose till or bank before entering the code.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                  ],
+                  if (_codeUnlocked) ...[
+                    const SizedBox(height: 16),
+                    MpesaCapture(
+                      mode: _mpesaCapture,
+                      onModeChanged: (next) => setState(() {
+                        _mpesaCapture = next;
+                        _attempted = false;
+                      }),
+                      phoneController: _phone,
+                      codeController: _reference,
+                      phoneFieldKey: const Key('settle_mpesa_phone'),
+                      codeFieldKey: const Key('settle_reference'),
+                      promptKey: const Key('settle_mpesa_capture_prompt'),
+                      codeModeKey: const Key('settle_mpesa_capture_code'),
+                      showErrors: _attempted,
+                      onChanged: () => setState(() {}),
+                    ),
+                  ],
                 ],
                 const SizedBox(height: 16),
                 CbPrimaryButton(

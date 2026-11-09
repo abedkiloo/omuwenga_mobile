@@ -107,6 +107,8 @@ class DailyNotesController extends StateNotifier<DailyNotesState> {
     int? assignedTo,
     int? assignedRole,
     bool assignToAll = false,
+    List<int>? imageBytes,
+    String imageFileName = 'note.jpg',
   }) async {
     if (content.trim().isEmpty) {
       state = state.copyWith(error: 'Write the note before saving');
@@ -124,6 +126,8 @@ class DailyNotesController extends StateNotifier<DailyNotesState> {
         assignedRole: assignedRole,
         assignToAll: assignToAll,
       ),
+      imageBytes: imageBytes,
+      imageFileName: imageFileName,
     );
     if (result.isFailure) {
       state = state.copyWith(
@@ -145,6 +149,8 @@ class DailyNotesController extends StateNotifier<DailyNotesState> {
     bool isSticky = false,
     int? assignedTo,
     int? assignedRole,
+    List<int>? imageBytes,
+    String imageFileName = 'note.jpg',
   }) async {
     if (content.trim().isEmpty) {
       state = state.copyWith(error: 'Write the note before saving');
@@ -162,6 +168,8 @@ class DailyNotesController extends StateNotifier<DailyNotesState> {
         assignedTo: assignedTo,
         assignedRole: assignedRole,
       ),
+      imageBytes: imageBytes,
+      imageFileName: imageFileName,
     );
     if (result.isFailure) {
       state = state.copyWith(

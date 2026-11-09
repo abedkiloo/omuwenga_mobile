@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/chrome/cb_bounded_sheet.dart';
@@ -298,6 +301,28 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                     notes: expense.notes.trim(),
                     onOpen: () => _showNotes(context, expense.notes.trim()),
                   ),
+                if (expense.hasImage &&
+                    (expense.imageUrl ?? '').trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Expense image',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      expense.imageUrl!,
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Text('Could not load expense image'),
+                      ),
+                    ),
+                  ),
+                ],
                 if (expense.createdByName != null)
                   _fact('Requested by', expense.createdByName!),
               ],
@@ -624,6 +649,8 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
   String _expenseDate = _todayIso();
   bool _showNewCategory = false;
   String? _error;
+  Uint8List? _imageBytes;
+  String? _imageName;
 
   @override
   void initState() {
@@ -676,6 +703,22 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
     });
   }
 
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 2000,
+    );
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _imageBytes = bytes;
+      _imageName = file.name;
+    });
+  }
+
   Future<void> _submit() async {
     final amount = double.tryParse(_amount.text.trim()) ?? 0;
     final draft = Expense(
@@ -695,6 +738,8 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
           draft: draft,
           existingId: widget.expense?.id,
           proposalReason: _reason.text,
+          imageBytes: _imageBytes,
+          imageFileName: _imageName ?? 'expense.jpg',
         );
     if (!mounted) return;
     if (err != null) {
@@ -908,6 +953,48 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
                     border: OutlineInputBorder(),
                   ),
                 ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Expense image (optional)'),
+                  subtitle: Text(
+                    _imageBytes != null
+                        ? (_imageName ?? 'Image selected')
+                        : (widget.expense?.hasImage == true
+                            ? 'Existing image kept — tap to replace'
+                            : 'Add a photo of the receipt or proof'),
+                  ),
+                  trailing: Icon(
+                    _imageBytes != null || widget.expense?.hasImage == true
+                        ? Icons.image_outlined
+                        : Icons.add_photo_alternate_outlined,
+                  ),
+                  onTap: () {
+                    FocusScope.of(context).unfocus();
+                    _pickImage();
+                  },
+                ),
+                if (_imageBytes != null) ...[
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      _imageBytes!,
+                      height: 140,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () => setState(() {
+                        _imageBytes = null;
+                        _imageName = null;
+                      }),
+                      child: const Text('Remove selected image'),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: _notes,

@@ -41,16 +41,61 @@ class DailyNotesApi {
     return _getList('daily-notes/notes/roles/', DailyRoleOption.fromJson);
   }
 
-  Future<Result<DailyNote>> createNote(Map<String, dynamic> body) {
-    return _sendMap('daily-notes/notes/', body, DailyNote.fromJson, 'Save note failed');
+  Future<Result<DailyNote>> createNote(
+    Map<String, dynamic> body, {
+    List<int>? imageBytes,
+    String imageFileName = 'note.jpg',
+    String imageContentType = 'image/jpeg',
+  }) {
+    if (imageBytes == null || imageBytes.isEmpty) {
+      return _sendMap(
+        'daily-notes/notes/',
+        body,
+        DailyNote.fromJson,
+        'Save note failed',
+      );
+    }
+    return _sendMultipart(
+      'daily-notes/notes/',
+      fields: {
+        for (final e in body.entries)
+          if (e.value != null) e.key: e.value.toString(),
+      },
+      fileBytes: imageBytes,
+      fileName: imageFileName,
+      contentType: imageContentType,
+      parse: DailyNote.fromJson,
+      label: 'Save note failed',
+    );
   }
 
-  Future<Result<DailyNote>> updateNote(int id, Map<String, dynamic> body) {
-    return _sendMap(
+  Future<Result<DailyNote>> updateNote(
+    int id,
+    Map<String, dynamic> body, {
+    List<int>? imageBytes,
+    String imageFileName = 'note.jpg',
+    String imageContentType = 'image/jpeg',
+  }) {
+    if (imageBytes == null || imageBytes.isEmpty) {
+      return _sendMap(
+        'daily-notes/notes/$id/',
+        body,
+        DailyNote.fromJson,
+        'Update note failed',
+        put: true,
+      );
+    }
+    return _sendMultipart(
       'daily-notes/notes/$id/',
-      body,
-      DailyNote.fromJson,
-      'Update note failed',
+      fields: {
+        for (final e in body.entries)
+          if (e.value != null) e.key: e.value.toString(),
+      },
+      fileBytes: imageBytes,
+      fileName: imageFileName,
+      contentType: imageContentType,
+      parse: DailyNote.fromJson,
+      label: 'Update note failed',
       put: true,
     );
   }
@@ -125,6 +170,49 @@ class DailyNotesApi {
         : put
             ? await _client.put(path, body: body)
             : await _client.post(path, body: body);
+    if (res.isFailure) return Failure((res as Failure).error);
+    final response = res.getOrThrow();
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return Failure(DailyNotesApiException(_errorMessage(response.body, label)));
+    }
+    try {
+      final data = jsonDecode(response.body);
+      if (data is! Map) {
+        return Failure(DailyNotesApiException('Invalid payload'));
+      }
+      return Success(parse(Map<String, dynamic>.from(data)));
+    } on Object catch (e, st) {
+      return Failure(e, st);
+    }
+  }
+
+  Future<Result<T>> _sendMultipart<T>(
+    String path, {
+    required Map<String, String> fields,
+    required List<int> fileBytes,
+    required String fileName,
+    required String contentType,
+    required T Function(Map<String, dynamic>) parse,
+    required String label,
+    bool put = false,
+  }) async {
+    final res = put
+        ? await _client.putMultipart(
+            path,
+            fields: fields,
+            fileField: 'image',
+            fileBytes: fileBytes,
+            fileName: fileName,
+            contentType: contentType,
+          )
+        : await _client.postMultipart(
+            path,
+            fields: fields,
+            fileField: 'image',
+            fileBytes: fileBytes,
+            fileName: fileName,
+            contentType: contentType,
+          );
     if (res.isFailure) return Failure((res as Failure).error);
     final response = res.getOrThrow();
     if (response.statusCode < 200 || response.statusCode >= 300) {

@@ -52,6 +52,7 @@ class _NavItem {
 List<_NavItem> _bottomBusinessNav(
   PermissionSet? perms, {
   required bool canApprove,
+  bool fieldSalesOnly = false,
 }) {
   final showHistoryOnBar = !canApprove && (perms == null || perms.canViewSales);
   return [
@@ -61,13 +62,13 @@ List<_NavItem> _bottomBusinessNav(
       route: AppRoutes.home,
       key: Key('nav_home'),
     ),
-    if (perms == null || perms.canAccessPos)
+    if (!fieldSalesOnly && (perms == null || perms.canAccessPos))
       const _NavItem(
         label: 'POS',
         icon: Icons.point_of_sale_outlined,
         route: AppRoutes.pos,
       ),
-    if (canApprove)
+    if (!fieldSalesOnly && canApprove)
       const _NavItem(
         label: 'Approvals',
         icon: Icons.fact_check_outlined,
@@ -95,7 +96,40 @@ List<_NavItem> _businessMoreNav({
   required bool canHistory,
   bool canViewDailySales = false,
   bool includeSalesHistory = false,
+  bool fieldSalesOnly = false,
 }) {
+  if (fieldSalesOnly) {
+    return [
+      if (includeSalesHistory && (perms?.canViewSales ?? false))
+        const _NavItem(
+          label: 'Sales history',
+          icon: Icons.receipt_long_outlined,
+          route: AppRoutes.salesHistory,
+          key: Key('more_sales_history'),
+        ),
+      if (perms?.canPlaceVisitOrders ?? false)
+        const _NavItem(
+          label: 'New field sale',
+          icon: Icons.shopping_bag_outlined,
+          route: AppRoutes.siteVisit,
+          key: Key('more_visit_order'),
+        ),
+      if (canViewDailySales)
+        const _NavItem(
+          label: 'Daily sales',
+          icon: Icons.calendar_today_outlined,
+          route: AppRoutes.dailySales,
+          key: Key('more_daily_sales'),
+        ),
+      if (perms?.canViewPayroll ?? false)
+        const _NavItem(
+          label: 'My pay',
+          icon: Icons.receipt_long_outlined,
+          route: AppRoutes.payroll,
+          key: Key('more_payroll'),
+        ),
+    ];
+  }
   return [
     if (includeSalesHistory && (perms?.canViewSales ?? false))
       const _NavItem(
@@ -189,6 +223,7 @@ List<_NavItem> _moreNav({
   required bool canApprove,
   bool canViewDailySales = false,
   bool includePrimaryDupes = false,
+  bool fieldSalesOnly = false,
 }) {
   final historyOnBar = !canApprove && (perms == null || perms.canViewSales);
   return _businessMoreNav(
@@ -196,6 +231,7 @@ List<_NavItem> _moreNav({
     canHistory: canHistory,
     canViewDailySales: canViewDailySales,
     includeSalesHistory: includePrimaryDupes || !historyOnBar,
+    fieldSalesOnly: fieldSalesOnly,
   );
 }
 
@@ -303,8 +339,14 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
           features: session.features,
           isSuperuser: session.user.isSuperuser,
         );
+    final fieldSalesOnly =
+        session != null && isFieldSalesProfile(session.profile);
 
-    final bottom = _bottomBusinessNav(perms, canApprove: canApprove);
+    final bottom = _bottomBusinessNav(
+      perms,
+      canApprove: canApprove,
+      fieldSalesOnly: fieldSalesOnly,
+    );
     final historyOnBar =
         !canApprove && (perms == null || perms.canViewSales);
     final businessMore = _businessMoreNav(
@@ -312,6 +354,7 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
       canHistory: canHistory,
       canViewDailySales: canViewDailySales,
       includeSalesHistory: !historyOnBar,
+      fieldSalesOnly: fieldSalesOnly,
     );
     final overflow = _sideOverflowNav();
     final sync = ref.watch(syncStatusProvider);
@@ -468,8 +511,10 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
             );
           },
         ),
-        const StickyNotesGate(),
-        const AppraisalGreeting(),
+        if (!(session != null && isFieldSalesProfile(session.profile))) ...[
+          const StickyNotesGate(),
+          const AppraisalGreeting(),
+        ],
       ],
     );
   }
@@ -691,12 +736,15 @@ class MorePage extends ConsumerWidget {
         (perms?.canApproveSales ?? false) ||
         (perms?.canApproveDebtManagement ?? false) ||
         sessionCanApproveExpenses(session);
+    final fieldSalesOnly =
+        session != null && isFieldSalesProfile(session.profile);
     final items = _moreNav(
       perms: perms,
       canHistory: canHistory,
       canApprove: canApprove,
       canViewDailySales: canViewDailySales,
       includePrimaryDupes: true,
+      fieldSalesOnly: fieldSalesOnly,
     );
     final overflow = _sideOverflowNav();
     final theme = Theme.of(context);
@@ -772,21 +820,26 @@ class PersonaHomePage extends ConsumerWidget {
     final canAccessPos = session.permissions.canAccessPos &&
         session.features.isRetailPosEnabled;
 
+    final fieldSalesOnly = isFieldSalesProfile(session.profile);
+
     switch (session.persona) {
       case AppPersona.cashier:
         return StoreHomeDashboard(
           title: 'Hi, ${session.user.displayName}',
-          canAccessPos: canAccessPos,
+          canAccessPos: fieldSalesOnly ? false : canAccessPos,
           canViewCustomers: session.permissions.canViewCustomers,
           canViewDailySales: canViewDailySales,
           canViewSales: session.permissions.canViewSales &&
               session.features.isSalesHistoryEnabled,
-          canViewDebtors: session.permissions.canViewDebtManagement,
+          canViewDebtors: fieldSalesOnly
+              ? false
+              : session.permissions.canViewDebtManagement,
           canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
-          canDispatch: session.permissions.canDispatch,
-          canAccessDelivery: session.permissions.canAccessDelivery,
-          canViewDeliveryHistory: canHistory,
-          canApprove: canApprove,
+          canDispatch: fieldSalesOnly ? false : session.permissions.canDispatch,
+          canAccessDelivery:
+              fieldSalesOnly ? false : session.permissions.canAccessDelivery,
+          canViewDeliveryHistory: fieldSalesOnly ? false : canHistory,
+          canApprove: fieldSalesOnly ? false : canApprove,
         );
       case AppPersona.dispatcher:
         return _DispatcherHome(name: session.user.displayName);

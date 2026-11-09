@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
@@ -454,6 +457,22 @@ class _NoteDetailSheet extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         Text(note.content),
+        if (note.hasImage) ...[
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              note.imageUrl!,
+              height: 180,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text('Could not load note image'),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 8),
         Text(
           _noteMeta(note),
@@ -533,6 +552,8 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
   late bool _assignToAll;
   int? _assignedTo;
   int? _assignedRole;
+  Uint8List? _imageBytes;
+  String? _imageName;
 
   @override
   void initState() {
@@ -558,6 +579,22 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
     _content.dispose();
     _title.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 2000,
+    );
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _imageBytes = bytes;
+      _imageName = file.name;
+    });
   }
 
   @override
@@ -590,6 +627,47 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
                 maxLines: 4,
                 decoration: const InputDecoration(labelText: 'Note'),
               ),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Note image (optional)'),
+                subtitle: Text(
+                  _imageBytes != null
+                      ? (_imageName ?? 'Image selected')
+                      : (widget.existing?.hasImage == true
+                          ? 'Existing image kept — tap to replace'
+                          : 'Add a photo — not required'),
+                ),
+                trailing: Icon(
+                  _imageBytes != null || widget.existing?.hasImage == true
+                      ? Icons.image_outlined
+                      : Icons.add_photo_alternate_outlined,
+                ),
+                onTap: () {
+                  FocusScope.of(context).unfocus();
+                  _pickImage();
+                },
+              ),
+              if (_imageBytes != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(
+                    _imageBytes!,
+                    height: 140,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () => setState(() {
+                      _imageBytes = null;
+                      _imageName = null;
+                    }),
+                    child: const Text('Remove selected image'),
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
               Text(
                 'Priority',
@@ -772,6 +850,8 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
                               assignedRole: _assignToRole
                                   ? _assignedRole
                                   : null,
+                              imageBytes: _imageBytes,
+                              imageFileName: _imageName ?? 'note.jpg',
                             )
                           : await notifier.createNote(
                               content: _content.text,
@@ -785,6 +865,8 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
                                   ? _assignedRole
                                   : null,
                               assignToAll: _assignToAll,
+                              imageBytes: _imageBytes,
+                              imageFileName: _imageName ?? 'note.jpg',
                             );
                       if (ok && context.mounted) {
                         Navigator.pop(context, true);

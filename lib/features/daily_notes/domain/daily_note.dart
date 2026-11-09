@@ -42,6 +42,7 @@ class DailyNote {
     this.assignedRoleId,
     this.assignedRoleName = '',
     this.daysCarriedOver = 0,
+    this.imageUrl,
   });
 
   final int id;
@@ -61,6 +62,9 @@ class DailyNote {
   final int? assignedRoleId;
   final String assignedRoleName;
   final int daysCarriedOver;
+  final String? imageUrl;
+
+  bool get hasImage => (imageUrl ?? '').trim().isNotEmpty;
 
   bool get isGeneral => !isSticky;
   bool get requiresSaleFix =>
@@ -95,6 +99,7 @@ class DailyNote {
       assignedRoleId: (json['assigned_role'] as num?)?.toInt(),
       assignedRoleName: (json['assigned_role_name'] ?? '').toString(),
       daysCarriedOver: parseDaysCarriedOver(json['days_carried_over']),
+      imageUrl: json['image_url']?.toString(),
     );
   }
 }

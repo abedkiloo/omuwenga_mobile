@@ -7,6 +7,7 @@ import '../../../app/routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../auth/domain/persona.dart';
 import '../../pos/application/pos_controllers.dart';
 import '../application/customer_list_paging.dart';
 import '../application/customers_controllers.dart';
@@ -118,6 +119,8 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
     final userName = session?.user.displayName ?? 'Cashier';
     final roleLabel =
         session?.profile.roleDisplay ?? session?.profile.role ?? 'Cashier';
+    final fieldSalesOnly = session != null &&
+        isFieldSalesProfile(session.profile);
 
     final visible = _visible(state.items);
     final debtorCount = state.items
@@ -159,12 +162,24 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
                   child: Text(
-                    'Customer Directory',
+                    fieldSalesOnly
+                        ? 'My customers'
+                        : 'Customer Directory',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
+                if (fieldSalesOnly)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+                    child: Text(
+                      'Only dukas you registered show here.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
                   child: _DirectoryHeaderCard(
@@ -457,9 +472,13 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
     if (state.items.isEmpty) {
       final tier = state.engagementTier;
       final segment = state.buyerSegment;
+      final fieldSalesOnly = auth.session != null &&
+          isFieldSalesProfile(auth.session!.profile);
       String title = 'No customers';
       String message = state.query.isEmpty
-          ? 'Add a customer or search by name or phone.'
+          ? (fieldSalesOnly
+              ? 'Register a duka to start your list — only customers you onboard appear here.'
+              : 'Add a customer or search by name or phone.')
           : 'No matches for “${state.query}”.';
       if (state.query.isEmpty && tier == EngagementTier.buyer) {
         if (segment != BuyerSegment.any) {

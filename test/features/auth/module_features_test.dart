@@ -9,6 +9,7 @@ void main() {
       expect(ModuleFeatures.empty.isDailySalesEnabled, isTrue);
       expect(ModuleFeatures.empty.isRetailPosEnabled, isTrue);
       expect(ModuleFeatures.empty.isCameraBarcodeScanEnabled, isTrue);
+      expect(ModuleFeatures.empty.isCollectionPayerDetailsEnabled, isTrue);
     });
 
     test('reads enabled_modules feature rows', () {
@@ -22,6 +23,12 @@ void main() {
             'sales_history': true,
           },
         },
+        'customers': {
+          'is_enabled': true,
+          'features': {
+            'collection_payer_details': {'is_enabled': false},
+          },
+        },
         'registry': {
           'feature_defaults': {
             'sales': {
@@ -30,6 +37,7 @@ void main() {
               'camera_barcode_scan': true,
               'sales_history': true,
             },
+            'customers': {'collection_payer_details': true},
           },
         },
       });
@@ -37,6 +45,7 @@ void main() {
       expect(features.isRetailPosEnabled, isTrue);
       expect(features.isCameraBarcodeScanEnabled, isFalse);
       expect(features.isSalesHistoryEnabled, isTrue);
+      expect(features.isCollectionPayerDetailsEnabled, isFalse);
     });
 
     test('disabled module turns all features off', () {
