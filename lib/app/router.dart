@@ -24,7 +24,7 @@ import '../features/customers/presentation/debt_management_page.dart';
 import '../features/customers/presentation/receive_payment_page.dart';
 import '../features/daily_sales/presentation/customer_day_page.dart';
 import '../features/daily_sales/presentation/daily_sales_page.dart';
-import '../features/health/presentation/health_page.dart';
+import '../features/about/presentation/about_page.dart';
 import '../features/pos/presentation/pos_page.dart';
 import '../features/sales_history/presentation/sale_detail_page.dart';
 import '../features/sales_history/presentation/sales_history_page.dart';
@@ -170,6 +170,22 @@ GoRouter createAppRouter({
             (permissions?.canApproveDebtManagement ?? false);
         if (!can) return AppRoutes.home;
       }
+      if (loc.startsWith(AppRoutes.expenses) &&
+          !(permissions?.canViewExpenses ?? false)) {
+        return AppRoutes.home;
+      }
+      if (loc.startsWith(AppRoutes.payroll) &&
+          !(permissions?.canViewPayroll ?? false)) {
+        return AppRoutes.home;
+      }
+      if (loc.startsWith(AppRoutes.appraisals) &&
+          !(permissions?.canViewAppraisals ?? false)) {
+        return AppRoutes.home;
+      }
+      // Old deep link / bookmark → About (version + connection check).
+      if (loc == AppRoutes.health) {
+        return AppRoutes.about;
+      }
       return null;
     },
     routes: [
@@ -189,8 +205,12 @@ GoRouter createAppRouter({
             _fadePage(key: state.pageKey, child: const ChangePasswordPage()),
       ),
       GoRoute(
+        path: AppRoutes.about,
+        builder: (context, state) => const AboutPage(),
+      ),
+      GoRoute(
         path: AppRoutes.health,
-        builder: (context, state) => const HealthPage(),
+        redirect: (context, state) => AppRoutes.about,
       ),
       ShellRoute(
         builder: (context, state, child) => StoreShellPage(child: child),

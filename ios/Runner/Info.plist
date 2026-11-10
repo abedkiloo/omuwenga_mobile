@@ -26,17 +26,18 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<!-- Allow http:// to local Django during development -->
+	<!-- Location + Maps -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Omuwenga Suppliers uses your location to drop a delivery pin and show today’s route.</string>
 	<key>GMSApiKey</key>
 	<string>REPLACE_WITH_MAPS_API_KEY</string>
+	<!-- HTTPS by default; local networking kept for LAN Django in debug. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 		<key>NSAllowsArbitraryLoads</key>
-		<true/>
+		<false/>
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Omuwenga Suppliers connects to your local server on the same Wi‑Fi.</string>

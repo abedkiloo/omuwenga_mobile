@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/format/money.dart';
+import '../../../core/media/image_upload_guard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/chrome/cb_bounded_sheet.dart';
 import '../../../design_system/chrome/cb_filter_chip.dart';
@@ -13,7 +15,6 @@ import '../../approvals/application/approvals_controller.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/expenses_controller.dart';
 import '../domain/expense.dart';
-import '../../../core/format/money.dart';
 
 
 String _todayIso() {
@@ -651,6 +652,7 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
   String? _error;
   Uint8List? _imageBytes;
   String? _imageName;
+  String _imageContentType = 'image/jpeg';
 
   @override
   void initState() {
@@ -713,10 +715,22 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
     if (file == null) return;
     final bytes = await file.readAsBytes();
     if (!mounted) return;
-    setState(() {
-      _imageBytes = bytes;
-      _imageName = file.name;
-    });
+    try {
+      final prepared = ImageUploadGuard.prepare(
+        bytes,
+        preferredName: file.name,
+      );
+      setState(() {
+        _imageBytes = prepared.bytes;
+        _imageName = prepared.fileName;
+        _imageContentType = prepared.contentType;
+      });
+    } on ImageUploadException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
   }
 
   Future<void> _submit() async {
@@ -740,6 +754,7 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
           proposalReason: _reason.text,
           imageBytes: _imageBytes,
           imageFileName: _imageName ?? 'expense.jpg',
+          imageContentType: _imageContentType,
         );
     if (!mounted) return;
     if (err != null) {
@@ -990,6 +1005,7 @@ class _ExpenseFormSheetState extends ConsumerState<_ExpenseFormSheet> {
                       onPressed: () => setState(() {
                         _imageBytes = null;
                         _imageName = null;
+                        _imageContentType = 'image/jpeg';
                       }),
                       child: const Text('Remove selected image'),
                     ),

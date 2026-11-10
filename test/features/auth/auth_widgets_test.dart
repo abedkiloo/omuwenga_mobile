@@ -235,7 +235,7 @@ void main() {
     expect(find.byKey(const Key('shell_side_rail')), findsOneWidget);
     expect(find.text('Business'), findsOneWidget);
     expect(find.text('Other'), findsOneWidget);
-    expect(find.text('API health'), findsOneWidget);
+    expect(find.text('About'), findsOneWidget);
   });
 
   testWidgets('phone shell shows bottom nav and More sheet', (tester) async {

@@ -205,8 +205,8 @@ void main() {
               builder: (_, _) => const Text('daily-body'),
             ),
             GoRoute(
-              path: AppRoutes.health,
-              builder: (_, _) => const Text('health-body'),
+              path: AppRoutes.about,
+              builder: (_, _) => const Text('about-body'),
             ),
           ],
         ),
@@ -259,12 +259,12 @@ void main() {
     await tester.tap(find.byKey(const Key('more_daily_sales')));
     await tester.pumpAndSettle();
     expect(find.text('daily-body'), findsOneWidget);
-    // Overflow tools (API health) stay in the side drawer.
+    // Overflow tools (About / version) stay in the side drawer.
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('API health'));
+    await tester.tap(find.text('About'));
     await tester.pumpAndSettle();
-    expect(find.text('health-body'), findsOneWidget);
+    expect(find.text('about-body'), findsOneWidget);
   });
 
   testWidgets('router redirects authenticated user from login', (tester) async {
@@ -503,7 +503,7 @@ void main() {
     expect(router.state.uri.toString(), AppRoutes.dailySales);
   });
 
-  testWidgets('createAppRouter health route', (tester) async {
+  testWidgets('createAppRouter health redirects to about', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: seedOverrides(cashierSession()),
@@ -518,8 +518,9 @@ void main() {
         ),
       ),
     );
-    await tester.pump();
-    expect(find.text('API health'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('About'), findsOneWidget);
+    expect(find.byKey(const Key('about_version')), findsOneWidget);
   });
 
   testWidgets('routerProvider readAuth runs on redirect', (tester) async {

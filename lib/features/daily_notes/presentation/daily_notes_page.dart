@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/media/image_upload_guard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/buttons/cb_primary_button.dart';
 import '../../../design_system/chrome/cb_bounded_sheet.dart';
@@ -554,6 +555,7 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
   int? _assignedRole;
   Uint8List? _imageBytes;
   String? _imageName;
+  String _imageContentType = 'image/jpeg';
 
   @override
   void initState() {
@@ -591,10 +593,22 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
     if (file == null) return;
     final bytes = await file.readAsBytes();
     if (!mounted) return;
-    setState(() {
-      _imageBytes = bytes;
-      _imageName = file.name;
-    });
+    try {
+      final prepared = ImageUploadGuard.prepare(
+        bytes,
+        preferredName: file.name,
+      );
+      setState(() {
+        _imageBytes = prepared.bytes;
+        _imageName = prepared.fileName;
+        _imageContentType = prepared.contentType;
+      });
+    } on ImageUploadException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
   }
 
   @override
@@ -662,6 +676,8 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
                   child: TextButton(
                     onPressed: () => setState(() {
                       _imageBytes = null;
+                      _imageName = null;
+                      _imageContentType = 'image/jpeg';
                       _imageName = null;
                     }),
                     child: const Text('Remove selected image'),
@@ -852,6 +868,7 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
                                   : null,
                               imageBytes: _imageBytes,
                               imageFileName: _imageName ?? 'note.jpg',
+                              imageContentType: _imageContentType,
                             )
                           : await notifier.createNote(
                               content: _content.text,
@@ -867,6 +884,7 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
                               assignToAll: _assignToAll,
                               imageBytes: _imageBytes,
                               imageFileName: _imageName ?? 'note.jpg',
+                              imageContentType: _imageContentType,
                             );
                       if (ok && context.mounted) {
                         Navigator.pop(context, true);

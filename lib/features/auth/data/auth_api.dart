@@ -35,6 +35,9 @@ class AuthApi {
     if (res.statusCode == 401 || res.statusCode == 403) {
       return Failure(AuthFailure.invalidCredentials());
     }
+    if (res.statusCode == 429) {
+      return Failure(AuthFailure.rateLimited(_retryAfterSeconds(res)));
+    }
     if (res.statusCode < 200 || res.statusCode >= 300) {
       return Failure(AuthFailure.server(safeMessage(res.body)));
     }
@@ -117,6 +120,12 @@ class AuthApi {
 
   /// Never surface raw stack traces / token material to the UI.
   static String safeMessage(String body) => apiErrorMessage(body);
+
+  static int? _retryAfterSeconds(http.Response res) {
+    final raw = res.headers['retry-after'] ?? res.headers['Retry-After'];
+    if (raw == null || raw.trim().isEmpty) return null;
+    return int.tryParse(raw.trim());
+  }
 }
 
 class AuthFailure implements Exception {
@@ -131,6 +140,17 @@ class AuthFailure implements Exception {
     'Session expired. Please sign in again.',
     code: 'session_expired',
   );
+
+  /// Matches backend login throttle (default 10/min) — wait before retrying.
+  factory AuthFailure.rateLimited([int? retryAfterSeconds]) {
+    final wait = retryAfterSeconds != null && retryAfterSeconds > 0
+        ? ' Wait about $retryAfterSeconds seconds, then try again.'
+        : ' Wait a minute, then try again.';
+    return AuthFailure._(
+      'Too many sign-in attempts.$wait',
+      code: 'rate_limited',
+    );
+  }
 
   factory AuthFailure.server(String message) =>
       AuthFailure._(message, code: 'server');

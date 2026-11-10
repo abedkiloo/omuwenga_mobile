@@ -204,14 +204,14 @@ List<_NavItem> _businessMoreNav({
   ];
 }
 
-/// Non-business overflow — side nav / drawer only.
+/// Non-business overflow — side nav / drawer / More page.
 List<_NavItem> _sideOverflowNav() {
   return const [
     _NavItem(
-      label: 'API health',
-      icon: Icons.monitor_heart_outlined,
-      route: AppRoutes.health,
-      key: Key('more_api_health'),
+      label: 'About',
+      icon: Icons.info_outline,
+      route: AppRoutes.about,
+      key: Key('more_about'),
     ),
   ];
 }
@@ -757,7 +757,7 @@ class MorePage extends ConsumerWidget {
           Text('More', style: theme.textTheme.titleLarge),
           const SizedBox(height: 4),
           Text(
-            'Business tools for your role.',
+            'Business tools for your role. About shows app version for support.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppColors.mutedForeground,
             ),

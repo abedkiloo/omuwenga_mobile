@@ -3,6 +3,8 @@ abstract final class AppRoutes {
   static const login = '/login';
   static const changePassword = '/change-password';
   static const health = '/health';
+  /// About / version — shop-floor app info (replaces bare “API health”).
+  static const about = '/about';
   static const home = '/home';
   static const pos = '/pos';
   static const customers = '/customers';

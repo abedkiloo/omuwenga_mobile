@@ -4,6 +4,7 @@ import 'package:completebyte_pos_mobile/core/env/app_env.dart';
 import 'package:completebyte_pos_mobile/core/network/api_client.dart';
 import 'package:completebyte_pos_mobile/core/result/result.dart';
 import 'package:completebyte_pos_mobile/core/secure/token_store.dart';
+import 'package:completebyte_pos_mobile/features/about/presentation/about_page.dart';
 import 'package:completebyte_pos_mobile/features/health/data/health_api.dart';
 import 'package:completebyte_pos_mobile/features/health/presentation/health_page.dart';
 import 'package:completebyte_pos_mobile/features/health/providers.dart';
@@ -64,20 +65,12 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('navigates to health route', (tester) async {
+  testWidgets('navigates to about route with connection check', (tester) async {
     final tokens = InMemoryTokenStore();
-    final api = ApiClient(
-      env: const AppEnv(
-        flavor: AppFlavor.dev,
-        apiBaseUrl: 'http://example.com/api',
-      ),
-      tokenStore: tokens,
-      httpClient: MockClient((_) async => http.Response('ok', 200)),
-    );
     final router = GoRouter(
-      initialLocation: AppRoutes.health,
+      initialLocation: AppRoutes.about,
       routes: [
-        GoRoute(path: AppRoutes.health, builder: (_, _) => const HealthPage()),
+        GoRoute(path: AppRoutes.about, builder: (_, _) => const AboutPage()),
       ],
     );
 
@@ -91,14 +84,26 @@ void main() {
               apiBaseUrl: 'http://example.com/api',
             ),
           ),
-          apiClientProvider.overrideWithValue(api),
+          healthCheckProvider.overrideWith(
+            (ref) async => const Success(
+              HealthStatus(ok: true, rawBody: 'ok'),
+            ),
+          ),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('API health'), findsOneWidget);
-    expect(find.text('Backend reachable'), findsOneWidget);
+    expect(find.text('About'), findsOneWidget);
+    expect(find.byKey(const Key('about_version')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Connection'),
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Server reachable'), findsOneWidget);
+    expect(find.byKey(const Key('about_connection_ok')), findsOneWidget);
   });
 
   testWidgets('HealthPage loading then Result failure branch', (tester) async {
