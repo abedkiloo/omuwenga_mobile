@@ -2,18 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
+import '../../../core/format/money.dart';
+import '../../../core/media/image_upload_guard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../pos/domain/payment.dart';
 import '../../payments/domain/mpesa_capture.dart';
 import '../../payments/presentation/mpesa_capture.dart';
 import '../../payments/presentation/stk_wait_page.dart';
+import '../../pos/domain/payment.dart';
 import '../application/customers_controllers.dart';
 import '../domain/mpesa_receipt.dart';
-import '../../../core/format/money.dart';
 
+String _todayLocalDate() {
+  final now = DateTime.now();
+  final y = now.year.toString().padLeft(4, '0');
+  final m = now.month.toString().padLeft(2, '0');
+  final d = now.day.toString().padLeft(2, '0');
+  return '$y-$m-$d';
+}
 
 class ReceivePaymentPage extends ConsumerStatefulWidget {
   const ReceivePaymentPage({super.key, required this.customerId});
@@ -33,6 +42,10 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
   PosPaymentMethod _method = PosPaymentMethod.cash;
   MpesaCaptureMode _mpesaCapture = MpesaCaptureMode.code;
   String _mpesaDestination = '';
+  String _paymentDate = _todayLocalDate();
+  Uint8List? _receiptBytes;
+  String _receiptName = 'mpesa_receipt.jpg';
+  String _receiptContentType = 'image/jpeg';
   bool _initialized = false;
   bool _attempted = false;
 
@@ -109,6 +122,51 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     return null;
   }
 
+  Future<void> _pickReceipt() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 2000,
+    );
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    if (!mounted) return;
+    try {
+      final prepared = ImageUploadGuard.prepare(
+        bytes,
+        preferredName: file.name,
+      );
+      setState(() {
+        _receiptBytes = prepared.bytes;
+        _receiptName = prepared.fileName;
+        _receiptContentType = prepared.contentType;
+      });
+    } on ImageUploadException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
+  }
+
+  Future<void> _pickPaymentDate() async {
+    final initial = DateTime.tryParse(_paymentDate) ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime.now().subtract(const Duration(days: 3650)),
+      lastDate: DateTime.now(),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _paymentDate =
+          '${picked.year.toString().padLeft(4, '0')}-'
+          '${picked.month.toString().padLeft(2, '0')}-'
+          '${picked.day.toString().padLeft(2, '0')}';
+    });
+  }
+
   Future<void> _confirm() async {
     setState(() => _attempted = true);
     final amountError = paymentAmountValidationMessage(_amount.text);
@@ -120,6 +178,14 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
 
     var reference = _reference.text;
     if (_method == PosPaymentMethod.mpesa) {
+      if (_receiptBytes == null || _receiptBytes!.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Attach a screenshot of the M-Pesa repayment receipt.'),
+          ),
+        );
+        return;
+      }
       if (isLiveMpesaPrompt(_mpesaCapture)) {
         final phoneErr = phoneValidationMessage(_phone.text, required: true);
         if (phoneErr != null) return;
@@ -138,6 +204,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     final canApprove =
         ref.read(authControllerProvider).session?.permissions.canApproveDebtManagement ??
         false;
+    final today = _todayLocalDate();
     final confirmed = await showCommitConfirm(
       context: context,
       title: 'Proceed with this payment?',
@@ -169,6 +236,10 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                 : 'Reference',
             value: reference.trim(),
           ),
+        if (_paymentDate != today)
+          CommitSummaryRow(label: 'Payment date', value: _paymentDate),
+        if (_receiptBytes != null)
+          const CommitSummaryRow(label: 'Receipt', value: 'Attached'),
         if (detail.debtAmount > 0)
           CommitSummaryRow(
             label: 'Current debt',
@@ -209,6 +280,10 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
           mpesaDestination: _requirePayer && _method == PosPaymentMethod.mpesa
               ? _mpesaDestination
               : '',
+          paymentDate: _paymentDate != today ? _paymentDate : '',
+          receiptImageBytes: _receiptBytes,
+          receiptFileName: _receiptName,
+          receiptContentType: _receiptContentType,
         );
     if (!mounted) return;
     if (ok) {
@@ -357,7 +432,66 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                       ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                ListTile(
+                  key: const Key('settle_payment_date'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Payment date'),
+                  subtitle: Text(
+                    _paymentDate == _todayLocalDate()
+                        ? '$_paymentDate (today)'
+                        : '$_paymentDate · past day',
+                  ),
+                  trailing: const Icon(Icons.calendar_today_outlined),
+                  onTap: _pickPaymentDate,
+                ),
+                if (_paymentDate != _todayLocalDate())
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'Marked as a past repayment on $_paymentDate.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.tertiary,
+                      ),
+                    ),
+                  ),
                 if (_method == PosPaymentMethod.mpesa) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'M-Pesa receipt screenshot *',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    key: const Key('settle_receipt_pick'),
+                    onPressed: _pickReceipt,
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: Text(
+                      _receiptBytes == null
+                          ? 'Attach receipt screenshot'
+                          : 'Change receipt screenshot',
+                    ),
+                  ),
+                  if (_receiptBytes != null) ...[
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        _receiptBytes!,
+                        height: 140,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ] else if (_attempted)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Attach a screenshot of the M-Pesa repayment receipt.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
                   if (_needsDestinationBeforeCode) ...[
                     const SizedBox(height: 16),
                     Text(

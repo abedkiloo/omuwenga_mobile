@@ -36,6 +36,35 @@ class PayrollApi {
     }
   }
 
+  /// Daily band commission for the signed-in agent (`date` = YYYY-MM-DD optional).
+  Future<Result<AgentCommissionDay>> commissionDay({String? date}) async {
+    final day = (date ?? '').trim();
+    final path = day.isEmpty
+        ? 'payroll/me/commission-day/'
+        : 'payroll/me/commission-day/?date=${Uri.encodeQueryComponent(day)}';
+    final res = await _client.get(path);
+    if (res.isFailure) return Failure((res as Failure).error);
+    final response = res.getOrThrow();
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      return Failure(
+        PayrollApiException(
+          'Load commission failed (${response.statusCode})',
+        ),
+      );
+    }
+    try {
+      final data = jsonDecode(response.body);
+      if (data is! Map) {
+        return Failure(PayrollApiException('Invalid commission payload'));
+      }
+      return Success(
+        AgentCommissionDay.fromJson(Map<String, dynamic>.from(data)),
+      );
+    } on Object catch (e, st) {
+      return Failure(e, st);
+    }
+  }
+
   Future<Result<List<MyPayslipSummary>>> myPayslips() async {
     final res = await _client.get('payroll/me/payslips/');
     if (res.isFailure) return Failure((res as Failure).error);

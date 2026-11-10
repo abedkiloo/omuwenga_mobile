@@ -188,3 +188,102 @@ class MyPayslipSummary {
     );
   }
 }
+
+/// One award band row from the sales-agent template.
+class AgentCommissionBand {
+  const AgentCommissionBand({
+    required this.min,
+    this.max,
+    required this.commission,
+  });
+
+  final String min;
+  final String? max;
+  final String commission;
+
+  factory AgentCommissionBand.fromJson(Map<String, dynamic> json) {
+    final maxRaw = json['max'];
+    return AgentCommissionBand(
+      min: (json['min'] ?? '0').toString(),
+      max: maxRaw == null || maxRaw.toString().isEmpty
+          ? null
+          : maxRaw.toString(),
+      commission: (json['commission'] ?? '0').toString(),
+    );
+  }
+}
+
+/// One day of sales-agent commission (daily band template).
+class AgentCommissionDay {
+  const AgentCommissionDay({
+    required this.date,
+    required this.isToday,
+    required this.enabled,
+    required this.qualifyingSales,
+    required this.commission,
+    required this.saleCount,
+    required this.transportAmount,
+    required this.transportQualified,
+    required this.transportNote,
+    this.excludedLines = 0,
+    this.bandIndex = 0,
+    this.bands = const [],
+    this.nextBandSalesToGo,
+    this.nextBandCommission,
+  });
+
+  final String date;
+  final bool isToday;
+  final bool enabled;
+  final double qualifyingSales;
+  final double commission;
+  final int saleCount;
+  final double transportAmount;
+  final bool transportQualified;
+  final String transportNote;
+  /// Product lines that remain on sales but do not count for the award.
+  final double excludedLines;
+  final int bandIndex;
+  final List<AgentCommissionBand> bands;
+  final double? nextBandSalesToGo;
+  final double? nextBandCommission;
+
+  factory AgentCommissionDay.fromJson(Map<String, dynamic> json) {
+    final transport = json['transport'];
+    final transportMap =
+        transport is Map ? Map<String, dynamic>.from(transport) : const {};
+    final next = json['next_band'];
+    final nextMap = next is Map ? Map<String, dynamic>.from(next) : null;
+    final template = json['template'];
+    final templateMap =
+        template is Map ? Map<String, dynamic>.from(template) : const {};
+    final rawBands = templateMap['bands'];
+    final bands = <AgentCommissionBand>[];
+    if (rawBands is List) {
+      for (final row in rawBands) {
+        if (row is Map) {
+          bands.add(AgentCommissionBand.fromJson(Map<String, dynamic>.from(row)));
+        }
+      }
+    }
+    return AgentCommissionDay(
+      date: (json['date'] ?? '').toString(),
+      isToday: json['is_today'] == true,
+      enabled: json['enabled'] != false,
+      qualifyingSales: _asDouble(json['qualifying_sales']),
+      commission: _asDouble(json['commission']),
+      saleCount: int.tryParse('${json['sale_count']}') ?? 0,
+      transportAmount: _asDouble(transportMap['amount']),
+      transportQualified: transportMap['qualified'] == true,
+      transportNote: (transportMap['note'] ?? '').toString(),
+      excludedLines: _asDouble(json['excluded_lines']),
+      bandIndex: int.tryParse('${json['band_index']}') ?? 0,
+      bands: bands,
+      nextBandSalesToGo: nextMap == null
+          ? null
+          : _asDouble(nextMap['sales_to_go']),
+      nextBandCommission:
+          nextMap == null ? null : _asDouble(nextMap['commission']),
+    );
+  }
+}

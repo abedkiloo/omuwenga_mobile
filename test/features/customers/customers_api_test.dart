@@ -9,6 +9,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+class _CapturingClient extends http.BaseClient {
+  _CapturingClient(this._handler);
+
+  final Future<http.Response> Function(http.BaseRequest request) _handler;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final response = await _handler(request);
+    return http.StreamedResponse(
+      Stream<List<int>>.fromIterable([response.bodyBytes]),
+      response.statusCode,
+      headers: response.headers,
+      request: request,
+      reasonPhrase: response.reasonPhrase,
+    );
+  }
+}
+
 void main() {
   late InMemoryTokenStore tokens;
 
@@ -265,6 +283,61 @@ void main() {
       idempotencyKey: 'idem-till',
     );
     expect(result.getOrThrow().transactionId, 44);
+  });
+
+  test('receive wallet payment multipart includes receipt and past payment_date',
+      () async {
+    final jpeg = <int>[0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3, 4, 5, 6];
+    http.BaseRequest? captured;
+    final client = _CapturingClient((request) async {
+      captured = request;
+      return http.Response(
+        jsonEncode({
+          'wallet_balance': '-20.00',
+          'transaction': {
+            'id': 55,
+            'receipt_image_url': '/media/debt_receipts/x.jpg',
+            'is_backdated': true,
+          },
+        }),
+        201,
+      );
+    });
+    final api = CustomersApi(
+      ApiClient(
+        env: const AppEnv(
+          flavor: AppFlavor.dev,
+          apiBaseUrl: 'http://example.com/api',
+        ),
+        tokenStore: tokens,
+        httpClient: client,
+      ),
+    );
+    final result = await api.receiveWalletPayment(
+      customerId: 3,
+      amount: 80,
+      paymentMethod: 'mpesa',
+      reference: 'QHX7K2L9M1',
+      payerName: 'Mary',
+      payerPhone: '0700111222',
+      mpesaDestination: 'till',
+      paymentDate: '2026-11-08',
+      receiptImageBytes: jpeg,
+      receiptFileName: 'mpesa_receipt.jpg',
+      receiptContentType: 'image/jpeg',
+      idempotencyKey: 'idem-receipt',
+    );
+    expect(result.getOrThrow().transactionId, 55);
+    expect(captured, isA<http.MultipartRequest>());
+    final multi = captured! as http.MultipartRequest;
+    expect(multi.fields['payment_method'], 'mpesa');
+    expect(multi.fields['reference'], 'QHX7K2L9M1');
+    expect(multi.fields['payment_date'], '2026-11-08');
+    expect(multi.fields['mpesa_destination'], 'till');
+    expect(multi.headers['Idempotency-Key'], 'idem-receipt');
+    expect(multi.files, hasLength(1));
+    expect(multi.files.single.field, 'receipt_image');
+    expect(multi.files.single.filename, 'mpesa_receipt.jpg');
   });
 
   test('receiveWalletPayment maps queued 202 as pending approval', () async {

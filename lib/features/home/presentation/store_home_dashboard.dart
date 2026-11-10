@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../auth/domain/persona.dart';
 import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/ui/client_channel_icon.dart';
@@ -11,6 +12,8 @@ import '../../../design_system/design_system.dart';
 import '../../daily_sales/domain/daily_report.dart';
 import '../../appraisals/application/appraisals_controller.dart';
 import '../../appraisals/presentation/appraisal_progress_card.dart';
+import '../../payroll/application/agent_commission_controller.dart';
+import '../../payroll/presentation/agent_commission_card.dart';
 import '../application/home_daily_controller.dart';
 
 /// Shared store home: daily summary + Start New Sale / web-like Quick actions.
@@ -47,10 +50,12 @@ class StoreHomeDashboard extends ConsumerWidget {
     final home = ref.watch(homeDailyProvider);
     final theme = Theme.of(context);
     final tools = _buildTools(context);
+    final session = ref.watch(authControllerProvider).session;
     final canAppraisals =
-        ref.watch(authControllerProvider).session?.permissions.canViewAppraisals ??
-        false;
+        session?.permissions.canViewAppraisals ?? false;
     final appraisal = ref.watch(appraisalsProvider).snapshot;
+    final showAgentCommission =
+        session != null && isFieldSalesProfile(session.profile);
 
     return ColoredBox(
       color: AppColors.background,
@@ -59,6 +64,8 @@ class StoreHomeDashboard extends ConsumerWidget {
           await Future.wait([
             ref.read(homeDailyProvider.notifier).load(),
             if (canAppraisals) ref.read(appraisalsProvider.notifier).load(),
+            if (showAgentCommission)
+              ref.read(agentCommissionProvider.notifier).load(),
           ]);
         },
         child: ListView(
@@ -104,6 +111,10 @@ class StoreHomeDashboard extends ConsumerWidget {
             if (canAppraisals && appraisal != null && appraisal.showOnHome) ...[
               const SizedBox(height: 12),
               AppraisalProgressCard(snapshot: appraisal, compact: true),
+            ],
+            if (showAgentCommission) ...[
+              const SizedBox(height: 12),
+              const AgentCommissionCard(),
             ],
             const SizedBox(height: 12),
             if (canAccessPos)

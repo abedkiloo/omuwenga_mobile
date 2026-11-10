@@ -858,6 +858,8 @@ void main() {
     });
 
     testWidgets('settle validates amount greater than zero', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       final client = _debtHttpClient();
       await tester.pumpWidget(
         ProviderScope(
@@ -882,6 +884,8 @@ void main() {
     testWidgets('sales confirm copy and queued collection snackbar', (
       tester,
     ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       final client = MockClient((request) async {
         final path = request.url.path;
         if (path.contains('/detail/')) {
@@ -938,7 +942,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('open_settle')));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('settle_confirm')),
+        80,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.byKey(const Key('settle_confirm')));
       await tester.pumpAndSettle();
       expect(
@@ -954,6 +962,8 @@ void main() {
     });
 
     testWidgets('approver confirm copy records payment live', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       final client = _debtHttpClient();
       await tester.pumpWidget(
         ProviderScope(
@@ -965,7 +975,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('settle_confirm')),
+        80,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.byKey(const Key('settle_confirm')));
       await tester.pumpAndSettle();
       expect(
@@ -977,7 +991,11 @@ void main() {
       expect(find.textContaining('Payment recorded'), findsOneWidget);
     });
 
-    testWidgets('settle validates mpesa code', (tester) async {
+    testWidgets('settle requires mpesa receipt screenshot before confirm', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       final client = _debtHttpClient();
       await tester.pumpWidget(
         ProviderScope(
@@ -989,26 +1007,34 @@ void main() {
 
       await tester.tap(find.byKey(const Key('settle_method_mpesa')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('settle_mpesa_capture_code')));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('settle_confirm')));
-      await tester.tap(find.byKey(const Key('settle_confirm')));
-      await tester.pump();
-      expect(find.byType(ReceivePaymentPage), findsOneWidget);
-      expect(find.text('Proceed with this payment?'), findsNothing);
+      expect(find.byKey(const Key('settle_payment_date')), findsOneWidget);
+      expect(find.byKey(const Key('settle_receipt_pick')), findsOneWidget);
+      expect(find.text('Attach receipt screenshot'), findsOneWidget);
 
-      await tester.enterText(find.byKey(const Key('settle_reference')), 'QHX7K2L9M1');
       await tester.tap(find.byKey(const Key('settle_confirm')));
       await tester.pumpAndSettle();
-      expect(find.text('Proceed with this payment?'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('settle_commit_cancel')));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('settle_mpesa_capture_prompt')));
-      await tester.pumpAndSettle();
-      expect(find.text('Coming soon'), findsWidgets);
-      expect(find.byKey(const Key('settle_reference')), findsOneWidget);
       expect(find.text('Proceed with this payment?'), findsNothing);
+      expect(
+        find.textContaining('Attach a screenshot of the M-Pesa repayment receipt'),
+        findsWidgets,
+      );
+    });
+
+    testWidgets('settle shows payment date and past-day label control', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final client = _debtHttpClient();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _overrides(session: _debtSession(), httpClient: client),
+          child: const MaterialApp(home: ReceivePaymentPage(customerId: 7)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('settle_payment_date')), findsOneWidget);
+      expect(find.textContaining('(today)'), findsOneWidget);
     });
 
     testWidgets('mpesa prompt is coming soon and collection uses a typed code', (

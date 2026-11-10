@@ -282,6 +282,10 @@ class CustomerDetailController extends StateNotifier<CustomerDetailState> {
     String payerName = '',
     String payerPhone = '',
     String mpesaDestination = '',
+    String paymentDate = '',
+    List<int>? receiptImageBytes,
+    String receiptFileName = 'mpesa_receipt.jpg',
+    String receiptContentType = 'image/jpeg',
   }) async {
     final detail = state.detail;
     if (detail == null) return false;
@@ -299,6 +303,10 @@ class CustomerDetailController extends StateNotifier<CustomerDetailState> {
       payerName: payerName,
       payerPhone: payerPhone,
       mpesaDestination: mpesaDestination,
+      paymentDate: paymentDate,
+      receiptImageBytes: receiptImageBytes,
+      receiptFileName: receiptFileName,
+      receiptContentType: receiptContentType,
       idempotencyKey: _ids.next(),
     );
     if (result.isFailure) {

@@ -243,22 +243,51 @@ class CustomersApi {
     String payerName = '',
     String payerPhone = '',
     String mpesaDestination = '',
+    String paymentDate = '',
+    List<int>? receiptImageBytes,
+    String receiptFileName = 'mpesa_receipt.jpg',
+    String receiptContentType = 'image/jpeg',
     required String idempotencyKey,
   }) async {
-    final response = await _client.post(
-      'sales/customers/$customerId/receive-wallet-payment/',
-      body: {
-        'amount': amount,
-        'payment_method': paymentMethod,
-        if (reference.trim().isNotEmpty) 'reference': reference.trim(),
-        if (notes.trim().isNotEmpty) 'notes': notes.trim(),
-        if (payerName.trim().isNotEmpty) 'payer_name': payerName.trim(),
-        if (payerPhone.trim().isNotEmpty) 'payer_phone': payerPhone.trim(),
-        if (mpesaDestination.trim().isNotEmpty)
-          'mpesa_destination': mpesaDestination.trim(),
-      },
-      idempotencyKey: idempotencyKey,
-    );
+    final path = 'sales/customers/$customerId/receive-wallet-payment/';
+    final Result<http.Response> response;
+    if (receiptImageBytes != null && receiptImageBytes.isNotEmpty) {
+      response = await _client.postMultipart(
+        path,
+        fields: {
+          'amount': amount.toString(),
+          'payment_method': paymentMethod,
+          if (reference.trim().isNotEmpty) 'reference': reference.trim(),
+          if (notes.trim().isNotEmpty) 'notes': notes.trim(),
+          if (payerName.trim().isNotEmpty) 'payer_name': payerName.trim(),
+          if (payerPhone.trim().isNotEmpty) 'payer_phone': payerPhone.trim(),
+          if (mpesaDestination.trim().isNotEmpty)
+            'mpesa_destination': mpesaDestination.trim(),
+          if (paymentDate.trim().isNotEmpty) 'payment_date': paymentDate.trim(),
+        },
+        fileField: 'receipt_image',
+        fileBytes: receiptImageBytes,
+        fileName: receiptFileName,
+        contentType: receiptContentType,
+        idempotencyKey: idempotencyKey,
+      );
+    } else {
+      response = await _client.post(
+        path,
+        body: {
+          'amount': amount,
+          'payment_method': paymentMethod,
+          if (reference.trim().isNotEmpty) 'reference': reference.trim(),
+          if (notes.trim().isNotEmpty) 'notes': notes.trim(),
+          if (payerName.trim().isNotEmpty) 'payer_name': payerName.trim(),
+          if (payerPhone.trim().isNotEmpty) 'payer_phone': payerPhone.trim(),
+          if (mpesaDestination.trim().isNotEmpty)
+            'mpesa_destination': mpesaDestination.trim(),
+          if (paymentDate.trim().isNotEmpty) 'payment_date': paymentDate.trim(),
+        },
+        idempotencyKey: idempotencyKey,
+      );
+    }
     if (response.isFailure) {
       final f = response as Failure;
       return Failure(f.error, f.stackTrace);
