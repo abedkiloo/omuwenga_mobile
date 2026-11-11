@@ -372,7 +372,7 @@ void main() {
         if (request.method == 'POST') {
           return http.Response(jsonEncode({'id': 8, 'name': 'New'}), 201);
         }
-        if (request.method == 'PUT') {
+        if (request.method == 'PUT' || request.method == 'PATCH') {
           return http.Response(jsonEncode({'id': 8, 'name': 'Updated'}), 200);
         }
         return http.Response(
@@ -403,8 +403,6 @@ void main() {
       {
         'name': 'Wambua Hardware',
         'phone': '',
-        'email': '',
-        'notes': '',
         'owner_name': 'Jane',
         'contact_person': 'Ann',
         'city': 'Nairobi',
@@ -462,5 +460,96 @@ void main() {
       fail.when(success: (_) => '', failure: (e, _) => e.toString()),
       contains('Phone: This phone is already used by Wambua Hardware'),
     );
+  });
+
+  test('create surfaces permission and server errors clearly', () async {
+    final forbidden = await apiWith(
+      MockClient((_) async => http.Response('<html>forbidden</html>', 403)),
+    ).create(const CustomerDraft(name: 'Blocked'));
+    expect(
+      forbidden.when(success: (_) => '', failure: (e, _) => e.toString()),
+      'You do not have permission to save this duka.',
+    );
+
+    final server = await apiWith(
+      MockClient((_) async => http.Response('<html>boom</html>', 500)),
+    ).create(const CustomerDraft(name: 'Boom'));
+    expect(
+      server.when(success: (_) => '', failure: (e, _) => e.toString()),
+      'Server error while saving this duka. Try again in a moment.',
+    );
+  });
+
+  test('receiveWalletPayment surfaces HTML errors as payment messages', () async {
+    final forbidden = await apiWith(
+      MockClient((_) async => http.Response('<html>forbidden</html>', 403)),
+    ).receiveWalletPayment(
+      customerId: 3,
+      amount: 40,
+      paymentMethod: 'cash',
+      idempotencyKey: 'idem-forbidden',
+    );
+    expect(
+      forbidden.when(success: (_) => '', failure: (e, _) => e.toString()),
+      'You do not have permission to record this payment.',
+    );
+
+    final server = await apiWith(
+      MockClient((_) async => http.Response('<html>boom</html>', 500)),
+    ).receiveWalletPayment(
+      customerId: 3,
+      amount: 40,
+      paymentMethod: 'cash',
+      idempotencyKey: 'idem-boom',
+    );
+    expect(
+      server.when(success: (_) => '', failure: (e, _) => e.toString()),
+      'Server error while recording this payment. Try again in a moment.',
+    );
+
+    final tooLarge = await apiWith(
+      MockClient((_) async => http.Response('<html>too large</html>', 413)),
+    ).receiveWalletPayment(
+      customerId: 3,
+      amount: 40,
+      paymentMethod: 'mpesa',
+      reference: 'QHX7K2L9M1',
+      receiptImageBytes: const [1, 2, 3],
+      idempotencyKey: 'idem-413',
+    );
+    expect(
+      tooLarge.when(success: (_) => '', failure: (e, _) => e.toString()),
+      contains('Receipt photo is too large'),
+    );
+  });
+
+  test('create retries without GPS when first attempt fails', () async {
+    var calls = 0;
+    Map<String, dynamic>? secondBody;
+    final api = apiWith(
+      MockClient((request) async {
+        calls++;
+        if (calls == 1) {
+          return http.Response(
+            jsonEncode({'error': 'Failed to create customer: site missing'}),
+            400,
+          );
+        }
+        secondBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(jsonEncode({'id': 9, 'name': 'Retry Duka'}), 201);
+      }),
+    );
+    final result = await api.create(
+      const CustomerDraft(
+        name: 'Retry Duka',
+        latitude: -1.29,
+        longitude: 36.82,
+        locationAccuracy: 10,
+      ),
+    );
+    expect(result.getOrThrow().id, 9);
+    expect(calls, 2);
+    expect(secondBody!.containsKey('latitude'), isFalse);
+    expect(secondBody!.containsKey('longitude'), isFalse);
   });
 }

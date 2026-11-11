@@ -199,19 +199,31 @@ class CustomersApi {
   }
 
   Future<Result<CustomerSummary>> create(CustomerDraft draft) async {
-    final response = await _client.post(
-      'sales/customers/',
-      body: draft.toJson(),
+    final first = await _parseCustomerWrite(
+      await _client.post('sales/customers/', body: draft.toJson()),
     );
-    return _parseCustomerWrite(response);
+    if (first.isSuccess || !draft.hasLocationPing) return first;
+    // Older servers rolled back the whole create when default site-pin sync
+    // failed. Retry once without GPS so the duka still registers.
+    return _parseCustomerWrite(
+      await _client.post(
+        'sales/customers/',
+        body: draft.withoutLocationPing().toJson(),
+      ),
+    );
   }
 
   Future<Result<CustomerSummary>> update(int id, CustomerDraft draft) async {
-    final response = await _client.patch(
-      'sales/customers/$id/',
-      body: draft.toJson(),
+    final first = await _parseCustomerWrite(
+      await _client.patch('sales/customers/$id/', body: draft.toJson()),
     );
-    return _parseCustomerWrite(response);
+    if (first.isSuccess || !draft.hasLocationPing) return first;
+    return _parseCustomerWrite(
+      await _client.patch(
+        'sales/customers/$id/',
+        body: draft.withoutLocationPing().toJson(),
+      ),
+    );
   }
 
   Future<Result<CustomerSummary>> _parseCustomerWrite(
@@ -223,15 +235,32 @@ class CustomersApi {
     }
     final res = response.getOrThrow();
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      return Failure(CustomersApiException(_safeError(res.body)));
+      return Failure(
+        CustomersApiException(
+          _safeError(
+            res.body,
+            statusCode: res.statusCode,
+            fallback:
+                'Could not save this duka. Check the details and try again.',
+          ),
+        ),
+      );
     }
-    final decoded = jsonDecode(res.body);
-    if (decoded is! Map) {
-      return Failure(CustomersApiException('Unexpected customer response.'));
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) {
+        return Failure(CustomersApiException('Unexpected customer response.'));
+      }
+      return Success(
+        CustomerSummary.fromJson(Map<String, dynamic>.from(decoded)),
+      );
+    } on Object catch (e) {
+      return Failure(
+        CustomersApiException(
+          'Saved on server but could not read the response: $e',
+        ),
+      );
     }
-    return Success(
-      CustomerSummary.fromJson(Map<String, dynamic>.from(decoded)),
-    );
   }
 
   Future<Result<ReceiveWalletPaymentResult>> receiveWalletPayment({
@@ -294,15 +323,27 @@ class CustomersApi {
     }
     final res = response.getOrThrow();
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      return Failure(CustomersApiException(_safeError(res.body)));
+      return Failure(
+        CustomersApiException(
+          _safePaymentError(res.body, statusCode: res.statusCode),
+        ),
+      );
     }
-    final decoded = jsonDecode(res.body);
-    if (decoded is! Map) {
-      return Failure(CustomersApiException('Unexpected payment response.'));
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) {
+        return Failure(CustomersApiException('Unexpected payment response.'));
+      }
+      return Success(
+        ReceiveWalletPaymentResult.fromJson(Map<String, dynamic>.from(decoded)),
+      );
+    } on Object catch (e) {
+      return Failure(
+        CustomersApiException(
+          'Payment may have been recorded but the response could not be read: $e',
+        ),
+      );
     }
-    return Success(
-      ReceiveWalletPaymentResult.fromJson(Map<String, dynamic>.from(decoded)),
-    );
   }
 
   Future<Result<CustomersModuleSettings>> loadSettings() async {
@@ -327,10 +368,51 @@ class CustomersApi {
     }
   }
 
-  static String _safeError(String body) => apiErrorMessage(
-    body,
-    fallback: 'Could not save this duka. Check the details and try again.',
-  );
+  static String _safeError(
+    String body, {
+    int? statusCode,
+    String fallback = 'Could not save this duka. Check the details and try again.',
+  }) {
+    final parsed = apiErrorMessage(body, fallback: '');
+    if (parsed.isNotEmpty) return parsed;
+    if (statusCode == 401) {
+      return 'Please sign in again, then save the duka.';
+    }
+    if (statusCode == 403) {
+      return 'You do not have permission to save this duka.';
+    }
+    if (statusCode != null && statusCode >= 500) {
+      return 'Server error while saving this duka. Try again in a moment.';
+    }
+    if (statusCode != null) {
+      return '$fallback (code $statusCode)';
+    }
+    return fallback;
+  }
+
+  /// Payment failures used to fall through to the duka-save fallback text.
+  static String _safePaymentError(String body, {int? statusCode}) {
+    final parsed = apiErrorMessage(body, fallback: '');
+    if (parsed.isNotEmpty) return parsed;
+    if (statusCode == 401) {
+      return 'Please sign in again, then record the payment.';
+    }
+    if (statusCode == 403) {
+      return 'You do not have permission to record this payment.';
+    }
+    if (statusCode == 413) {
+      return 'Receipt photo is too large for the server. '
+          'Pick a smaller screenshot and try again.';
+    }
+    if (statusCode != null && statusCode >= 500) {
+      return 'Server error while recording this payment. Try again in a moment.';
+    }
+    if (statusCode != null) {
+      return 'Could not record this payment. Check the details and try again. '
+          '(code $statusCode)';
+    }
+    return 'Could not record this payment. Check the details and try again.';
+  }
 }
 
 class CustomersApiException implements Exception {

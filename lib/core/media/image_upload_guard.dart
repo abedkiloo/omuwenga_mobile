@@ -1,16 +1,24 @@
 import 'dart:typed_data';
 
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+
 /// Client-side receipt / note photo checks before multipart upload.
 ///
 /// Mirrors backend backfill/expense image rules: real bitmap only, size cap,
 /// server-friendly filename + content-type. Does not replace server validation.
+///
+/// Prefer [prepareForUpload] from UI code — it recompresses so the request
+/// stays under typical reverse-proxy limits (nginx default 1 MiB → HTTP 413).
 abstract final class ImageUploadGuard {
-  /// Max upload size (5 MiB) — same ballpark as backend receipt photos.
+  /// Max size accepted from the gallery before we try to recompress.
   static const maxBytes = 5 * 1024 * 1024;
+
+  /// Target upload size after compression (leaves room for multipart headers).
+  static const targetUploadBytes = 900 * 1024;
 
   static const _allowed = <String>{'image/jpeg', 'image/png', 'image/webp', 'image/gif'};
 
-  /// Validate [bytes] and derive a safe name + MIME type.
+  /// Validate [bytes] and derive a safe name + MIME type (no recompress).
   ///
   /// Returns a prepared [PreparedImageUpload], or throws [ImageUploadException]
   /// with a short staff-facing message when the file is empty, too large,
@@ -44,6 +52,71 @@ abstract final class ImageUploadGuard {
       bytes: Uint8List.fromList(bytes),
       fileName: '$base.$ext',
       contentType: mime,
+    );
+  }
+
+  /// Validate then JPEG-compress so uploads fit under proxy body limits.
+  ///
+  /// Throws [ImageUploadException] when the source is invalid or still too
+  /// large after compression.
+  static Future<PreparedImageUpload> prepareForUpload(
+    List<int> bytes, {
+    String? preferredName,
+  }) async {
+    final checked = prepare(bytes, preferredName: preferredName);
+    final base = _sanitizeBaseName(preferredName) ?? 'photo';
+    if (checked.bytes.length <= targetUploadBytes &&
+        checked.contentType == 'image/jpeg') {
+      return PreparedImageUpload(
+        bytes: checked.bytes,
+        fileName: '$base.jpg',
+        contentType: 'image/jpeg',
+      );
+    }
+
+    Uint8List? best;
+    for (final quality in const [72, 60, 48, 36]) {
+      Uint8List compressed;
+      try {
+        compressed = await FlutterImageCompress.compressWithList(
+          Uint8List.fromList(checked.bytes),
+          minWidth: 1280,
+          minHeight: 1280,
+          quality: quality,
+          format: CompressFormat.jpeg,
+        );
+      } on Object {
+        // Unit tests / missing native codec — fall through with original bytes.
+        break;
+      }
+      if (compressed.isEmpty) continue;
+      best = compressed;
+      if (compressed.length <= targetUploadBytes) {
+        return PreparedImageUpload(
+          bytes: compressed,
+          fileName: '$base.jpg',
+          contentType: 'image/jpeg',
+        );
+      }
+    }
+
+    if (best != null && best.length <= maxBytes) {
+      // Still over the proxy-friendly target but under backend max — send it;
+      // server nginx must allow ≥ this (see fe/nginx.conf client_max_body_size).
+      return PreparedImageUpload(
+        bytes: best,
+        fileName: '$base.jpg',
+        contentType: 'image/jpeg',
+      );
+    }
+
+    if (checked.bytes.length <= targetUploadBytes) {
+      return checked;
+    }
+
+    throw ImageUploadException(
+      'Receipt photo is still too large after compressing. '
+      'Crop the screenshot or pick a smaller picture.',
     );
   }
 

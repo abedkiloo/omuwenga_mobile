@@ -26,6 +26,9 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Camera — Retail POS barcode / QR scan -->
+	<key>NSCameraUsageDescription</key>
+	<string>Omuwenga uses the camera to scan product barcodes and QR codes into the sale cart.</string>
 	<!-- Location + Maps -->
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Omuwenga Suppliers uses your location to drop a delivery pin and show today’s route.</string>

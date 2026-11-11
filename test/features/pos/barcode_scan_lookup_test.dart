@@ -47,6 +47,48 @@ void main() {
     expect(pick.product, product);
   });
 
+  test('extracts QR URL payload before searching', () async {
+    final queried = <String>[];
+    final pick = await lookupScanProduct(
+      (query, {int limit = 8}) async {
+        queried.add(query);
+        if (query == '6281001234567') {
+          return const Success([product]);
+        }
+        return const Success([]);
+      },
+      'https://shop.example/item?sku=6281001234567',
+    );
+    expect(pick.reason, ScanPickReason.exact);
+    expect(pick.product?.id, 1);
+    expect(queried.first, '6281001234567');
+  });
+
+  test('tries UPC/EAN candidates until a hit', () async {
+    final queried = <String>[];
+    const upcProduct = CatalogProduct(
+      id: 2,
+      name: 'Milk',
+      price: 20,
+      sku: 'MILK',
+      barcode: '123456789012',
+    );
+    final pick = await lookupScanProduct(
+      (query, {int limit = 8}) async {
+        queried.add(query);
+        if (query == '123456789012') {
+          return const Success([upcProduct]);
+        }
+        return const Success([]);
+      },
+      '0123456789012',
+    );
+    expect(pick.reason, ScanPickReason.exact);
+    expect(pick.product?.id, 2);
+    expect(queried, contains('0123456789012'));
+    expect(queried, contains('123456789012'));
+  });
+
   test('api failure maps to none', () async {
     final pick = await lookupScanProduct(
       (query, {int limit = 8}) async => Failure(Exception('offline')),

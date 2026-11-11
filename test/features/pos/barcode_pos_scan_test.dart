@@ -148,7 +148,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Search SKU or scan with Bluetooth gun…'),
+      find.text('Search SKU / barcode (Bluetooth gun)…'),
       findsOneWidget,
     );
     await tester.tap(find.byKey(const Key('pos_search_button')));
@@ -173,5 +173,36 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('No product for'), findsOneWidget);
+  });
+
+  testWidgets('scan adds product that does not track stock', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _overrides(
+          httpClient: _catalogClient(
+            searchHits: [
+              {
+                'id': 55,
+                'name': 'Service Fee',
+                'sku': 'SVC-1',
+                'barcode': '555000111222',
+                'selling_price': 100,
+                'track_stock': false,
+              },
+            ],
+          ),
+          session: _session(cameraScan: true),
+        ),
+        child: const MaterialApp(home: PosPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('pos_search')), '555000111222');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Service Fee added'), findsOneWidget);
+    expect(find.textContaining('no available stock'), findsNothing);
   });
 }

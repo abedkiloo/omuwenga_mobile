@@ -35,6 +35,70 @@ void main() {
     );
   });
 
+  test('matches UPC-A / EAN-13 length variants', () {
+    const upc = CatalogProduct(
+      id: 4,
+      name: 'Milk',
+      price: 20,
+      sku: 'MILK',
+      barcode: '123456789012',
+    );
+    expect(scanCodeCandidates('0123456789012'), containsAll(['0123456789012', '123456789012']));
+    expect(productMatchesScanCode(upc, '0123456789012'), isTrue);
+    expect(productMatchesScanCode(upc, '1234567890128'), isTrue);
+    expect(
+      productMatchesScanCode(
+        const CatalogProduct(
+          id: 5,
+          name: 'Tea',
+          price: 5,
+          barcode: '0123456789012',
+        ),
+        '123456789012',
+      ),
+      isTrue,
+    );
+  });
+
+  test('extracts product code from QR URL and GS1 payloads', () {
+    expect(
+      extractProductScanCode('https://shop.example/products/SOAP-1'),
+      'SOAP-1',
+    );
+    expect(
+      extractProductScanCode(
+        'https://shop.example/p?barcode=6281001234567&x=1',
+      ),
+      '6281001234567',
+    );
+    expect(extractProductScanCode('(01)01234567890128'), '01234567890128');
+    expect(extractProductScanCode('0101234567890128'), '01234567890128');
+    expect(extractProductScanCode('  SOAP-1  '), 'SOAP-1');
+  });
+
+  test('continuous debounce window covers industry 1.2s hold', () {
+    final t0 = DateTime(2026, 11, 5, 12, 0, 0);
+    final last = ScanStamp(code: '111', at: t0);
+    expect(
+      isDuplicateScan(
+        last,
+        '111',
+        window: kPosContinuousScanDebounce,
+        now: () => t0.add(const Duration(milliseconds: 800)),
+      ),
+      isTrue,
+    );
+    expect(
+      isDuplicateScan(
+        last,
+        '111',
+        window: kPosContinuousScanDebounce,
+        now: () => t0.add(const Duration(milliseconds: 1300)),
+      ),
+      isFalse,
+    );
+  });
+
   test('picks a single exact hit and rejects ambiguous', () {
     expect(pickExactScanProduct([a], '111').reason, ScanPickReason.exact);
     expect(pickExactScanProduct([a], '111').product, a);

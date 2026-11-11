@@ -85,8 +85,15 @@ class CustomerSummary {
       };
 
   factory CustomerSummary.fromJson(Map<String, dynamic> json) {
+    final rawId = json['id'];
+    final id = rawId is num
+        ? rawId.toInt()
+        : int.tryParse(rawId?.toString() ?? '');
+    if (id == null) {
+      throw FormatException('Customer response is missing id.');
+    }
     return CustomerSummary(
-      id: (json['id'] as num).toInt(),
+      id: id,
       name: (json['name'] ?? '').toString(),
       customerCode: json['customer_code']?.toString(),
       phone: json['phone']?.toString(),
@@ -566,27 +573,56 @@ class CustomerDraft {
 
   bool get hasLocationPing => latitude != null && longitude != null;
 
-  Map<String, dynamic> toJson() => {
-    'name': name.trim(),
-    'phone': phone.trim(),
-    'email': email.trim(),
-    'notes': notes.trim(),
-    'owner_name': ownerName.trim(),
-    'gender': gender.trim().toLowerCase(),
-    'contact_person': contactPerson.trim(),
-    'city': (county.trim().isNotEmpty ? county : city).trim(),
-    'county': county.trim(),
-    'sub_county': subCounty.trim(),
-    'ward': ward.trim(),
-    'address': address.trim(),
-    'typical_goods': [
-      for (final item in typicalGoods)
-        if (item.trim().isNotEmpty) item.trim(),
-    ],
-    if (latitude != null) 'latitude': latitude,
-    if (longitude != null) 'longitude': longitude,
-    if (locationAccuracy != null) 'location_accuracy': locationAccuracy,
-  };
+  /// Same draft without GPS — used to retry save when site-pin sync fails.
+  CustomerDraft withoutLocationPing() {
+    return CustomerDraft(
+      name: name,
+      phone: phone,
+      email: email,
+      notes: notes,
+      ownerName: ownerName,
+      gender: gender,
+      contactPerson: contactPerson,
+      city: city,
+      county: county,
+      subCounty: subCounty,
+      ward: ward,
+      address: address,
+      typicalGoods: typicalGoods,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    final genderValue = gender.trim().toLowerCase();
+    final lat = (latitude != null && latitude!.isFinite) ? latitude : null;
+    final lng = (longitude != null && longitude!.isFinite) ? longitude : null;
+    final accuracy =
+        (locationAccuracy != null && locationAccuracy!.isFinite)
+            ? locationAccuracy
+            : null;
+    return {
+      'name': name.trim(),
+      'phone': phone.trim(),
+      if (email.trim().isNotEmpty) 'email': email.trim(),
+      if (notes.trim().isNotEmpty) 'notes': notes.trim(),
+      'owner_name': ownerName.trim(),
+      if (genderValue == 'male' || genderValue == 'female')
+        'gender': genderValue,
+      'contact_person': contactPerson.trim(),
+      'city': (county.trim().isNotEmpty ? county : city).trim(),
+      'county': county.trim(),
+      'sub_county': subCounty.trim(),
+      'ward': ward.trim(),
+      'address': address.trim(),
+      'typical_goods': [
+        for (final item in typicalGoods)
+          if (item.trim().isNotEmpty) item.trim(),
+      ],
+      if (lat != null) 'latitude': lat,
+      if (lng != null) 'longitude': lng,
+      if (accuracy != null) 'location_accuracy': accuracy,
+    };
+  }
 }
 
 class CustomersModuleSettings {

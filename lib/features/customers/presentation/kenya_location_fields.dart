@@ -83,8 +83,33 @@ class _Fields extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final counties = units.sortedCounties();
-    final subCounties = units.subCountiesFor(county);
-    final wards = units.wardsFor(county, subCounty);
+    final effectiveCounty = counties.contains(county)
+        ? county
+        : (counties.isNotEmpty ? counties.first : county);
+    final subCounties = units.subCountiesFor(effectiveCounty);
+    final effectiveSub = subCounties.contains(subCounty)
+        ? subCounty
+        : (subCounties.isNotEmpty ? subCounties.first : subCounty);
+    final wards = units.wardsFor(effectiveCounty, effectiveSub);
+    final effectiveWard = wards.contains(ward)
+        ? ward
+        : (wards.isNotEmpty ? wards.first : ward);
+
+    // Keep parent state aligned with what the dropdowns actually show so save
+    // does not send a stale/invalid Kenya admin combo.
+    if (counties.isNotEmpty && effectiveCounty != county) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        onCountyChanged(effectiveCounty);
+      });
+    } else if (subCounties.isNotEmpty && effectiveSub != subCounty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        onSubCountyChanged(effectiveSub);
+      });
+    } else if (wards.isNotEmpty && effectiveWard != ward) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        onWardChanged(effectiveWard);
+      });
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -92,7 +117,7 @@ class _Fields extends StatelessWidget {
         _Dropdown(
           key: const Key('customer_form_county'),
           label: 'County',
-          value: county,
+          value: effectiveCounty,
           items: counties,
           onChanged: (value) {
             if (value == null) return;
@@ -109,12 +134,12 @@ class _Fields extends StatelessWidget {
         _Dropdown(
           key: const Key('customer_form_sub_county'),
           label: 'Sub-county',
-          value: subCounty,
+          value: effectiveSub,
           items: subCounties,
           onChanged: (value) {
             if (value == null) return;
             onSubCountyChanged(value);
-            final w = units.wardsFor(county, value);
+            final w = units.wardsFor(effectiveCounty, value);
             if (w.isNotEmpty) onWardChanged(w.first);
           },
         ),
@@ -122,7 +147,7 @@ class _Fields extends StatelessWidget {
         _Dropdown(
           key: const Key('customer_form_ward'),
           label: 'Ward',
-          value: ward,
+          value: effectiveWard,
           items: wards,
           onChanged: (value) {
             if (value != null) onWardChanged(value);

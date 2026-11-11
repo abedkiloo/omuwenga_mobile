@@ -587,14 +587,14 @@ class _NoteEditorSheetState extends ConsumerState<_NoteEditorSheet> {
     final picker = ImagePicker();
     final file = await picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 85,
-      maxWidth: 2000,
+      imageQuality: 70,
+      maxWidth: 1280,
     );
     if (file == null) return;
     final bytes = await file.readAsBytes();
     if (!mounted) return;
     try {
-      final prepared = ImageUploadGuard.prepare(
+      final prepared = await ImageUploadGuard.prepareForUpload(
         bytes,
         preferredName: file.name,
       );

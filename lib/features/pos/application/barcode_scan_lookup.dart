@@ -11,22 +11,32 @@ typedef ProductScanSearch = Future<Result<List<CatalogProduct>>> Function(
 
 /// Look up a barcode/SKU and pick an exact cart hit.
 ///
-/// [search] defaults to wiring via [PosApi] when callers pass
-/// `(q, {limit}) => api.searchProducts(q, limit: limit)`.
+/// Tries [scanCodeCandidates] in order (raw, UPC/EAN variants) until an exact
+/// or ambiguous hit. [limit] is 1–50 (default 8). Empty code → empty reason.
 Future<ScanPickResult> lookupScanProduct(
   ProductScanSearch search,
   String rawCode, {
   int limit = 8,
 }) async {
-  final code = normalizeScanCode(rawCode);
-  if (code.isEmpty) {
+  final extracted = extractProductScanCode(rawCode);
+  final candidates = scanCodeCandidates(extracted);
+  if (candidates.isEmpty) {
     return const ScanPickResult(reason: ScanPickReason.empty);
   }
-  final result = await search(code, limit: limit);
-  return result.when(
-    success: (list) => pickExactScanProduct(list, code),
-    failure: (_, _) => const ScanPickResult(reason: ScanPickReason.none),
-  );
+  final capped = limit.clamp(1, 50);
+  ScanPickResult last = const ScanPickResult(reason: ScanPickReason.none);
+  for (final code in candidates) {
+    final result = await search(code, limit: capped);
+    final pick = result.when(
+      success: (list) => pickExactScanProduct(list, code),
+      failure: (_, _) => const ScanPickResult(reason: ScanPickReason.none),
+    );
+    if (pick.product != null || pick.reason == ScanPickReason.ambiguous) {
+      return pick;
+    }
+    last = pick;
+  }
+  return last;
 }
 
 /// Convenience: look up using [PosApi.searchProducts].

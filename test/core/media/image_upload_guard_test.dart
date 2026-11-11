@@ -38,5 +38,16 @@ void main() {
         throwsA(isA<ImageUploadException>()),
       );
     });
+
+    test('prepareForUpload keeps small JPEGs under the proxy target', () async {
+      final bytes = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3, 4]);
+      final prepared = await ImageUploadGuard.prepareForUpload(
+        bytes,
+        preferredName: 'mpesa_receipt.png',
+      );
+      expect(prepared.contentType, 'image/jpeg');
+      expect(prepared.fileName, 'mpesa_receipt.jpg');
+      expect(prepared.bytes.length, lessThanOrEqualTo(ImageUploadGuard.targetUploadBytes));
+    });
   });
 }

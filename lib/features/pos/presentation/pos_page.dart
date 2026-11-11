@@ -305,7 +305,14 @@ class _PosPageState extends ConsumerState<PosPage> {
     );
   }
 
-  Future<void> _selectProduct(CatalogProduct product) async {
+  /// Adds [product] to the cart, or opens the variant picker when needed.
+  ///
+  /// Returns a short error when blocked/cancelled; null when a line was added.
+  /// Stock is only enforced when [CatalogProduct.trackStock] is true.
+  Future<String?> _selectProduct(
+    CatalogProduct product, {
+    bool showSnackbars = true,
+  }) async {
     if (product.hasVariants) {
       final pick = await showVariantPickerSheet(
         context: context,
@@ -320,11 +327,13 @@ class _PosPageState extends ConsumerState<PosPage> {
           );
         },
       );
-      if (!mounted || pick == null) return;
+      if (!mounted || pick == null) return 'Variant not selected.';
       final stock = pick.variant.stockQuantity;
-      if (stock == null || stock <= 0 || pick.quantity > stock) {
-        _showStockUnavailable(pick.variant.sku ?? pick.product.name);
-        return;
+      if (product.trackStock &&
+          (stock == null || stock <= 0 || pick.quantity > stock)) {
+        final label = pick.variant.sku ?? pick.product.name;
+        if (showSnackbars) _showStockUnavailable(label);
+        return '$label has no available stock.';
       }
       ref.read(cartControllerProvider.notifier).addProduct(
             pick.product,
@@ -333,22 +342,44 @@ class _PosPageState extends ConsumerState<PosPage> {
             fromPicker: true,
           );
       await _clearSearchAfterSelect();
-    } else {
-      final stock = product.stockQuantity;
-      if (stock == null || stock <= 0) {
-        _showStockUnavailable(product.sku ?? product.name);
-        return;
-      }
-      ref.read(cartControllerProvider.notifier).addProduct(product);
-      await _clearSearchAfterSelect();
+      return null;
     }
+
+    final stock = product.stockQuantity;
+    if (product.trackStock && (stock == null || stock <= 0)) {
+      final label = product.sku ?? product.name;
+      if (showSnackbars) _showStockUnavailable(label);
+      return '$label has no available stock.';
+    }
+    ref.read(cartControllerProvider.notifier).addProduct(product);
+    await _clearSearchAfterSelect();
+    return null;
   }
 
-  /// Exact barcode/SKU add from camera or Bluetooth HID (search Enter).
-  Future<bool> _addByScanCode(String rawCode) async {
-    final code = normalizeScanCode(rawCode);
-    if (code.isEmpty || _scanBusy) return false;
-    if (isDuplicateScan(_lastScan, code)) return false;
+  /// Exact barcode/SKU/QR add from camera or Bluetooth HID (search Enter).
+  ///
+  /// [debounce] defaults to gun-friendly 450ms; continuous camera uses
+  /// [kPosContinuousScanDebounce] (~1.2s). When [showSnackbars] is false,
+  /// feedback is returned for the scanner chrome instead.
+  Future<PosScanFeedback> _addByScanCode(
+    String rawCode, {
+    bool showSnackbars = true,
+    Duration debounce = const Duration(milliseconds: 450),
+  }) async {
+    final code = extractProductScanCode(rawCode);
+    if (code.isEmpty) {
+      const message = 'Enter a barcode or QR code to scan.';
+      if (showSnackbars && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(message)),
+        );
+      }
+      return const PosScanFeedback(ok: false, message: message);
+    }
+    if (_scanBusy) return PosScanFeedback.ignored;
+    if (isDuplicateScan(_lastScan, code, window: debounce)) {
+      return PosScanFeedback.ignored;
+    }
     _lastScan = ScanStamp(code: code, at: DateTime.now());
     setState(() => _scanBusy = true);
     try {
@@ -356,36 +387,51 @@ class _PosPageState extends ConsumerState<PosPage> {
         ref.read(posApiProvider),
         code,
       );
-      if (!mounted) return false;
+      if (!mounted) return PosScanFeedback.ignored;
       if (pick.product == null) {
         final message = switch (pick.reason) {
           ScanPickReason.ambiguous =>
             'Several products share that code — pick from the list.',
-          ScanPickReason.empty => 'Enter a barcode to scan.',
-          _ => 'No product for "$code". Check the barcode or add it in Products.',
+          ScanPickReason.empty => 'Enter a barcode or QR code to scan.',
+          _ =>
+            'No product for "$code". Check the barcode/QR or add it in Products.',
         };
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        if (showSnackbars) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+        }
         if (pick.reason == ScanPickReason.ambiguous) {
           _search.text = code;
           await _loadCatalog(code);
         }
-        return false;
+        return PosScanFeedback(ok: false, message: message);
       }
-      await _selectProduct(pick.product!);
-      if (!mounted) return true;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${pick.product!.name} added')),
+      final error = await _selectProduct(
+        pick.product!,
+        showSnackbars: showSnackbars,
       );
-      return true;
+      if (!mounted) return PosScanFeedback.ignored;
+      if (error != null) {
+        return PosScanFeedback(ok: false, message: error);
+      }
+      final message = '${pick.product!.name} added';
+      if (showSnackbars) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+      return PosScanFeedback(ok: true, message: message);
     } finally {
       if (mounted) setState(() => _scanBusy = false);
     }
   }
 
   Future<void> _onSearchSubmitted(String raw) async {
-    if (looksLikeScanCode(raw)) {
+    final extracted = extractProductScanCode(raw);
+    final fromPayload = extracted.isNotEmpty &&
+        extracted.toLowerCase() != normalizeScanCode(raw).toLowerCase();
+    if (fromPayload || looksLikeScanCode(extracted) || looksLikeScanCode(raw)) {
       await _addByScanCode(raw);
       return;
     }
@@ -408,9 +454,14 @@ class _PosPageState extends ConsumerState<PosPage> {
       );
       return;
     }
-    final code = await openBarcodeScanner(context);
-    if (!mounted || code == null || code.isEmpty) return;
-    await _addByScanCode(code);
+    await openBarcodeScanner(
+      context,
+      onScan: (code) => _addByScanCode(
+        code,
+        showSnackbars: false,
+        debounce: kPosContinuousScanDebounce,
+      ),
+    );
     if (mounted) _searchFocus.requestFocus();
   }
 
@@ -1107,8 +1158,8 @@ class _PosSearchRow extends StatelessWidget {
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
               hintText: cameraScanEnabled
-                  ? 'Search SKU or scan… (camera / Bluetooth gun)'
-                  : 'Search SKU or scan with Bluetooth gun…',
+                  ? 'Search SKU, barcode, or QR…'
+                  : 'Search SKU / barcode (Bluetooth gun)…',
               prefixIcon: const Icon(
                 Icons.search,
                 color: AppColors.mutedForeground,
