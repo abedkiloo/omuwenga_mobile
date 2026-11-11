@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/providers.dart';
 import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../pos/domain/payment.dart';
 import '../domain/approval_details.dart';
 
 String formatApprovalMoney(String raw) {
@@ -14,13 +17,13 @@ String formatApprovalMoney(String raw) {
 }
 
 /// Renders API approval sections (facts + line items) for the checker.
-class ApprovalDetailsPanel extends StatelessWidget {
+class ApprovalDetailsPanel extends ConsumerWidget {
   const ApprovalDetailsPanel({super.key, required this.details});
 
   final ApprovalDetails details;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (details.isEmpty) {
       return Text(
         'No extra details were provided for this request.',
@@ -29,6 +32,7 @@ class ApprovalDetailsPanel extends StatelessWidget {
         ),
       );
     }
+    final apiBase = ref.watch(appEnvProvider).apiBaseUrl;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -57,31 +61,42 @@ class ApprovalDetailsPanel extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: fact.kind == 'notes'
                           ? _NotesFactRow(notes: fact.value)
-                          : Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    fact.label,
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          color: AppColors.mutedForeground,
-                                        ),
-                                  ),
+                          : fact.kind == 'image'
+                              ? _ImageFactRow(
+                                  label: fact.label,
+                                  url: resolveMediaUrl(fact.value, apiBase),
+                                )
+                              : Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        fact.label,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: AppColors.mutedForeground,
+                                            ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Flexible(
+                                      child: Text(
+                                        fact.kind == 'money'
+                                            ? 'KES ${formatApprovalMoney(fact.value)}'
+                                            : fact.value,
+                                        textAlign: TextAlign.right,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 12),
-                                Flexible(
-                                  child: Text(
-                                    fact.kind == 'money'
-                                        ? 'KES ${formatApprovalMoney(fact.value)}'
-                                        : fact.value,
-                                    textAlign: TextAlign.right,
-                                    style: Theme.of(context).textTheme.bodyMedium
-                                        ?.copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                ),
-                              ],
-                            ),
                     ),
                 ],
               ),
@@ -153,6 +168,113 @@ class ApprovalDetailsPanel extends StatelessWidget {
           ],
           const SizedBox(height: 16),
         ],
+      ],
+    );
+  }
+}
+
+class _ImageFactRow extends StatelessWidget {
+  const _ImageFactRow({required this.label, required this.url});
+
+  final String label;
+  final String url;
+
+  Future<void> _open(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: InteractiveViewer(
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('Could not load image'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.trim().isEmpty) {
+      return Text(
+        'No image attached',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.mutedForeground,
+            ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.mutedForeground,
+              ),
+        ),
+        const SizedBox(height: 8),
+        Material(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            key: const Key('approval_evidence_image'),
+            onTap: () => _open(context),
+            borderRadius: BorderRadius.circular(8),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                url,
+                height: 180,
+                width: double.infinity,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text('Could not load uploaded image'),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Tap to enlarge',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppColors.mutedForeground,
+              ),
+        ),
       ],
     );
   }

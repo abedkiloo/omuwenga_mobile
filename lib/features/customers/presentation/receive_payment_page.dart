@@ -39,6 +39,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
   late final TextEditingController _phone;
   late final TextEditingController _payerName;
   late final TextEditingController _payerPhone;
+  late final TextEditingController _notes;
   PosPaymentMethod _method = PosPaymentMethod.cash;
   MpesaCaptureMode _mpesaCapture = MpesaCaptureMode.code;
   String _mpesaDestination = '';
@@ -57,6 +58,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     _phone = TextEditingController();
     _payerName = TextEditingController();
     _payerPhone = TextEditingController();
+    _notes = TextEditingController();
   }
 
   @override
@@ -66,6 +68,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     _phone.dispose();
     _payerName.dispose();
     _payerPhone.dispose();
+    _notes.dispose();
     super.dispose();
   }
 
@@ -89,13 +92,17 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     return paymentAmountValidationMessage(_amount.text);
   }
 
-  bool get _requirePayer {
+  bool get _payerFeatureOn {
     final features = ref.read(authControllerProvider).session?.features;
     return features?.isCollectionPayerDetailsEnabled ?? true;
   }
 
+  /// Who-paid / phone only after a non-cash method is selected.
+  bool get _askPayer =>
+      _payerFeatureOn && _method != PosPaymentMethod.cash;
+
   bool get _needsDestinationBeforeCode =>
-      _requirePayer &&
+      _payerFeatureOn &&
       _method == PosPaymentMethod.mpesa &&
       !isLiveMpesaPrompt(_mpesaCapture);
 
@@ -103,7 +110,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
       !_needsDestinationBeforeCode || _mpesaDestination.isNotEmpty;
 
   String? get _payerNameError {
-    if (!_requirePayer || (!_attempted && _payerName.text.trim().isEmpty)) {
+    if (!_askPayer || (!_attempted && _payerName.text.trim().isEmpty)) {
       return null;
     }
     if (_payerName.text.trim().isEmpty) return 'Enter the name of who paid.';
@@ -111,7 +118,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
   }
 
   String? get _payerPhoneError {
-    if (!_requirePayer || (!_attempted && _payerPhone.text.trim().isEmpty)) {
+    if (!_askPayer || (!_attempted && _payerPhone.text.trim().isEmpty)) {
       return null;
     }
     final digits = _payerPhone.text.replaceAll(RegExp(r'\D'), '');
@@ -171,7 +178,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     setState(() => _attempted = true);
     final amountError = paymentAmountValidationMessage(_amount.text);
     if (amountError != null) return;
-    if (_requirePayer) {
+    if (_askPayer) {
       if (_payerNameError != null || _payerPhoneError != null) return;
     }
     final amount = parsePaymentAmount(_amount.text)!;
@@ -217,9 +224,9 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
         CommitSummaryRow(label: 'Customer', value: detail.name),
         CommitSummaryRow(label: 'Amount', value: formatKes(amount), emphasis: true),
         CommitSummaryRow(label: 'Method', value: _method.label),
-        if (_requirePayer && _payerName.text.trim().isNotEmpty)
+        if (_askPayer && _payerName.text.trim().isNotEmpty)
           CommitSummaryRow(label: 'Paid by', value: _payerName.text.trim()),
-        if (_requirePayer && _payerPhone.text.trim().isNotEmpty)
+        if (_askPayer && _payerPhone.text.trim().isNotEmpty)
           CommitSummaryRow(label: 'Payer phone', value: _payerPhone.text.trim()),
         if (_mpesaDestination.isNotEmpty)
           CommitSummaryRow(
@@ -238,6 +245,8 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
           ),
         if (_paymentDate != today)
           CommitSummaryRow(label: 'Payment date', value: _paymentDate),
+        if (_notes.text.trim().isNotEmpty)
+          CommitSummaryRow(label: 'Notes', value: _notes.text.trim()),
         if (_receiptBytes != null)
           const CommitSummaryRow(label: 'Receipt', value: 'Attached'),
         if (detail.debtAmount > 0)
@@ -275,9 +284,10 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
           amount: amount,
           paymentMethod: _method.apiValue,
           reference: reference,
-          payerName: _requirePayer ? _payerName.text.trim() : '',
-          payerPhone: _requirePayer ? _payerPhone.text.trim() : '',
-          mpesaDestination: _requirePayer && _method == PosPaymentMethod.mpesa
+          notes: _notes.text.trim(),
+          payerName: _askPayer ? _payerName.text.trim() : '',
+          payerPhone: _askPayer ? _payerPhone.text.trim() : '',
+          mpesaDestination: _askPayer && _method == PosPaymentMethod.mpesa
               ? _mpesaDestination
               : '',
           paymentDate: _paymentDate != today ? _paymentDate : '',
@@ -321,7 +331,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
     if (detail != null) {
       _seedAmount(detail.debtAmount, phone: detail.phone, name: detail.name);
     }
-    final requirePayer = _requirePayer;
+    final askPayer = _askPayer;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Collect payment')),
@@ -380,7 +390,31 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
-                if (requirePayer) ...[
+                const SizedBox(height: 16),
+                Text('Method', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final m in const [
+                      PosPaymentMethod.cash,
+                      PosPaymentMethod.mpesa,
+                    ])
+                      ChoiceChip(
+                        key: Key('settle_method_${m.name}'),
+                        label: Text(m.label),
+                        selected: _method == m,
+                        onSelected: (_) => setState(() {
+                          _method = m;
+                          if (m != PosPaymentMethod.mpesa) {
+                            _mpesaCapture = MpesaCaptureMode.code;
+                            _mpesaDestination = '';
+                          }
+                        }),
+                      ),
+                  ],
+                ),
+                if (askPayer) ...[
                   const SizedBox(height: 16),
                   TextField(
                     key: const Key('settle_payer_name'),
@@ -408,30 +442,6 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                     onChanged: (_) => setState(() {}),
                   ),
                 ],
-                const SizedBox(height: 16),
-                Text('Method', style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    for (final m in const [
-                      PosPaymentMethod.cash,
-                      PosPaymentMethod.mpesa,
-                    ])
-                      ChoiceChip(
-                        key: Key('settle_method_${m.name}'),
-                        label: Text(m.label),
-                        selected: _method == m,
-                        onSelected: (_) => setState(() {
-                          _method = m;
-                          if (m != PosPaymentMethod.mpesa) {
-                            _mpesaCapture = MpesaCaptureMode.code;
-                            _mpesaDestination = '';
-                          }
-                        }),
-                      ),
-                  ],
-                ),
                 const SizedBox(height: 16),
                 ListTile(
                   key: const Key('settle_payment_date'),
@@ -550,6 +560,19 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                     ),
                   ],
                 ],
+                const SizedBox(height: 16),
+                TextField(
+                  key: const Key('settle_notes'),
+                  controller: _notes,
+                  textCapitalization: TextCapitalization.sentences,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Notes',
+                    hintText: 'Optional — e.g. duka closed, partial visit',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
                 const SizedBox(height: 16),
                 CbPrimaryButton(
                   key: const Key('settle_confirm'),

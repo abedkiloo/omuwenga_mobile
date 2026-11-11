@@ -11,6 +11,7 @@ import 'package:completebyte_pos_mobile/features/auth/domain/persona.dart';
 import 'package:completebyte_pos_mobile/features/customers/application/customers_controllers.dart';
 import 'package:completebyte_pos_mobile/features/customers/domain/customer.dart';
 import 'package:completebyte_pos_mobile/features/customers/presentation/customer_detail_page.dart';
+import 'package:completebyte_pos_mobile/features/customers/presentation/customers_list_page.dart';
 import 'package:completebyte_pos_mobile/sync/application/connectivity_monitor.dart';
 import 'package:completebyte_pos_mobile/sync/data/memory_outbox_store.dart';
 import 'package:completebyte_pos_mobile/sync/providers.dart';
@@ -275,5 +276,63 @@ void main() {
     await tester.tap(find.byKey(const Key('customer_tab_orders')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('customer_order_9')), findsOneWidget);
+  });
+
+  testWidgets('customer list hides advanced filter tabs until opened', (
+    tester,
+  ) async {
+    final client = MockClient((request) async {
+      final path = request.url.path;
+      if (path.contains('sales/customers') &&
+          !path.contains('/detail/') &&
+          !path.contains('receive-wallet') &&
+          !path.contains('settings')) {
+        return http.Response(
+          jsonEncode({
+            'count': 1,
+            'results': [
+              {
+                'id': 7,
+                'name': 'Debtor Shop',
+                'phone': '0700123456',
+                'wallet_balance': '-80.00',
+                'engagement_tier': 'buyer',
+                'buyer_segment': 'active',
+              },
+            ],
+          }),
+          200,
+        );
+      }
+      return http.Response('{}', 200);
+    });
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _overrides(
+          session: _session(canUpdate: true),
+          httpClient: client,
+        ),
+        child: const MaterialApp(home: CustomersListPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Debtor Shop'), findsOneWidget);
+    expect(find.byKey(const Key('customers_more_filters')), findsOneWidget);
+    expect(find.text('Bought from Omuwenga'), findsNothing);
+    expect(find.text('Any segment'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('customers_more_filters')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('customers_more_filters_sheet')), findsOneWidget);
+    expect(find.text('Bought from Omuwenga'), findsOneWidget);
+    expect(find.text('Any segment'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const Key('customers_more_filters_done')));
+    await tester.tap(find.byKey(const Key('customers_more_filters_done')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('customers_more_filters_sheet')), findsNothing);
+    expect(find.text('Bought from Omuwenga'), findsNothing);
   });
 }

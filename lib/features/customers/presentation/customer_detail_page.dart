@@ -810,33 +810,43 @@ class _LedgerActivitySection extends StatelessWidget {
     final theme = Theme.of(context);
     final hasLedger = detail.ledger.isNotEmpty;
     final hasOrders = detail.recentOrders.isNotEmpty;
-    final showingLedger = tab == 'ledger';
+    // Only offer a switcher when both sides have content.
+    final showTabSwitcher = hasOrders && hasLedger;
+    final showingLedger = switch ((hasOrders, hasLedger)) {
+      (true, true) => tab == 'ledger',
+      (false, true) => true,
+      (true, false) => false,
+      (false, false) => tab == 'ledger',
+    };
 
     return CbSurfaceCard(
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              CbFilterChip(
-                key: const Key('customer_tab_orders'),
-                label: 'Orders',
-                selected: !showingLedger,
-                compact: true,
-                onTap: () => onTabChanged('orders'),
-              ),
-              const SizedBox(width: 8),
-              CbFilterChip(
-                key: const Key('customer_tab_ledger'),
-                label: 'Debt & payments',
-                selected: showingLedger,
-                compact: true,
-                onTap: () => onTabChanged('ledger'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          if (showTabSwitcher) ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                CbFilterChip(
+                  key: const Key('customer_tab_orders'),
+                  label: 'Orders',
+                  selected: !showingLedger,
+                  compact: true,
+                  onTap: () => onTabChanged('orders'),
+                ),
+                CbFilterChip(
+                  key: const Key('customer_tab_ledger'),
+                  label: 'Debt & payments',
+                  selected: showingLedger,
+                  compact: true,
+                  onTap: () => onTabChanged('ledger'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
           if (showingLedger)
             if (!hasLedger)
               Text(

@@ -35,6 +35,168 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
   _CustomerSort _sort = _CustomerSort.highestDebt;
   bool _chromeCollapsed = false;
 
+  bool _advancedFiltersActive(CustomersListState state) {
+    return state.engagementTier != EngagementTier.all ||
+        state.buyerSegment != BuyerSegment.any ||
+        state.hasLocationFilter;
+  }
+
+  Future<void> _openMoreFilters() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final state = ref.watch(customersListProvider);
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 12,
+                  right: 12,
+                  bottom: MediaQuery.viewInsetsOf(context).bottom + 12,
+                ),
+                child: SingleChildScrollView(
+                  key: const Key('customers_more_filters_sheet'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'More filters',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Buyer type, segment, location, and sort — only when you need them.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.mutedForeground,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Customer type',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final tier in EngagementTier.values)
+                            _FilterChip(
+                              label: tier.label,
+                              selected: state.engagementTier == tier,
+                              tooltip: tier.tip,
+                              onTap: () => ref
+                                  .read(customersListProvider.notifier)
+                                  .setEngagementTier(tier),
+                            ),
+                        ],
+                      ),
+                      if (state.engagementTier != EngagementTier.prospect) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'Buyer segment',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final seg in BuyerSegment.values)
+                              _FilterChip(
+                                label: seg.label,
+                                selected: state.buyerSegment == seg,
+                                tooltip: seg.tip,
+                                onTap: () => ref
+                                    .read(customersListProvider.notifier)
+                                    .setBuyerSegment(seg),
+                              ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      Text(
+                        'Location',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final loc in CustomerLocationStatus.values)
+                            _FilterChip(
+                              label: loc.label,
+                              selected: state.locationStatus == loc,
+                              tooltip: loc == CustomerLocationStatus.valid
+                                  ? 'County, sub-county, and ward match our list'
+                                  : loc == CustomerLocationStatus.invalid
+                                      ? 'Blank or mismatched Kenya admin location'
+                                      : 'All location qualities',
+                              onTap: () => ref
+                                  .read(customersListProvider.notifier)
+                                  .setLocationStatus(loc),
+                            ),
+                          if (state.hasLocationFilter)
+                            _FilterChip(
+                              label: 'Clear location',
+                              selected: false,
+                              onTap: () => ref
+                                  .read(customersListProvider.notifier)
+                                  .clearLocationFilters(),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _LocationLevelFilters(state: state),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Sort by',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 4),
+                      DropdownButtonHideUnderline(
+                        child: DropdownButton<_CustomerSort>(
+                          value: _sort,
+                          isExpanded: true,
+                          items: const [
+                            DropdownMenuItem(
+                              value: _CustomerSort.highestDebt,
+                              child: Text('Balance / Highest Debt'),
+                            ),
+                            DropdownMenuItem(
+                              value: _CustomerSort.name,
+                              child: Text('Name A–Z'),
+                            ),
+                          ],
+                          onChanged: (v) {
+                            if (v == null) return;
+                            setState(() => _sort = v);
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        key: const Key('customers_more_filters_done'),
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                        child: const Text('Done'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -210,192 +372,68 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
             ),
           ),
           filters: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: SizedBox(
-                        height: 36,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          children: [
-                            for (final tier in EngagementTier.values) ...[
-                              if (tier != EngagementTier.values.first)
-                                const SizedBox(width: 8),
-                              _FilterChip(
-                                label: tier.label,
-                                selected: state.engagementTier == tier,
-                                tooltip: tier.tip,
-                                onTap: () => ref
-                                    .read(customersListProvider.notifier)
-                                    .setEngagementTier(tier),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (state.engagementTier != EngagementTier.prospect)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: SizedBox(
-                          height: 36,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            children: [
-                              for (final seg in BuyerSegment.values) ...[
-                                if (seg != BuyerSegment.values.first)
-                                  const SizedBox(width: 8),
-                                _FilterChip(
-                                  label: seg.label,
-                                  selected: state.buyerSegment == seg,
-                                  tooltip: seg.tip,
-                                  onTap: () => ref
-                                      .read(customersListProvider.notifier)
-                                      .setBuyerSegment(seg),
-                                ),
-                              ],
-                            ],
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: SizedBox(
+                  height: 36,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    children: [
+                      if (state.items.isNotEmpty) ...[
+                        _FilterChip(
+                          label:
+                              'All (${state.count > 0 ? state.count : state.items.length})',
+                          selected: _filter == _CustomerFilter.all,
+                          onTap: () => setState(
+                            () => _filter = _CustomerFilter.all,
                           ),
                         ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: SizedBox(
-                        height: 36,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          children: [
-                            for (final loc in CustomerLocationStatus.values) ...[
-                              if (loc != CustomerLocationStatus.values.first)
-                                const SizedBox(width: 8),
-                              _FilterChip(
-                                label: loc.label,
-                                selected: state.locationStatus == loc,
-                                tooltip: loc == CustomerLocationStatus.valid
-                                    ? 'County, sub-county, and ward match our list'
-                                    : loc == CustomerLocationStatus.invalid
-                                        ? 'Blank or mismatched Kenya admin location'
-                                        : 'All location qualities',
-                                onTap: () => ref
-                                    .read(customersListProvider.notifier)
-                                    .setLocationStatus(loc),
-                              ),
-                            ],
-                            if (state.hasLocationFilter) ...[
-                              const SizedBox(width: 8),
-                              _FilterChip(
-                                label: 'Clear location',
-                                selected: false,
-                                onTap: () => ref
-                                    .read(customersListProvider.notifier)
-                                    .clearLocationFilters(),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                      child: _LocationLevelFilters(state: state),
-                    ),
-                    if (state.items.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: SizedBox(
-                          height: 36,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            children: [
-                              _FilterChip(
-                                label:
-                                    'Standing · All (${state.count > 0 ? state.count : state.items.length})',
-                                selected: _filter == _CustomerFilter.all,
-                                onTap: () => setState(
-                                  () => _filter = _CustomerFilter.all,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              _FilterChip(
-                                label: 'Debtors ($debtorCount)',
-                                selected: _filter == _CustomerFilter.debtors,
-                                onTap: () => setState(
-                                  () => _filter = _CustomerFilter.debtors,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              _FilterChip(
-                                label: 'Credit ($creditCount)',
-                                selected: _filter == _CustomerFilter.credit,
-                                onTap: () => setState(
-                                  () => _filter = _CustomerFilter.credit,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              _FilterChip(
-                                label: 'Good ($goodCount)',
-                                selected: _filter == _CustomerFilter.good,
-                                onTap: () => setState(
-                                  () => _filter = _CustomerFilter.good,
-                                ),
-                              ),
-                            ],
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Debtors ($debtorCount)',
+                          selected: _filter == _CustomerFilter.debtors,
+                          onTap: () => setState(
+                            () => _filter = _CustomerFilter.debtors,
                           ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
-                        child: Row(
-                          children: [
-                            Text(
-                              'Sort by: ',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: AppColors.mutedForeground),
-                            ),
-                            Expanded(
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<_CustomerSort>(
-                                  value: _sort,
-                                  isDense: true,
-                                  isExpanded: true,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: _CustomerSort.highestDebt,
-                                      child: Text(
-                                        'Balance / Highest Debt',
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: _CustomerSort.name,
-                                      child: Text('Name A–Z'),
-                                    ),
-                                  ],
-                                  onChanged: (v) {
-                                    if (v != null) setState(() => _sort = v);
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Credit ($creditCount)',
+                          selected: _filter == _CustomerFilter.credit,
+                          onTap: () => setState(
+                            () => _filter = _CustomerFilter.credit,
+                          ),
                         ),
+                        const SizedBox(width: 8),
+                        _FilterChip(
+                          label: 'Good ($goodCount)',
+                          selected: _filter == _CustomerFilter.good,
+                          onTap: () => setState(
+                            () => _filter = _CustomerFilter.good,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      _FilterChip(
+                        key: const Key('customers_more_filters'),
+                        label: _advancedFiltersActive(state)
+                            ? 'More filters · on'
+                            : 'More filters',
+                        selected: _advancedFiltersActive(state),
+                        onTap: _openMoreFilters,
                       ),
                     ],
-                    if (state.loading)
-                      const LinearProgressIndicator(minHeight: 2),
-                  ],
+                  ),
                 ),
+              ),
+              if (state.loading)
+                const LinearProgressIndicator(minHeight: 2),
+            ],
+          ),
           body: NotificationListener<ScrollNotification>(
             onNotification: _onListScroll,
             child: _buildBody(
@@ -927,6 +965,7 @@ class _SummaryMetric extends StatelessWidget {
 
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
+    super.key,
     required this.label,
     required this.selected,
     required this.onTap,

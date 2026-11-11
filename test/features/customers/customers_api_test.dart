@@ -231,8 +231,9 @@ void main() {
         final body = jsonDecode(request.body) as Map;
         expect(body['amount'], 40);
         expect(body['payment_method'], 'cash');
-        expect(body['payer_name'], 'Ann');
-        expect(body['payer_phone'], '0712345678');
+        expect(body['notes'], 'Something happened with duka');
+        expect(body.containsKey('payer_name'), isFalse);
+        expect(body.containsKey('payer_phone'), isFalse);
         return http.Response(
           jsonEncode({
             'wallet_balance': '-60.00',
@@ -246,8 +247,7 @@ void main() {
       customerId: 3,
       amount: 40,
       paymentMethod: 'cash',
-      payerName: 'Ann',
-      payerPhone: '0712345678',
+      notes: 'Something happened with duka',
       idempotencyKey: 'idem-1',
     );
     expect(result.getOrThrow().walletBalance, -60);

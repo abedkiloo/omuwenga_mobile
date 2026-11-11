@@ -814,7 +814,8 @@ void main() {
 
       await tester.tap(find.byKey(const Key('collection_customer_44')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const Key('customer_tab_ledger')), findsOneWidget);
+      expect(find.byType(CustomerDetailPage), findsOneWidget);
+      expect(find.text('Debtor Shop'), findsOneWidget);
 
       await tester.pageBack();
       await tester.pumpAndSettle();
@@ -879,6 +880,86 @@ void main() {
       await tester.pump();
       expect(find.textContaining('greater than zero'), findsOneWidget);
       expect(find.byType(ReceivePaymentPage), findsOneWidget);
+    });
+
+    testWidgets('cash hides who-paid; mpesa asks and notes are sent', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      http.Request? settleRequest;
+      final client = MockClient((request) async {
+        final path = request.url.path;
+        if (path.contains('/detail/')) {
+          return http.Response(
+            jsonEncode({
+              'customer': {
+                'id': 7,
+                'name': 'Debtor Shop',
+                'phone': '0700123456',
+                'wallet_balance': '-80.00',
+              },
+              'standing_summary': {'standing': 'debt'},
+              'orders': <dynamic>[],
+            }),
+            200,
+          );
+        }
+        if (path.contains('receive-wallet-payment')) {
+          settleRequest = request;
+          return http.Response(
+            jsonEncode({
+              'wallet_balance': '0.00',
+              'message': 'recorded',
+            }),
+            201,
+          );
+        }
+        return http.Response('{}', 200);
+      });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _overrides(
+            session: _debtSession(canApprove: true),
+            httpClient: client,
+          ),
+          child: const MaterialApp(home: ReceivePaymentPage(customerId: 7)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('settle_payer_name')), findsNothing);
+      expect(find.byKey(const Key('settle_notes')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('settle_method_mpesa')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('settle_payer_name')), findsOneWidget);
+      expect(find.byKey(const Key('settle_payer_phone')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('settle_method_cash')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('settle_payer_name')), findsNothing);
+
+      await tester.enterText(
+        find.byKey(const Key('settle_notes')),
+        'Something happened with duka',
+      );
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('settle_confirm')),
+        80,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.byKey(const Key('settle_confirm')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('settle_commit_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(settleRequest, isNotNull);
+      final body = jsonDecode(settleRequest!.body) as Map<String, dynamic>;
+      expect(body['notes'], 'Something happened with duka');
+      expect(body['payment_method'], 'cash');
+      expect(body.containsKey('payer_name'), isFalse);
+      expect(body.containsKey('payer_phone'), isFalse);
     });
 
     testWidgets('sales confirm copy and queued collection snackbar', (
