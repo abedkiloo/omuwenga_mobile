@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/providers.dart';
 import '../../../app/routes.dart';
+import '../../../core/media/proof_image_tile.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
@@ -283,6 +285,30 @@ class _SaleDetailPageState extends ConsumerState<SaleDetailPage> {
             _FinancialAccounting(detail: detail, subtotal: subtotal),
             const SizedBox(height: 12),
             _TenderAudit(detail: detail),
+            if (detail.backfillReceiptPhotoUrl.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              CbSurfaceCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Paper receipt',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    ProofImageTile(
+                      url: resolveMediaUrl(
+                        detail.backfillReceiptPhotoUrl,
+                        ref.watch(appEnvProvider).apiBaseUrl,
+                      ),
+                      label: 'Paper receipt',
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ],
@@ -979,7 +1005,7 @@ class _TenderAudit extends StatelessWidget {
           const Divider(height: 22),
           _Meta(
             label: 'PAYMENT METHOD',
-            value: (detail.paymentMethod ?? 'Unknown').toUpperCase(),
+            value: detail.tenderLabel,
           ),
           if (detail.paymentReference?.trim().isNotEmpty == true) ...[
             const SizedBox(height: 10),

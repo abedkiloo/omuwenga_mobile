@@ -86,7 +86,9 @@ void main() {
           draft: const CheckoutDraft(
             method: PosPaymentMethod.mpesa,
             amountPaid: 150,
-            paymentReference: 'QHX1',
+            paymentReference: 'QHX7K2L9M1',
+            mpesaDestination: 'till',
+            paymentReceiptBytes: [1, 2, 3],
           ),
         ),
         isTrue,
@@ -198,6 +200,75 @@ void main() {
       expect(body['amount_paid'], 40);
       expect(body['customer_id'], 4);
       expect(body['client_channel'], 'mobile');
+      final payLaterBody = posSaleRequestBody(
+        cart: cart,
+        draft: const CheckoutDraft(
+          method: PosPaymentMethod.cash,
+          amountPaid: 0,
+          paymentOnAccount: true,
+        ),
+      );
+      expect(payLaterBody['payment_method'], 'on_account');
+    });
+
+    test('mpesa collection requires till/bank and screenshot', () {
+      final cart = const PosCart().addProduct(product);
+      expect(
+        validateCheckout(
+          cart: cart,
+          settings: const PosSettings(
+            enabledPaymentMethods: [PosPaymentMethod.mpesa],
+          ),
+          draft: const CheckoutDraft(
+            method: PosPaymentMethod.mpesa,
+            amountPaid: 150,
+            paymentReference: 'QHX7K2L9M1',
+          ),
+        ),
+        contains('till or bank'),
+      );
+      expect(
+        validateCheckout(
+          cart: cart,
+          settings: const PosSettings(
+            enabledPaymentMethods: [PosPaymentMethod.mpesa],
+          ),
+          draft: const CheckoutDraft(
+            method: PosPaymentMethod.mpesa,
+            amountPaid: 150,
+            paymentReference: 'QHX7K2L9M1',
+            mpesaDestination: 'till',
+          ),
+        ),
+        contains('screenshot'),
+      );
+      expect(
+        canSubmitCheckout(
+          cart: cart,
+          settings: const PosSettings(
+            enabledPaymentMethods: [PosPaymentMethod.mpesa],
+          ),
+          draft: CheckoutDraft(
+            method: PosPaymentMethod.mpesa,
+            amountPaid: 150,
+            paymentReference: 'QHX7K2L9M1',
+            mpesaDestination: 'bank',
+            paymentReceiptBytes: const [1, 2, 3],
+          ),
+        ),
+        isTrue,
+      );
+      final body = posSaleRequestBody(
+        cart: cart,
+        draft: const CheckoutDraft(
+          method: PosPaymentMethod.mpesa,
+          amountPaid: 150,
+          paymentReference: 'QHX7K2L9M1',
+          mpesaDestination: 'bank',
+        ),
+      );
+      expect(body['mpesa_destination'], 'bank');
+      expect(body['payment_method'], 'mpesa');
     });
 
     test('partial payment blocked when store setting is off', () {

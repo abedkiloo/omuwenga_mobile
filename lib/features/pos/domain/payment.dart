@@ -142,6 +142,10 @@ class CheckoutDraft {
     required this.amountPaid,
     this.paymentReference = '',
     this.paymentOnAccount = false,
+    this.mpesaDestination = '',
+    this.paymentReceiptBytes,
+    this.paymentReceiptFileName = 'payment_receipt.jpg',
+    this.paymentReceiptContentType = 'image/jpeg',
   });
 
   final PosPaymentMethod method;
@@ -151,17 +155,38 @@ class CheckoutDraft {
   /// Cashier opted to put unpaid balance on the customer account.
   final bool paymentOnAccount;
 
+  /// ``till`` or ``bank`` when collecting M-Pesa now (before the code).
+  final String mpesaDestination;
+
+  /// Screenshot of the till/bank confirmation; required for M-Pesa collection.
+  final List<int>? paymentReceiptBytes;
+  final String paymentReceiptFileName;
+  final String paymentReceiptContentType;
+
   CheckoutDraft copyWith({
     PosPaymentMethod? method,
     double? amountPaid,
     String? paymentReference,
     bool? paymentOnAccount,
+    String? mpesaDestination,
+    List<int>? paymentReceiptBytes,
+    String? paymentReceiptFileName,
+    String? paymentReceiptContentType,
+    bool clearPaymentReceipt = false,
   }) {
     return CheckoutDraft(
       method: method ?? this.method,
       amountPaid: amountPaid ?? this.amountPaid,
       paymentReference: paymentReference ?? this.paymentReference,
       paymentOnAccount: paymentOnAccount ?? this.paymentOnAccount,
+      mpesaDestination: mpesaDestination ?? this.mpesaDestination,
+      paymentReceiptBytes: clearPaymentReceipt
+          ? null
+          : (paymentReceiptBytes ?? this.paymentReceiptBytes),
+      paymentReceiptFileName:
+          paymentReceiptFileName ?? this.paymentReceiptFileName,
+      paymentReceiptContentType:
+          paymentReceiptContentType ?? this.paymentReceiptContentType,
     );
   }
 }
@@ -187,11 +212,13 @@ Map<String, dynamic> posSaleRequestBody({
   required CheckoutDraft draft,
 }) {
   final underpaid = isUnderpaid(total: cart.total, paid: draft.amountPaid);
+  final payLater = draft.paymentOnAccount && draft.amountPaid <= 0;
+  final method = payLater ? 'on_account' : draft.method.apiValue;
   return <String, dynamic>{
     'sale_type': 'pos',
     'client_channel': 'mobile',
     'items': cart.toSaleItemsJson(),
-    'payment_method': draft.method.apiValue,
+    'payment_method': method,
     'amount_paid': draft.amountPaid,
     'tax_amount': cart.taxAmount,
     'discount_amount': cart.discountAmount,
@@ -199,8 +226,15 @@ Map<String, dynamic> posSaleRequestBody({
     'excess_payment_choice': 'change',
     if (cart.customerId != null) 'customer_id': cart.customerId,
     if (cart.holdingId != null) 'holding_id': cart.holdingId,
-    if (draft.paymentReference.trim().isNotEmpty)
+    if (!payLater &&
+        draft.method.requiresReference &&
+        draft.paymentReference.trim().isNotEmpty)
       'payment_reference': draft.paymentReference.trim(),
+    if (!payLater &&
+        draft.method == PosPaymentMethod.mpesa &&
+        draft.amountPaid > 0 &&
+        draft.mpesaDestination.trim().isNotEmpty)
+      'mpesa_destination': draft.mpesaDestination.trim().toLowerCase(),
   };
 }
 
@@ -232,7 +266,23 @@ String? validateCheckout({
       return 'Assign a customer before recording a balance on their account.';
     }
   }
-  if (draft.method.requiresReference &&
+  final payLater = draft.paymentOnAccount && draft.amountPaid <= 0;
+  final collectingMpesaNow =
+      !payLater &&
+      draft.method == PosPaymentMethod.mpesa &&
+      draft.amountPaid > 0;
+  if (collectingMpesaNow) {
+    final dest = draft.mpesaDestination.trim().toLowerCase();
+    if (dest != 'till' && dest != 'bank') {
+      return 'Choose till or bank before entering the M-Pesa code.';
+    }
+    if (draft.paymentReceiptBytes == null ||
+        draft.paymentReceiptBytes!.isEmpty) {
+      return 'Attach a screenshot of the M-Pesa payment (till or bank).';
+    }
+  }
+  if (!payLater &&
+      draft.method.requiresReference &&
       draft.paymentReference.trim().isEmpty &&
       !isUnderpaid(total: cart.total, paid: draft.amountPaid)) {
     if (draft.method == PosPaymentMethod.mpesa) {

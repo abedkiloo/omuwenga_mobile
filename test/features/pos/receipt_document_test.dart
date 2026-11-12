@@ -180,6 +180,23 @@ void main() {
     expect(receiptPaymentLabel('bank_transfer'), 'Bank Transfer');
     expect(receiptPaymentLabel(''), 'Paid');
     expect(receiptPaymentLabel('voucher'), 'voucher');
+    expect(
+      receiptPaymentLabel('cash', amountPaid: 0, total: 100),
+      'Pay later',
+    );
+    expect(
+      receiptPaymentLabel('on_account', amountPaid: 0, total: 100),
+      'Pay later',
+    );
+    expect(
+      receiptPaymentLabel(
+        'mpesa',
+        amountPaid: 100,
+        total: 100,
+        mpesaDestination: 'till',
+      ),
+      'M-Pesa · Till',
+    );
     expect(receiptAppliedPaid(_receipt(total: 5850, amountPaid: 6000)), 5850);
     expect(receiptChangeDue(_receipt(total: 5850, amountPaid: 6000, change: 0)), 150);
     expect(

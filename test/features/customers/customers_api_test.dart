@@ -207,9 +207,11 @@ void main() {
       'source_type': 'debt_settlement',
       'amount': '10',
       'balance_after': '-15.00',
+      'receipt_image_url': '/media/debt_receipts/pay.jpg',
     });
     expect(byBalance.stillOwes, isTrue);
     expect(byBalance.remainingDebt, 15);
+    expect(byBalance.receiptImageUrl, '/media/debt_receipts/pay.jpg');
 
     final cleared = CustomerLedgerEntry.fromJson({
       'id': 3,

@@ -102,12 +102,14 @@ void main() {
       'status': 'cancelled',
       'refund_status': 'refunded',
       'customer_name': 'Ann',
+      'backfill_receipt_photo_url': '/media/sale_backfill/paper.jpg',
     };
     final list = SaleSummary.fromJson(json);
     final detail = SaleDetail.fromJson(json);
     expect(list.lifecycle.label, detail.lifecycle.label);
     expect(list.lifecycle.label, 'Cancelled');
     expect(detail.paymentStatus, PaymentStatusDisplay.paid);
+    expect(detail.backfillReceiptPhotoUrl, '/media/sale_backfill/paper.jpg');
   });
 
   test('returned holding is labelled for salesperson action on list and detail', () {

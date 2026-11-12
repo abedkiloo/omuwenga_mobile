@@ -81,6 +81,7 @@ Map<String, dynamic> _collectionJson({
   'sale_number': null,
   'received_by': 'Col Lect',
   'created_at': '2026-09-23T10:15:00Z',
+  'receipt_image_url': '/media/debt_receipts/demo.jpg',
 };
 
 Map<String, dynamic> _collectionsJson({
@@ -290,6 +291,7 @@ void main() {
       expect(remaining.remainingDebt, 40);
       expect(remaining.remainingLabel, 'Remains');
       expect(remaining.subtitle, contains('0700123456'));
+      expect(remaining.receiptImageUrl, '/media/debt_receipts/demo.jpg');
 
       final settled = DebtCollectionRow.fromJson(
         _collectionJson(balanceAfter: '5.00'),
@@ -331,23 +333,33 @@ void main() {
   ) async {
     var retried = false;
     var jumped = false;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ListView(
-            children: [
-              DebtCollectionsPanel(
-                date: '2026-01-01',
-                collections: const DebtCollections(),
-                loading: false,
-                error: 'Could not read collections.',
-                onRetry: () => retried = true,
-                onPreviousDay: () {},
-                onNextDay: () {},
-                onJumpToday: () => jumped = true,
+    Widget wrap(Widget child) => ProviderScope(
+          overrides: [
+            appEnvProvider.overrideWithValue(
+              const AppEnv(
+                flavor: AppFlavor.dev,
+                apiBaseUrl: 'http://example.com/api',
               ),
-            ],
-          ),
+            ),
+          ],
+          child: MaterialApp(home: Scaffold(body: child)),
+        );
+
+    await tester.pumpWidget(
+      wrap(
+        ListView(
+          children: [
+            DebtCollectionsPanel(
+              date: '2026-01-01',
+              collections: const DebtCollections(),
+              loading: false,
+              error: 'Could not read collections.',
+              onRetry: () => retried = true,
+              onPreviousDay: () {},
+              onNextDay: () {},
+              onJumpToday: () => jumped = true,
+            ),
+          ],
         ),
       ),
     );
@@ -359,14 +371,12 @@ void main() {
     expect(jumped, isTrue);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: DebtCollectionsPanel(
-            date: localDateString(),
-            collections: const DebtCollections(count: 0, total: 0, results: []),
-            loading: false,
-            showDateNav: false,
-          ),
+      wrap(
+        DebtCollectionsPanel(
+          date: localDateString(),
+          collections: const DebtCollections(count: 0, total: 0, results: []),
+          loading: false,
+          showDateNav: false,
         ),
       ),
     );
@@ -374,34 +384,31 @@ void main() {
     expect(find.textContaining('No collections on this day'), findsOneWidget);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: DebtCollectionsPanel(
-            date: localDateString(),
-            collections: DebtCollections.fromJson(
-              _collectionsJson(
-                date: localDateString(),
-                results: [_collectionJson(balanceAfter: '0.00')],
-              ),
+      wrap(
+        DebtCollectionsPanel(
+          date: localDateString(),
+          collections: DebtCollections.fromJson(
+            _collectionsJson(
+              date: localDateString(),
+              results: [_collectionJson(balanceAfter: '0.00')],
             ),
-            loading: false,
-            onOpenCustomer: (_) {},
           ),
+          loading: false,
+          onOpenCustomer: (_) {},
         ),
       ),
     );
     await tester.pumpAndSettle();
     expect(find.text('Settled'), findsOneWidget);
     expect(find.textContaining('Received by'), findsOneWidget);
+    expect(find.byKey(const Key('proof_image_tile')), findsOneWidget);
 
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: DebtCollectionsPanel(
-            date: '2026-09-23',
-            collections: null,
-            loading: true,
-          ),
+      wrap(
+        const DebtCollectionsPanel(
+          date: '2026-09-23',
+          collections: null,
+          loading: true,
         ),
       ),
     );

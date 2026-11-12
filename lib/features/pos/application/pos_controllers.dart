@@ -198,7 +198,18 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final online = await _connectivity.isOnline;
 
     if (!online) {
-      final body = posSaleRequestBody(cart: cart, draft: state.draft);
+      final draft = state.draft;
+      final collectingMpesa =
+          draft.method == PosPaymentMethod.mpesa && draft.amountPaid > 0;
+      if (collectingMpesa) {
+        state = state.copyWith(
+          phase: CheckoutPhase.error,
+          message:
+              'M-Pesa till/bank payments with a screenshot need an internet connection.',
+        );
+        return false;
+      }
+      final body = posSaleRequestBody(cart: cart, draft: draft);
       await _outbox.enqueue(
         EnqueueMutation(
           method: 'POST',
@@ -208,19 +219,25 @@ class CheckoutController extends StateNotifier<CheckoutState> {
           clientResourceId: key,
         ),
       );
+      final payLater = draft.paymentOnAccount && draft.amountPaid <= 0;
+      final method = payLater ? 'on_account' : draft.method.apiValue;
       final queued = SaleReceipt(
         id: null,
         saleNumber: 'QUEUED',
         total: cart.total,
-        paymentMethod: state.draft.method.apiValue,
-        amountPaid: state.draft.amountPaid,
-        change: (state.draft.amountPaid - cart.total).clamp(0, double.infinity),
+        paymentMethod: method,
+        amountPaid: draft.amountPaid,
+        change: (draft.amountPaid - cart.total).clamp(0, double.infinity),
         items: cart.lines,
         customerName: cart.customerName,
         subtotal: cart.subtotal,
         taxAmount: cart.taxAmount,
         discountAmount: cart.discountAmount,
-        paymentReference: state.draft.paymentReference,
+        paymentReference: draft.paymentReference,
+        mpesaDestination: draft.mpesaDestination,
+        paymentMethodLabel: payLater
+            ? 'Pay later'
+            : (method == 'mpesa' ? 'M-Pesa' : method),
         createdAt: DateTime.now(),
         servedByName: _ref.read(authControllerProvider).session?.user.displayName,
         queuedOffline: true,

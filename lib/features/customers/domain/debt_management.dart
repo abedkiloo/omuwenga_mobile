@@ -72,6 +72,14 @@ class DebtCollectionRow {
     this.saleNumber,
     this.receivedBy = '',
     this.createdAt,
+    this.occurredAt,
+    this.receiptImageUrl = '',
+    this.paymentMethod = '',
+    this.paymentMethodLabel = '',
+    this.payerName = '',
+    this.payerPhone = '',
+    this.mpesaDestination = '',
+    this.mpesaDestinationLabel = '',
   });
 
   final int id;
@@ -86,6 +94,16 @@ class DebtCollectionRow {
   final String? saleNumber;
   final String receivedBy;
   final String? createdAt;
+  final String? occurredAt;
+
+  /// M-Pesa / payment screenshot URL when the collector attached proof.
+  final String receiptImageUrl;
+  final String paymentMethod;
+  final String paymentMethodLabel;
+  final String payerName;
+  final String payerPhone;
+  final String mpesaDestination;
+  final String mpesaDestinationLabel;
 
   bool get stillOwes => balanceAfter < -0.005;
 
@@ -115,6 +133,15 @@ class DebtCollectionRow {
       saleNumber: json['sale_number']?.toString(),
       receivedBy: (json['received_by'] ?? '').toString(),
       createdAt: json['created_at']?.toString(),
+      occurredAt: json['occurred_at']?.toString(),
+      receiptImageUrl: (json['receipt_image_url'] ?? '').toString(),
+      paymentMethod: (json['payment_method'] ?? '').toString(),
+      paymentMethodLabel: (json['payment_method_label'] ?? '').toString(),
+      payerName: (json['payer_name'] ?? '').toString(),
+      payerPhone: (json['payer_phone'] ?? '').toString(),
+      mpesaDestination: (json['mpesa_destination'] ?? '').toString(),
+      mpesaDestinationLabel:
+          (json['mpesa_destination_label'] ?? '').toString(),
     );
   }
 }

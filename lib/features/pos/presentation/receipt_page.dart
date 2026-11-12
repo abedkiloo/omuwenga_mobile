@@ -160,7 +160,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '${receiptPaymentLabel(receipt.paymentMethod)}'
+                              '${saleReceiptTenderLabel(receipt)}'
                               '${receipt.paymentReference?.trim().isNotEmpty == true ? ' Ref: ${receipt.paymentReference}' : ''}'
                               '${receipt.queuedOffline ? ' · Queued offline' : ' · Recorded to sales ledger'}',
                               style: theme.textTheme.bodySmall?.copyWith(

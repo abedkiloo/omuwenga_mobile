@@ -102,9 +102,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
       _payerFeatureOn && _method != PosPaymentMethod.cash;
 
   bool get _needsDestinationBeforeCode =>
-      _payerFeatureOn &&
-      _method == PosPaymentMethod.mpesa &&
-      !isLiveMpesaPrompt(_mpesaCapture);
+      _method == PosPaymentMethod.mpesa && !isLiveMpesaPrompt(_mpesaCapture);
 
   bool get _codeUnlocked =>
       !_needsDestinationBeforeCode || _mpesaDestination.isNotEmpty;
@@ -287,7 +285,7 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
           notes: _notes.text.trim(),
           payerName: _askPayer ? _payerName.text.trim() : '',
           payerPhone: _askPayer ? _payerPhone.text.trim() : '',
-          mpesaDestination: _askPayer && _method == PosPaymentMethod.mpesa
+          mpesaDestination: _method == PosPaymentMethod.mpesa
               ? _mpesaDestination
               : '',
           paymentDate: _paymentDate != today ? _paymentDate : '',
@@ -466,44 +464,8 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                     ),
                   ),
                 if (_method == PosPaymentMethod.mpesa) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'M-Pesa receipt screenshot *',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    key: const Key('settle_receipt_pick'),
-                    onPressed: _pickReceipt,
-                    icon: const Icon(Icons.photo_library_outlined),
-                    label: Text(
-                      _receiptBytes == null
-                          ? 'Attach receipt screenshot'
-                          : 'Change receipt screenshot',
-                    ),
-                  ),
-                  if (_receiptBytes != null) ...[
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.memory(
-                        _receiptBytes!,
-                        height: 140,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ] else if (_attempted)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        'Attach a screenshot of the M-Pesa repayment receipt.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                    ),
                   if (_needsDestinationBeforeCode) ...[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
                     Text(
                       'Did the payment come via till or bank?',
                       style: Theme.of(context).textTheme.titleSmall,
@@ -558,6 +520,42 @@ class _ReceivePaymentPageState extends ConsumerState<ReceivePaymentPage> {
                       showErrors: _attempted,
                       onChanged: () => setState(() {}),
                     ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'M-Pesa receipt screenshot *',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      key: const Key('settle_receipt_pick'),
+                      onPressed: _pickReceipt,
+                      icon: const Icon(Icons.photo_library_outlined),
+                      label: Text(
+                        _receiptBytes == null
+                            ? 'Attach receipt screenshot'
+                            : 'Change receipt screenshot',
+                      ),
+                    ),
+                    if (_receiptBytes != null) ...[
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          _receiptBytes!,
+                          height: 140,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ] else if (_attempted)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Attach a screenshot of the M-Pesa repayment receipt.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ),
                   ],
                 ],
                 const SizedBox(height: 16),

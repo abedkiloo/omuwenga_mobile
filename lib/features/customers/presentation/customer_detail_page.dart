@@ -3,11 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/providers.dart';
 import '../../../app/routes.dart';
+import '../../../core/media/proof_image_tile.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../pos/domain/payment.dart';
 import '../application/customers_controllers.dart';
 import '../domain/customer.dart';
 import '../domain/customer_intelligence.dart';
@@ -878,14 +881,18 @@ class _LedgerActivitySection extends StatelessWidget {
   }
 }
 
-class _LedgerRow extends StatelessWidget {
+class _LedgerRow extends ConsumerWidget {
   const _LedgerRow({required this.entry});
 
   final CustomerLedgerEntry entry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final receiptUrl = resolveMediaUrl(
+      entry.receiptImageUrl,
+      ref.watch(appEnvProvider).apiBaseUrl,
+    );
     final settlement = entry.isSettlement;
     final title = entry.saleNumber != null && entry.saleNumber!.isNotEmpty
         ? entry.saleNumber!
@@ -925,9 +932,11 @@ class _LedgerRow extends StatelessWidget {
 
     return InkWell(
       key: Key('customer_ledger_${entry.id}'),
-      onTap: entry.saleId == null
-          ? null
-          : () => context.push(AppRoutes.saleDetail(entry.saleId!)),
+      onTap: settlement
+          ? () => context.push(AppRoutes.paymentDetail(entry.id))
+          : entry.saleId == null
+              ? null
+              : () => context.push(AppRoutes.saleDetail(entry.saleId!)),
       borderRadius: BorderRadius.circular(10),
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -984,6 +993,10 @@ class _LedgerRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall,
             ),
+            if (receiptUrl.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ProofImageTile(url: receiptUrl, label: 'Payment screenshot'),
+            ],
             const SizedBox(height: 8),
             Row(
               children: [

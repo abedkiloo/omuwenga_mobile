@@ -21,6 +21,7 @@ import '../features/customers/presentation/customer_detail_page.dart';
 import '../features/customers/presentation/customer_form_page.dart';
 import '../features/customers/presentation/customers_list_page.dart';
 import '../features/customers/presentation/debt_management_page.dart';
+import '../features/customers/presentation/payment_detail_page.dart';
 import '../features/customers/presentation/receive_payment_page.dart';
 import '../features/daily_sales/presentation/customer_day_page.dart';
 import '../features/daily_sales/presentation/daily_sales_page.dart';
@@ -266,6 +267,13 @@ GoRouter createAppRouter({
             builder: (context, state) {
               final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
               return ReceivePaymentPage(customerId: id);
+            },
+          ),
+          GoRoute(
+            path: '/payments/:id',
+            builder: (context, state) {
+              final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+              return PaymentDetailPage(paymentId: id);
             },
           ),
           GoRoute(

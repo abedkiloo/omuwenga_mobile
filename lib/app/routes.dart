@@ -34,6 +34,7 @@ abstract final class AppRoutes {
   static String customerEdit(int id) => '/customers/$id/edit';
   static String customerSettle(int id) => '/customers/$id/settle';
   static String saleDetail(int id) => '/sales/$id';
+  static String paymentDetail(int id) => '/payments/$id';
   static String dailyCustomerDay(int customerId, {required String date}) =>
       '/daily-sales/customer/$customerId?date=${Uri.encodeQueryComponent(date)}';
   static String fieldOrderCartForSite(int siteId) => '/visit-orders/new';

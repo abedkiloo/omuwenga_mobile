@@ -168,7 +168,7 @@ Future<Uint8List> buildReceiptPdf(
             _doubleRule(),
             pw.SizedBox(height: 2),
             _pdfPair(
-              receiptPaymentLabel(receipt.paymentMethod),
+              saleReceiptTenderLabel(receipt),
               formatReceiptMoney(receiptAppliedPaid(receipt)),
             ),
             if ((receipt.paymentReference?.trim() ?? '').isNotEmpty)

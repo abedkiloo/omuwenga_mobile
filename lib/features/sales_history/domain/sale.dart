@@ -22,6 +22,37 @@ int? _asInt(Object? value) {
   return int.tryParse(value.toString());
 }
 
+/// Cashier-facing sale tender for history / detail / receipts.
+///
+/// Prefer [paymentMethodLabel] from the API. Unpaid / ``on_account`` must
+/// never display as Cash. M-Pesa may include till/bank when known.
+String saleTenderLabel({
+  String? paymentMethod,
+  String? paymentMethodLabel,
+  double amountPaid = 0,
+  double total = 0,
+  String? mpesaDestination,
+}) {
+  final fromApi = (paymentMethodLabel ?? '').trim();
+  if (fromApi.isNotEmpty) return fromApi;
+  final method = (paymentMethod ?? '').trim().toLowerCase();
+  final unpaid = method == 'on_account' ||
+      (amountPaid <= 0.009 &&
+          (total > 0.009 || method.isEmpty || method == 'cash'));
+  if (unpaid) return 'Pay later';
+  if (method == 'mpesa') {
+    final dest = (mpesaDestination ?? '').trim().toLowerCase();
+    if (dest == 'till') return 'M-Pesa · Till';
+    if (dest == 'bank') return 'M-Pesa · Bank';
+    return 'M-Pesa';
+  }
+  if (method == 'cash') return 'Cash';
+  if (method == 'wallet') return 'Wallet';
+  if (method == 'card') return 'Card';
+  if (method.isEmpty) return '—';
+  return method.replaceAll('_', ' ');
+}
+
 class SaleSummary {
   const SaleSummary({
     required this.id,
@@ -29,6 +60,8 @@ class SaleSummary {
     required this.total,
     required this.amountPaid,
     this.paymentMethod,
+    this.paymentMethodLabel,
+    this.mpesaDestination,
     this.customerName,
     this.occurredAt,
     this.status,
@@ -49,6 +82,8 @@ class SaleSummary {
   final double total;
   final double amountPaid;
   final String? paymentMethod;
+  final String? paymentMethodLabel;
+  final String? mpesaDestination;
   final String? customerName;
   final String? occurredAt;
   final String? status;
@@ -62,6 +97,15 @@ class SaleSummary {
   final bool needsSalespersonAction;
   final String? rejectionReason;
   final ApprovalDetails approvalDetails;
+
+  /// Cashier-facing tender; never shows unpaid sales as Cash.
+  String get tenderLabel => saleTenderLabel(
+        paymentMethod: paymentMethod,
+        paymentMethodLabel: paymentMethodLabel,
+        amountPaid: amountPaid,
+        total: total,
+        mpesaDestination: mpesaDestination,
+      );
 
   PaymentStatusDisplay get paymentStatus =>
       classifyPaymentStatus(total: total, amountPaid: amountPaid);
@@ -90,6 +134,8 @@ class SaleSummary {
       total: _asDouble(json['total']) ?? 0,
       amountPaid: _asDouble(json['amount_paid']) ?? 0,
       paymentMethod: json['payment_method']?.toString(),
+      paymentMethodLabel: json['payment_method_label']?.toString(),
+      mpesaDestination: json['mpesa_destination']?.toString(),
       customerName: json['customer_name']?.toString(),
       occurredAt:
           json['occurred_at']?.toString() ?? json['created_at']?.toString(),
@@ -149,6 +195,8 @@ class SaleDetail {
     required this.total,
     required this.amountPaid,
     this.paymentMethod,
+    this.paymentMethodLabel,
+    this.mpesaDestination,
     this.paymentReference,
     this.customerId,
     this.customerName,
@@ -174,6 +222,7 @@ class SaleDetail {
     this.rejectionReason,
     this.canCorrectDate = false,
     this.approvalDetails = const ApprovalDetails(),
+    this.backfillReceiptPhotoUrl = '',
   });
 
   final int id;
@@ -181,6 +230,8 @@ class SaleDetail {
   final double total;
   final double amountPaid;
   final String? paymentMethod;
+  final String? paymentMethodLabel;
+  final String? mpesaDestination;
   final String? paymentReference;
   final int? customerId;
   final String? customerName;
@@ -206,6 +257,18 @@ class SaleDetail {
   final String? rejectionReason;
   final bool canCorrectDate;
   final ApprovalDetails approvalDetails;
+
+  /// Past-sale paper receipt photo URL when recorded with proof.
+  final String backfillReceiptPhotoUrl;
+
+  /// Cashier-facing tender; never shows unpaid sales as Cash.
+  String get tenderLabel => saleTenderLabel(
+        paymentMethod: paymentMethod,
+        paymentMethodLabel: paymentMethodLabel,
+        amountPaid: amountPaid,
+        total: total,
+        mpesaDestination: mpesaDestination,
+      );
 
   PaymentStatusDisplay get paymentStatus =>
       classifyPaymentStatus(total: total, amountPaid: amountPaid);
@@ -243,6 +306,8 @@ class SaleDetail {
       total: _asDouble(json['total']) ?? 0,
       amountPaid: _asDouble(json['amount_paid']) ?? 0,
       paymentMethod: json['payment_method']?.toString(),
+      paymentMethodLabel: json['payment_method_label']?.toString(),
+      mpesaDestination: json['mpesa_destination']?.toString(),
       paymentReference: json['payment_reference']?.toString(),
       customerId: _asInt(json['customer_id']) ?? _asInt(json['customer']),
       customerName: json['customer_name']?.toString(),
@@ -269,6 +334,8 @@ class SaleDetail {
       rejectionReason: json['rejection_reason']?.toString(),
       canCorrectDate: json['can_correct_date'] == true,
       approvalDetails: ApprovalDetails.fromJson(json['approval_details']),
+      backfillReceiptPhotoUrl:
+          (json['backfill_receipt_photo_url'] ?? '').toString(),
     );
   }
 }

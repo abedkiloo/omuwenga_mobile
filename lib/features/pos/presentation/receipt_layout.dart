@@ -74,12 +74,31 @@ String formatReceiptQuantity(double value) {
   return value.toStringAsFixed(2);
 }
 
-String receiptPaymentLabel(String raw) {
-  switch (raw.trim().toLowerCase()) {
+String receiptPaymentLabel(
+  String raw, {
+  double? amountPaid,
+  double? total,
+  String mpesaDestination = '',
+}) {
+  final method = raw.trim().toLowerCase();
+  final paid = amountPaid;
+  final tot = total;
+  final unpaid = method == 'on_account' ||
+      (paid != null &&
+          paid <= 0.009 &&
+          (tot == null || tot > 0.009) &&
+          (method.isEmpty || method == 'cash' || method == 'on_account'));
+  if (unpaid) return 'Pay later';
+  switch (method) {
     case 'cash':
       return 'Cash';
     case 'mpesa':
+      final dest = mpesaDestination.trim().toLowerCase();
+      if (dest == 'till') return 'M-Pesa · Till';
+      if (dest == 'bank') return 'M-Pesa · Bank';
       return 'M-Pesa';
+    case 'on_account':
+      return 'Pay later';
     case 'wallet':
       return 'Wallet';
     case 'card':
@@ -87,8 +106,20 @@ String receiptPaymentLabel(String raw) {
     case 'bank_transfer':
       return 'Bank Transfer';
     default:
-      return raw.trim().isEmpty ? 'Paid' : raw.trim();
+      return method.isEmpty ? 'Paid' : raw.trim();
   }
+}
+
+/// Prefer API ``payment_method_label``; otherwise derive a cashier-facing tender.
+String saleReceiptTenderLabel(SaleReceipt receipt) {
+  final fromApi = receipt.paymentMethodLabel.trim();
+  if (fromApi.isNotEmpty) return fromApi;
+  return receiptPaymentLabel(
+    receipt.paymentMethod,
+    amountPaid: receipt.amountPaid,
+    total: receipt.total,
+    mpesaDestination: receipt.mpesaDestination,
+  );
 }
 
 double receiptSubtotal(SaleReceipt receipt) {
@@ -200,7 +231,7 @@ String buildThermalReceiptText(
   pair('TOTAL', formatReceiptMoney(receipt.total));
   rule('=');
   pair(
-    receiptPaymentLabel(receipt.paymentMethod),
+    saleReceiptTenderLabel(receipt),
     formatReceiptMoney(receiptAppliedPaid(receipt)),
   );
   final reference = receipt.paymentReference?.trim() ?? '';

@@ -432,11 +432,20 @@ class CustomerLedgerEntry {
     this.saleId,
     this.saleNumber,
     this.createdAt,
+    this.occurredAt,
     this.previousDebt,
     this.newDebt,
     this.paymentAmount,
     this.debtAdded,
     this.balanceAfter,
+    this.receiptImageUrl = '',
+    this.paymentMethod = '',
+    this.paymentMethodLabel = '',
+    this.payerName = '',
+    this.payerPhone = '',
+    this.mpesaDestination = '',
+    this.mpesaDestinationLabel = '',
+    this.receivedBy = '',
   });
 
   final int id;
@@ -448,11 +457,22 @@ class CustomerLedgerEntry {
   final int? saleId;
   final String? saleNumber;
   final String? createdAt;
+  final String? occurredAt;
   final double? previousDebt;
   final double? newDebt;
   final double? paymentAmount;
   final double? debtAdded;
   final double? balanceAfter;
+
+  /// Payment screenshot URL for debt settlements (empty when none).
+  final String receiptImageUrl;
+  final String paymentMethod;
+  final String paymentMethodLabel;
+  final String payerName;
+  final String payerPhone;
+  final String mpesaDestination;
+  final String mpesaDestinationLabel;
+  final String receivedBy;
 
   bool get isSettlement =>
       sourceType == 'debt_settlement' ||
@@ -483,11 +503,22 @@ class CustomerLedgerEntry {
       saleId: (json['sale'] as num?)?.toInt(),
       saleNumber: json['sale_number']?.toString(),
       createdAt: json['created_at']?.toString(),
+      occurredAt: json['occurred_at']?.toString(),
       previousDebt: _asDouble(json['previous_debt']),
       newDebt: _asDouble(json['new_debt']),
       paymentAmount: _asDouble(json['payment_amount']),
       debtAdded: _asDouble(json['debt_added']),
       balanceAfter: _asDouble(json['balance_after']),
+      receiptImageUrl: (json['receipt_image_url'] ?? '').toString(),
+      paymentMethod: (json['payment_method'] ?? '').toString(),
+      paymentMethodLabel: (json['payment_method_label'] ?? '').toString(),
+      payerName: (json['payer_name'] ?? '').toString(),
+      payerPhone: (json['payer_phone'] ?? '').toString(),
+      mpesaDestination: (json['mpesa_destination'] ?? '').toString(),
+      mpesaDestinationLabel:
+          (json['mpesa_destination_label'] ?? '').toString(),
+      receivedBy: (json['received_by'] ?? json['created_by_name'] ?? '')
+          .toString(),
     );
   }
 }

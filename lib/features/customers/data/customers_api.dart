@@ -7,6 +7,7 @@ import '../../../core/network/api_error_message.dart';
 import '../../../core/result/result.dart';
 import '../domain/customer.dart';
 import '../domain/kenya_admin_units.dart';
+import '../domain/payment_detail.dart';
 
 class ReceiveWalletPaymentResult {
   const ReceiveWalletPaymentResult({
@@ -342,6 +343,37 @@ class CustomersApi {
         CustomersApiException(
           'Payment may have been recorded but the response could not be read: $e',
         ),
+      );
+    }
+  }
+
+  Future<Result<PaymentDetail>> walletSettlementDetail(int txnId) async {
+    final response = await _client.get(
+      'sales/customers/wallet-settlements/$txnId/',
+    );
+    if (response.isFailure) {
+      final f = response as Failure;
+      return Failure(f.error, f.stackTrace);
+    }
+    final res = response.getOrThrow();
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return Failure(
+        CustomersApiException(
+          _safePaymentError(res.body, statusCode: res.statusCode),
+        ),
+      );
+    }
+    try {
+      final decoded = jsonDecode(res.body);
+      if (decoded is! Map) {
+        return Failure(CustomersApiException('Unexpected payment detail.'));
+      }
+      return Success(
+        PaymentDetail.fromJson(Map<String, dynamic>.from(decoded)),
+      );
+    } on Object catch (e) {
+      return Failure(
+        CustomersApiException('Could not read payment detail: $e'),
       );
     }
   }

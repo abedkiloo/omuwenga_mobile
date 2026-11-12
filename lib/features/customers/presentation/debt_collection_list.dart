@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/providers.dart';
+import '../../../app/routes.dart';
+import '../../../core/media/proof_image_tile.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
+import '../../pos/domain/payment.dart';
 import '../domain/debt_management.dart';
 import '../../../core/format/money.dart';
 
@@ -183,14 +189,14 @@ class DebtCollectionsPanel extends StatelessWidget {
   }
 }
 
-class DebtCollectionTile extends StatelessWidget {
+class DebtCollectionTile extends ConsumerWidget {
   const DebtCollectionTile({super.key, required this.row, this.onOpenCustomer});
 
   final DebtCollectionRow row;
   final VoidCallback? onOpenCustomer;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final remainingText = row.stillOwes
         ? '${row.remainingLabel} ${formatKes(row.remainingDebt)}'
         : 'Settled';
@@ -198,122 +204,142 @@ class DebtCollectionTile extends StatelessWidget {
       if (row.reference.isNotEmpty) row.reference,
       if (row.notes.isNotEmpty) row.notes,
     ].join(' · ');
+    final receiptUrl = resolveMediaUrl(
+      row.receiptImageUrl,
+      ref.watch(appEnvProvider).apiBaseUrl,
+    );
 
-    return Container(
+    return InkWell(
       key: Key('collection_row_${row.id}'),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Flexible(
-                child: Text(
-                  formatCollectionTime(row.createdAt),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.mutedForeground,
+      onTap: () => context.push(AppRoutes.paymentDetail(row.id)),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.border),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    formatCollectionTime(row.occurredAt ?? row.createdAt),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  remainingText,
-                  key: Key('collection_remaining_${row.id}'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.right,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: row.stillOwes
-                        ? AppColors.destructive
-                        : AppColors.mutedForeground,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    remainingText,
+                    key: Key('collection_remaining_${row.id}'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: row.stillOwes
+                          ? AppColors.destructive
+                          : AppColors.mutedForeground,
+                    ),
                   ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            InkWell(
+              key: Key('collection_customer_${row.id}'),
+              onTap: onOpenCustomer,
+              child: Text(
+                row.customerName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: onOpenCustomer == null ? null : AppColors.primary,
+                  decoration: onOpenCustomer == null
+                      ? null
+                      : TextDecoration.underline,
+                ),
+              ),
+            ),
+            if (row.subtitle.isNotEmpty)
+              Text(
+                row.subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.mutedForeground,
+                ),
+              ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Amount paid',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: CbFitMoney(
+                    formatKes(row.amount),
+                    key: Key('collection_amount_${row.id}'),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.success,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (row.receivedBy.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Received by ${row.receivedBy}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.mutedForeground,
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 4),
-          InkWell(
-            key: Key('collection_customer_${row.id}'),
-            onTap: onOpenCustomer,
-            child: Text(
-              row.customerName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: onOpenCustomer == null ? null : AppColors.primary,
-                decoration: onOpenCustomer == null
-                    ? null
-                    : TextDecoration.underline,
-              ),
-            ),
-          ),
-          if (row.subtitle.isNotEmpty)
-            Text(
-              row.subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
-            ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Amount paid',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.mutedForeground,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: CbFitMoney(
-                  formatKes(row.amount),
-                  key: Key('collection_amount_${row.id}'),
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.success,
-                  ),
+            if (notes.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(
+                notes,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.mutedForeground,
                 ),
               ),
             ],
-          ),
-          if (row.receivedBy.isNotEmpty) ...[
+            if (receiptUrl.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ProofImageTile(url: receiptUrl, label: 'Payment screenshot'),
+            ],
             const SizedBox(height: 4),
             Text(
-              'Received by ${row.receivedBy}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
+              'Tap for full payment details',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
-          if (notes.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(
-              notes,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.mutedForeground),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

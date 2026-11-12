@@ -1,8 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../app/routes.dart';
+import '../../../core/media/image_upload_guard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
@@ -1738,6 +1742,10 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
   late final TextEditingController _phone;
   MpesaCaptureMode _mpesaCapture = MpesaCaptureMode.code;
   bool _showMpesaErrors = false;
+  String _mpesaDestination = '';
+  Uint8List? _receiptBytes;
+  String _receiptName = 'payment_receipt.jpg';
+  String _receiptContentType = 'image/jpeg';
 
   @override
   void initState() {
@@ -1746,6 +1754,13 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     _amount = TextEditingController(text: draft.amountPaid.toStringAsFixed(2));
     _reference = TextEditingController(text: draft.paymentReference);
     _phone = TextEditingController();
+    _mpesaDestination = draft.mpesaDestination;
+    final existingReceipt = draft.paymentReceiptBytes;
+    if (existingReceipt != null && existingReceipt.isNotEmpty) {
+      _receiptBytes = Uint8List.fromList(existingReceipt);
+      _receiptName = draft.paymentReceiptFileName;
+      _receiptContentType = draft.paymentReceiptContentType;
+    }
   }
 
   @override
@@ -1769,8 +1784,41 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
             paymentReference: _reference.text,
             paymentOnAccount:
                 paymentOnAccount ?? checkout.draft.paymentOnAccount,
+            mpesaDestination: _mpesaDestination,
+            paymentReceiptBytes: _receiptBytes,
+            paymentReceiptFileName: _receiptName,
+            paymentReceiptContentType: _receiptContentType,
           ),
         );
+  }
+
+  Future<void> _pickPaymentReceipt() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+      maxWidth: 1280,
+    );
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    if (!mounted) return;
+    try {
+      final prepared = await ImageUploadGuard.prepareForUpload(
+        bytes,
+        preferredName: file.name,
+      );
+      setState(() {
+        _receiptBytes = Uint8List.fromList(prepared.bytes);
+        _receiptName = prepared.fileName;
+        _receiptContentType = prepared.contentType;
+      });
+      _pushDraft();
+    } on ImageUploadException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
   }
 
   void _setPaid(double amount) {
@@ -1873,6 +1921,9 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
         isMpesa && collectNow && isLiveMpesaPrompt(_mpesaCapture);
     final needsMpesaCode =
         isMpesa && collectNow && !isLiveMpesaPrompt(_mpesaCapture);
+    final needsDestinationBeforeCode = needsMpesaCode;
+    final codeUnlocked =
+        !needsDestinationBeforeCode || _mpesaDestination.isNotEmpty;
 
     String confirmLabel;
     if (checkout.phase == CheckoutPhase.submitting) {
@@ -1994,6 +2045,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                       setState(() {
                         _mpesaCapture = MpesaCaptureMode.code;
                         _showMpesaErrors = false;
+                        _mpesaDestination = '';
+                        _receiptBytes = null;
                       });
                     }
                   },
@@ -2124,25 +2177,116 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
               ),
             ],
             if (isMpesa) ...[
-              const SizedBox(height: 8),
-              MpesaCapture(
-                mode: _mpesaCapture,
-                onModeChanged: (next) => setState(() {
-                  _mpesaCapture = next;
-                  _showMpesaErrors = false;
-                }),
-                phoneController: _phone,
-                codeController: _reference,
-                phoneFieldKey: const Key('pos_mpesa_phone'),
-                codeFieldKey: const Key('pos_payment_ref'),
-                promptKey: const Key('pos_mpesa_capture_prompt'),
-                codeModeKey: const Key('pos_mpesa_capture_code'),
-                showErrors: _showMpesaErrors,
-                onChanged: () {
-                  _pushDraft();
-                  setState(() {});
-                },
-              ),
+              if (needsDestinationBeforeCode) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Did the payment come via till or bank?',
+                  style: theme.textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    ChoiceChip(
+                      key: const Key('pos_mpesa_via_till'),
+                      label: const Text('Till'),
+                      selected: _mpesaDestination == 'till',
+                      onSelected: (_) {
+                        setState(() => _mpesaDestination = 'till');
+                        _pushDraft();
+                      },
+                    ),
+                    ChoiceChip(
+                      key: const Key('pos_mpesa_via_bank'),
+                      label: const Text('Bank'),
+                      selected: _mpesaDestination == 'bank',
+                      onSelected: (_) {
+                        setState(() => _mpesaDestination = 'bank');
+                        _pushDraft();
+                      },
+                    ),
+                  ],
+                ),
+                if (_showMpesaErrors && _mpesaDestination.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Choose till or bank before entering the code.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Choose till or bank first, then enter the M-Pesa code.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+              ],
+              if (codeUnlocked) ...[
+                const SizedBox(height: 8),
+                MpesaCapture(
+                  mode: _mpesaCapture,
+                  onModeChanged: (next) => setState(() {
+                    _mpesaCapture = next;
+                    _showMpesaErrors = false;
+                  }),
+                  phoneController: _phone,
+                  codeController: _reference,
+                  phoneFieldKey: const Key('pos_mpesa_phone'),
+                  codeFieldKey: const Key('pos_payment_ref'),
+                  promptKey: const Key('pos_mpesa_capture_prompt'),
+                  codeModeKey: const Key('pos_mpesa_capture_code'),
+                  showErrors: _showMpesaErrors,
+                  onChanged: () {
+                    _pushDraft();
+                    setState(() {});
+                  },
+                ),
+                if (needsMpesaCode) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Payment screenshot *',
+                    style: theme.textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    key: const Key('pos_payment_receipt_pick'),
+                    onPressed: _pickPaymentReceipt,
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: Text(
+                      _receiptBytes == null
+                          ? 'Attach receipt screenshot'
+                          : 'Change receipt screenshot',
+                    ),
+                  ),
+                  if (_receiptBytes != null) ...[
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        _receiptBytes!,
+                        height: 140,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ] else if (_showMpesaErrors)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Attach a screenshot of the M-Pesa payment (till or bank).',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                ],
+              ],
             ] else if (draft.method.requiresReference && collectNow) ...[
               const SizedBox(height: 12),
               TextField(
@@ -2198,6 +2342,26 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                       }
                       if (needsMpesaCode) {
                         setState(() => _showMpesaErrors = true);
+                        if (_mpesaDestination.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Choose till or bank before entering the code.',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+                        if (_receiptBytes == null || _receiptBytes!.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Attach a screenshot of the M-Pesa payment (till or bank).',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
                         final refErr = mpesaReceiptValidationMessage(
                           _reference.text,
                         );

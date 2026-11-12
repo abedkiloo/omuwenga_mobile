@@ -702,6 +702,16 @@ class _SaleHistoryCard extends StatelessWidget {
                         label: statusLabel,
                         variant: sale.lifecycle.pillVariant,
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        sale.tenderLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppColors.mutedForeground,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       if (sale.cashierName != null &&
                           sale.cashierName!.trim().isNotEmpty) ...[
                         const SizedBox(height: 4),

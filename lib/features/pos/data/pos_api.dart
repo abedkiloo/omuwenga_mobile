@@ -23,6 +23,8 @@ class SaleReceipt {
     this.discountAmount = 0,
     this.deliveryCost = 0,
     this.paymentReference,
+    this.mpesaDestination = '',
+    this.paymentMethodLabel = '',
     this.createdAt,
     this.servedByName,
     this.queuedOffline = false,
@@ -44,6 +46,8 @@ class SaleReceipt {
   final double discountAmount;
   final double deliveryCost;
   final String? paymentReference;
+  final String mpesaDestination;
+  final String paymentMethodLabel;
   final DateTime? createdAt;
   final String? servedByName;
   final bool queuedOffline;
@@ -109,6 +113,8 @@ class SaleReceipt {
       discountAmount: asDouble(json['discount_amount']),
       deliveryCost: asDouble(json['delivery_cost']),
       paymentReference: json['payment_reference']?.toString(),
+      mpesaDestination: (json['mpesa_destination'] ?? '').toString(),
+      paymentMethodLabel: (json['payment_method_label'] ?? '').toString(),
       createdAt: DateTime.tryParse(
         (json['occurred_at'] ?? json['created_at'] ?? '').toString(),
       ),
@@ -434,12 +440,33 @@ class PosApi {
       );
     }
     final body = posSaleRequestBody(cart: cart, draft: draft);
-
-    final response = await _client.post(
-      'sales/',
-      body: body,
-      idempotencyKey: idempotencyKey,
-    );
+    final receiptBytes = draft.paymentReceiptBytes;
+    final response;
+    if (receiptBytes != null && receiptBytes.isNotEmpty) {
+      final fields = <String, String>{
+        for (final entry in body.entries)
+          if (entry.key != 'items')
+            entry.key: entry.value is bool || entry.value is num
+                ? entry.value.toString()
+                : entry.value?.toString() ?? '',
+        'items': jsonEncode(body['items']),
+      };
+      response = await _client.postMultipart(
+        'sales/',
+        fields: fields,
+        fileField: 'payment_receipt_image',
+        fileBytes: receiptBytes,
+        fileName: draft.paymentReceiptFileName,
+        contentType: draft.paymentReceiptContentType,
+        idempotencyKey: idempotencyKey,
+      );
+    } else {
+      response = await _client.post(
+        'sales/',
+        body: body,
+        idempotencyKey: idempotencyKey,
+      );
+    }
     if (response.isFailure) {
       final f = response as Failure;
       return Failure(f.error, f.stackTrace);
@@ -486,19 +513,48 @@ class PosApi {
     required CheckoutDraft draft,
     required String idempotencyKey,
   }) async {
-    final response = await _client.post(
-      'sales/$holdingId/checkout/',
-      body: {
-        'payment_method': draft.method.apiValue,
-        'amount_paid': draft.amountPaid,
-        'allow_partial_payment': draft.paymentOnAccount && draft.amountPaid >= 0,
-        'excess_payment_choice': 'change',
-        'client_channel': 'mobile',
-        if (draft.paymentReference.trim().isNotEmpty)
-          'payment_reference': draft.paymentReference.trim(),
-      },
-      idempotencyKey: idempotencyKey,
-    );
+    final payLater = draft.paymentOnAccount && draft.amountPaid <= 0;
+    final method = payLater ? 'on_account' : draft.method.apiValue;
+    final checkoutBody = <String, dynamic>{
+      'payment_method': method,
+      'amount_paid': draft.amountPaid,
+      'allow_partial_payment': draft.paymentOnAccount && draft.amountPaid >= 0,
+      'excess_payment_choice': 'change',
+      'client_channel': 'mobile',
+      if (!payLater &&
+          draft.method.requiresReference &&
+          draft.paymentReference.trim().isNotEmpty)
+        'payment_reference': draft.paymentReference.trim(),
+      if (!payLater &&
+          draft.method == PosPaymentMethod.mpesa &&
+          draft.amountPaid > 0 &&
+          draft.mpesaDestination.trim().isNotEmpty)
+        'mpesa_destination': draft.mpesaDestination.trim().toLowerCase(),
+    };
+    final receiptBytes = draft.paymentReceiptBytes;
+    final response;
+    if (receiptBytes != null && receiptBytes.isNotEmpty) {
+      response = await _client.postMultipart(
+        'sales/$holdingId/checkout/',
+        fields: {
+          for (final entry in checkoutBody.entries)
+            entry.key: entry.value is bool || entry.value is num
+                ? entry.value.toString()
+                : entry.value?.toString() ?? '',
+        },
+        fileField: 'payment_receipt_image',
+        fileBytes: receiptBytes,
+        fileName: draft.paymentReceiptFileName,
+        contentType: draft.paymentReceiptContentType,
+        idempotencyKey: idempotencyKey,
+      );
+    } else {
+      response = await _client.post(
+        'sales/$holdingId/checkout/',
+        body: checkoutBody,
+        idempotencyKey: idempotencyKey,
+      );
+    }
     if (response.isFailure) {
       final f = response as Failure;
       return Failure(f.error, f.stackTrace);
