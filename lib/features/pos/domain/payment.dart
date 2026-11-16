@@ -152,7 +152,7 @@ class CheckoutDraft {
   final double amountPaid;
   final String paymentReference;
 
-  /// Cashier opted to put unpaid balance on the customer account.
+  /// Cashier opted to record unpaid balance as customer debt.
   final bool paymentOnAccount;
 
   /// ``till`` or ``bank`` when collecting M-Pesa now (before the code).
@@ -257,13 +257,13 @@ String? validateCheckout({
   }
   if (isUnderpaid(total: cart.total, paid: draft.amountPaid)) {
     if (!settings.allowPartialPayment) {
-      return 'Payment on account is disabled in store settings.';
+      return 'Debt / partial payment is disabled in store settings.';
     }
     if (!draft.paymentOnAccount) {
-      return 'Enable “Payment on customer account” for a partial payment or pay later.';
+      return 'Enable “Allow debt / partial payment” to record unpaid balance as debt.';
     }
     if (cart.customerId == null) {
-      return 'Assign a customer before recording a balance on their account.';
+      return 'Assign a customer before recording balance as debt.';
     }
   }
   final payLater = draft.paymentOnAccount && draft.amountPaid <= 0;

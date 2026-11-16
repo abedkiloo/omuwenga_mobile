@@ -26,7 +26,7 @@ List<CommitSummaryRow> posCloseSaleRows({
       CommitSummaryRow(label: 'Collected now', value: formatKes(paid)),
     if (kind != CheckoutKind.full)
       CommitSummaryRow(
-        label: 'On account',
+        label: 'Debt',
         value: formatKes(balance),
         emphasis: true,
       ),

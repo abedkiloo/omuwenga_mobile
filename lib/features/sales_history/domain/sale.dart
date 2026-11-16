@@ -25,7 +25,8 @@ int? _asInt(Object? value) {
 /// Cashier-facing sale tender for history / detail / receipts.
 ///
 /// Prefer [paymentMethodLabel] from the API. Unpaid / ``on_account`` must
-/// never display as Cash. M-Pesa may include till/bank when known.
+/// never display as Cash or "on account". Fully settled debt → ``Debt repaid``.
+/// M-Pesa may include till/bank when known.
 String saleTenderLabel({
   String? paymentMethod,
   String? paymentMethodLabel,
@@ -33,13 +34,21 @@ String saleTenderLabel({
   double total = 0,
   String? mpesaDestination,
 }) {
-  final fromApi = (paymentMethodLabel ?? '').trim();
-  if (fromApi.isNotEmpty) return fromApi;
   final method = (paymentMethod ?? '').trim().toLowerCase();
-  final unpaid = method == 'on_account' ||
-      (amountPaid <= 0.009 &&
-          (total > 0.009 || method.isEmpty || method == 'cash'));
-  if (unpaid) return 'Pay later';
+  final isDebtTender = method == 'on_account';
+  final looksUnpaidZero = !isDebtTender &&
+      amountPaid <= 0.009 &&
+      (total > 0.009 || method.isEmpty || method == 'cash');
+  if (isDebtTender || looksUnpaidZero) {
+    if (total > 0.009 && amountPaid + 0.009 >= total) return 'Debt repaid';
+    return 'Debt';
+  }
+  final fromApi = (paymentMethodLabel ?? '').trim();
+  if (fromApi.isNotEmpty &&
+      fromApi.toLowerCase() != 'pay later' &&
+      fromApi.toLowerCase() != 'on account') {
+    return fromApi;
+  }
   if (method == 'mpesa') {
     final dest = (mpesaDestination ?? '').trim().toLowerCase();
     if (dest == 'till') return 'M-Pesa · Till';

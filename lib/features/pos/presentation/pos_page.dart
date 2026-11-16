@@ -1841,14 +1841,14 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     final title = sendForApproval
         ? 'Send this sale for approval?'
         : switch (kind) {
-            CheckoutKind.payLater => 'Record full amount as pay later?',
+            CheckoutKind.payLater => 'Record full sale as debt?',
             CheckoutKind.partial => 'Record balance as debt?',
             CheckoutKind.full => 'Confirm and close sale?',
           };
     final confirm = sendForApproval
         ? 'Send for approval'
         : switch (kind) {
-            CheckoutKind.payLater => 'Record sale — pay later',
+            CheckoutKind.payLater => 'Record sale as debt',
             CheckoutKind.partial => 'Record sale & debt',
             CheckoutKind.full => 'Confirm & close sale',
           };
@@ -1856,9 +1856,9 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
         ? 'Record payment and any remaining debt. A manager will approve before stock, books, and the receipt go live.'
         : switch (kind) {
       CheckoutKind.payLater =>
-        'No payment is collected now. The full ${formatKes(cart.total)} will be added to ${cart.customerName ?? 'the customer'}\'s account.',
+        'No payment is collected now. The full ${formatKes(cart.total)} will be recorded as debt for ${cart.customerName ?? 'the customer'}.',
       CheckoutKind.partial =>
-        'Collected ${formatKes(paid)} now. Balance ${formatKes(balance)} will be added to ${cart.customerName ?? 'the customer'}\'s account.',
+        'Collected ${formatKes(paid)} now. Balance ${formatKes(balance)} will be recorded as debt for ${cart.customerName ?? 'the customer'}.',
       CheckoutKind.full =>
         'Confirm payment of ${formatKes(cart.total)} and record this sale. '
             'Choose Back to sale if you need to change any item first.',
@@ -1931,7 +1931,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     } else if (sendForApproval) {
       confirmLabel = 'Send for approval · ${formatKes(cart.total)}';
     } else if (kind == CheckoutKind.payLater) {
-      confirmLabel = 'Pay later — ${formatKes(cart.total)}';
+      confirmLabel = 'Debt — ${formatKes(cart.total)}';
     } else if (kind == CheckoutKind.partial) {
       confirmLabel = 'Pay ${formatKes(amountPaid)} · debt ${formatKes(balanceDue)}';
     } else if (needsStk) {
@@ -2087,7 +2087,7 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Payment on customer account',
+                                  'Allow debt / partial payment',
                                   style: theme.textTheme.titleSmall?.copyWith(
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -2095,8 +2095,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                                 const SizedBox(height: 2),
                                 Text(
                                   cart.customerId == null
-                                      ? 'Assign a customer to charge a balance to their account.'
-                                      : 'Collect part now, or pay the full amount later. The balance is added to the customer account.',
+                                      ? 'Assign a customer before recording debt.'
+                                      : 'Collect part now, or record the full sale as debt for this customer.',
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: AppColors.mutedForeground,
                                   ),
@@ -2113,14 +2113,14 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                         key: const Key('pos_pay_later'),
                         onPressed: _payFullAmountLater,
                         icon: const Icon(Icons.schedule, size: 18),
-                        label: const Text('Pay full amount later'),
+                        label: const Text('Record full sale as debt'),
                       ),
                       if (kind != CheckoutKind.full) ...[
                         const SizedBox(height: 8),
                         Text(
                           kind == CheckoutKind.payLater
-                              ? 'Pay later: entire ${formatKes(cart.total)} will be added to the customer account.'
-                              : 'Balance on account: ${formatKes(balanceDue)}',
+                              ? 'Debt: entire ${formatKes(cart.total)} will be recorded as customer debt.'
+                              : 'Balance (debt): ${formatKes(balanceDue)}',
                           key: const Key('pos_account_balance'),
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: AppColors.warning,

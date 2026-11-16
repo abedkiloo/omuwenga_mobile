@@ -616,11 +616,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pos_pay_later')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Pay later'), findsWidgets);
+    expect(find.textContaining('Debt'), findsWidgets);
     await tester.ensureVisible(find.byKey(const Key('pos_confirm_pay')));
     await tester.tap(find.byKey(const Key('pos_confirm_pay')));
     await tester.pumpAndSettle();
-    expect(find.text('Record full amount as pay later?'), findsOneWidget);
+    expect(find.text('Record full sale as debt?'), findsOneWidget);
     await tester.tap(find.byKey(const Key('pos_close_sale_confirm')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('receipt_title')), findsOneWidget);

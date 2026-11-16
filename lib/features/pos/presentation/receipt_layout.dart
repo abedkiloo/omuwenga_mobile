@@ -83,12 +83,18 @@ String receiptPaymentLabel(
   final method = raw.trim().toLowerCase();
   final paid = amountPaid;
   final tot = total;
-  final unpaid = method == 'on_account' ||
-      (paid != null &&
-          paid <= 0.009 &&
-          (tot == null || tot > 0.009) &&
-          (method.isEmpty || method == 'cash' || method == 'on_account'));
-  if (unpaid) return 'Pay later';
+  final isDebtTender = method == 'on_account';
+  final looksUnpaidZero = !isDebtTender &&
+      paid != null &&
+      paid <= 0.009 &&
+      (tot == null || tot > 0.009) &&
+      (method.isEmpty || method == 'cash');
+  if (isDebtTender || looksUnpaidZero) {
+    if (paid != null && tot != null && tot > 0.009 && paid + 0.009 >= tot) {
+      return 'Debt repaid';
+    }
+    return 'Debt';
+  }
   switch (method) {
     case 'cash':
       return 'Cash';
@@ -97,8 +103,6 @@ String receiptPaymentLabel(
       if (dest == 'till') return 'M-Pesa · Till';
       if (dest == 'bank') return 'M-Pesa · Bank';
       return 'M-Pesa';
-    case 'on_account':
-      return 'Pay later';
     case 'wallet':
       return 'Wallet';
     case 'card':

@@ -1071,7 +1071,7 @@ void main() {
       await tester.tap(find.byKey(const Key('settle_confirm')));
       await tester.pumpAndSettle();
       expect(
-        find.textContaining('This records the payment on the customer account'),
+        find.textContaining('This records a debt repayment for the customer'),
         findsOneWidget,
       );
       await tester.tap(find.byKey(const Key('settle_commit_confirm')));

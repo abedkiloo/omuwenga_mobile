@@ -236,7 +236,7 @@ class CheckoutController extends StateNotifier<CheckoutState> {
         paymentReference: draft.paymentReference,
         mpesaDestination: draft.mpesaDestination,
         paymentMethodLabel: payLater
-            ? 'Pay later'
+            ? 'Debt'
             : (method == 'mpesa' ? 'M-Pesa' : method),
         createdAt: DateTime.now(),
         servedByName: _ref.read(authControllerProvider).session?.user.displayName,

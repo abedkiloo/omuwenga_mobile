@@ -182,11 +182,15 @@ void main() {
     expect(receiptPaymentLabel('voucher'), 'voucher');
     expect(
       receiptPaymentLabel('cash', amountPaid: 0, total: 100),
-      'Pay later',
+      'Debt',
     );
     expect(
       receiptPaymentLabel('on_account', amountPaid: 0, total: 100),
-      'Pay later',
+      'Debt',
+    );
+    expect(
+      receiptPaymentLabel('on_account', amountPaid: 100, total: 100),
+      'Debt repaid',
     );
     expect(
       receiptPaymentLabel(

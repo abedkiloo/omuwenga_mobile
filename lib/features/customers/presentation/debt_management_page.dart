@@ -209,7 +209,7 @@ class _DebtManagementPageState extends ConsumerState<DebtManagementPage> {
                   ? 'Try clearing search or age filters.'
                   : (fieldSalesOnly
                       ? 'Only debt for dukas you registered appears here.'
-                      : 'When sales are put on account, debtors will appear here.'),
+                      : 'When sales are recorded as debt, debtors will appear here.'),
               primaryLabel: 'Refresh',
               onPrimary: () =>
                   ref.read(debtManagementControllerProvider.notifier).load(),
