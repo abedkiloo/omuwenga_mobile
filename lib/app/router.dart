@@ -6,6 +6,7 @@ import '../features/approvals/presentation/approvals_page.dart';
 import '../features/daily_notes/presentation/daily_notes_page.dart';
 import '../features/appraisals/presentation/appraisals_page.dart';
 import '../features/payroll/presentation/payroll_page.dart';
+import '../features/field_loads/presentation/field_loads_page.dart';
 import '../features/expenses/presentation/expenses_list_page.dart';
 import '../features/dispatch/presentation/dispatch_queue_page.dart';
 import '../features/delivery/presentation/delivery_route_page.dart';
@@ -175,6 +176,15 @@ GoRouter createAppRouter({
           !(permissions?.canViewExpenses ?? false)) {
         return AppRoutes.home;
       }
+      if (loc.startsWith(AppRoutes.fieldLoads)) {
+        final session = auth.session;
+        final allowed = session != null &&
+            sessionCanViewFieldLoads(
+              permissions: session.permissions,
+              features: session.features,
+            );
+        if (!allowed) return AppRoutes.home;
+      }
       if (loc.startsWith(AppRoutes.payroll) &&
           !(permissions?.canViewPayroll ?? false)) {
         return AppRoutes.home;
@@ -291,6 +301,10 @@ GoRouter createAppRouter({
           GoRoute(
             path: AppRoutes.expenses,
             builder: (context, state) => const ExpensesListPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.fieldLoads,
+            builder: (context, state) => const FieldLoadsPage(),
           ),
           GoRoute(
             path: AppRoutes.salesHistory,

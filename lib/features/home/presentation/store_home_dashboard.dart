@@ -28,6 +28,7 @@ class StoreHomeDashboard extends ConsumerWidget {
     this.canViewDebtors = false,
     this.canDispatch = false,
     this.canPlaceVisitOrders = false,
+    this.canViewFieldLoads = false,
     this.canAccessDelivery = false,
     this.canViewDeliveryHistory = false,
     this.canApprove = false,
@@ -41,6 +42,7 @@ class StoreHomeDashboard extends ConsumerWidget {
   final bool canViewDebtors;
   final bool canDispatch;
   final bool canPlaceVisitOrders;
+  final bool canViewFieldLoads;
   final bool canAccessDelivery;
   final bool canViewDeliveryHistory;
   final bool canApprove;
@@ -248,6 +250,17 @@ class StoreHomeDashboard extends ConsumerWidget {
           label: 'Field sale',
           description: 'Order on site',
           onTap: () => context.go(AppRoutes.siteVisit),
+        ),
+      );
+    }
+    if (canViewFieldLoads) {
+      tools.add(
+        _HomeTool(
+          key: const Key('home_field_load'),
+          icon: Icons.inventory_outlined,
+          label: 'Field load',
+          description: 'What you carried out',
+          onTap: () => context.go(AppRoutes.fieldLoads),
         ),
       );
     }

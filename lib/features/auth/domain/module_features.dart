@@ -95,4 +95,7 @@ class ModuleFeatures {
   /// Require who paid + till/bank on debt collections.
   bool get isCollectionPayerDetailsEnabled =>
       isEnabled('customers', 'collection_payer_details');
+
+  /// Stock a field agent carries, sells, and accounts for.
+  bool get isFieldLoadEnabled => isEnabled('sales', 'field_load');
 }

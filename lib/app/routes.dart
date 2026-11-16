@@ -23,6 +23,7 @@ abstract final class AppRoutes {
   static const payroll = '/payroll';
   static const approvals = '/approvals';
   static const expenses = '/expenses';
+  static const fieldLoads = '/field-loads';
 
   static String posForSale(int saleId) => '$pos?sale=$saleId';
 

@@ -180,3 +180,16 @@ bool sessionCanViewDailySales({
   if (isStoreManagerProfile(profile)) return false;
   return permissions.has('sales', 'view');
 }
+
+/// Field load nav and route. Needs the permission and the sales feature.
+///
+/// Superusers still need the feature flag, which defaults on when the store
+/// has not turned it off. Returns false when [permissions] lack
+/// `agents.field_load` or the feature is disabled.
+bool sessionCanViewFieldLoads({
+  required PermissionSet permissions,
+  ModuleFeatures features = ModuleFeatures.empty,
+}) {
+  if (!features.isFieldLoadEnabled) return false;
+  return permissions.canViewFieldLoad;
+}

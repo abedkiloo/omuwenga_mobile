@@ -95,6 +95,7 @@ List<_NavItem> _businessMoreNav({
   required PermissionSet? perms,
   required bool canHistory,
   bool canViewDailySales = false,
+  bool canViewFieldLoads = false,
   bool includeSalesHistory = false,
   bool fieldSalesOnly = false,
 }) {
@@ -120,6 +121,13 @@ List<_NavItem> _businessMoreNav({
           icon: Icons.calendar_today_outlined,
           route: AppRoutes.dailySales,
           key: Key('more_daily_sales'),
+        ),
+      if (canViewFieldLoads)
+        const _NavItem(
+          label: 'Field load',
+          icon: Icons.inventory_outlined,
+          route: AppRoutes.fieldLoads,
+          key: Key('more_field_load'),
         ),
       if (perms?.canViewPayroll ?? false)
         const _NavItem(
@@ -165,6 +173,13 @@ List<_NavItem> _businessMoreNav({
         icon: Icons.calendar_today_outlined,
         route: AppRoutes.dailySales,
         key: Key('more_daily_sales'),
+      ),
+    if (canViewFieldLoads)
+      const _NavItem(
+        label: 'Field load',
+        icon: Icons.inventory_outlined,
+        route: AppRoutes.fieldLoads,
+        key: Key('more_field_load'),
       ),
     if (perms?.canViewDebtManagement ?? false)
       const _NavItem(
@@ -222,6 +237,7 @@ List<_NavItem> _moreNav({
   required bool canHistory,
   required bool canApprove,
   bool canViewDailySales = false,
+  bool canViewFieldLoads = false,
   bool includePrimaryDupes = false,
   bool fieldSalesOnly = false,
 }) {
@@ -230,6 +246,7 @@ List<_NavItem> _moreNav({
     perms: perms,
     canHistory: canHistory,
     canViewDailySales: canViewDailySales,
+    canViewFieldLoads: canViewFieldLoads,
     includeSalesHistory: includePrimaryDupes || !historyOnBar,
     fieldSalesOnly: fieldSalesOnly,
   );
@@ -339,6 +356,11 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
           features: session.features,
           isSuperuser: session.user.isSuperuser,
         );
+    final canViewFieldLoads = session != null &&
+        sessionCanViewFieldLoads(
+          permissions: session.permissions,
+          features: session.features,
+        );
     final fieldSalesOnly =
         session != null && isFieldSalesProfile(session.profile);
 
@@ -353,6 +375,7 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
       perms: perms,
       canHistory: canHistory,
       canViewDailySales: canViewDailySales,
+      canViewFieldLoads: canViewFieldLoads,
       includeSalesHistory: !historyOnBar,
       fieldSalesOnly: fieldSalesOnly,
     );
@@ -732,6 +755,11 @@ class MorePage extends ConsumerWidget {
           features: session.features,
           isSuperuser: session.user.isSuperuser,
         );
+    final canViewFieldLoads = session != null &&
+        sessionCanViewFieldLoads(
+          permissions: session.permissions,
+          features: session.features,
+        );
     final canApprove =
         (perms?.canApproveSales ?? false) ||
         (perms?.canApproveDebtManagement ?? false) ||
@@ -743,6 +771,7 @@ class MorePage extends ConsumerWidget {
       canHistory: canHistory,
       canApprove: canApprove,
       canViewDailySales: canViewDailySales,
+      canViewFieldLoads: canViewFieldLoads,
       includePrimaryDupes: true,
       fieldSalesOnly: fieldSalesOnly,
     );
@@ -815,6 +844,10 @@ class PersonaHomePage extends ConsumerWidget {
       features: session.features,
       isSuperuser: session.user.isSuperuser,
     );
+    final canViewFieldLoads = sessionCanViewFieldLoads(
+      permissions: session.permissions,
+      features: session.features,
+    );
     final canApprove = session.permissions.canApproveSales ||
         session.permissions.canApproveDebtManagement;
     final canAccessPos = session.permissions.canAccessPos &&
@@ -835,6 +868,7 @@ class PersonaHomePage extends ConsumerWidget {
               ? false
               : session.permissions.canViewDebtManagement,
           canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
+          canViewFieldLoads: canViewFieldLoads,
           canDispatch: fieldSalesOnly ? false : session.permissions.canDispatch,
           canAccessDelivery:
               fieldSalesOnly ? false : session.permissions.canAccessDelivery,
@@ -859,6 +893,7 @@ class PersonaHomePage extends ConsumerWidget {
           canViewDebtors: session.permissions.canViewDebtManagement,
           canDispatch: session.permissions.canDispatch,
           canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
+          canViewFieldLoads: canViewFieldLoads,
           canAccessDelivery: session.permissions.canAccessDelivery,
           canViewDeliveryHistory: canHistory,
           canApprove: canApprove,

@@ -104,6 +104,12 @@ class PermissionSet {
   bool get canUpdateExpenses => has('expenses', 'update');
   bool get canDeleteExpenses => has('expenses', 'delete');
 
+  /// See a field load, sell from it, and submit the return count.
+  bool get canViewFieldLoad => has('agents', 'field_load');
+
+  /// Accept or send back a return count.
+  bool get canApproveFieldLoad => has('agents', 'field_load_approve');
+
   bool get isEmpty => _keys.isEmpty;
   int get length => _keys.length;
 }
