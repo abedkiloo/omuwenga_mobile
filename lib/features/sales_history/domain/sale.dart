@@ -62,6 +62,35 @@ String saleTenderLabel({
   return method.replaceAll('_', ' ');
 }
 
+/// Shop, packed field order, or a sale of stock already on a field load.
+///
+/// [json] may carry `sale_origin`, `entry_source`, `is_field_sale`, and
+/// `is_field_load_sale`. A field-load sale stays `field_load`.
+String readSaleOrigin(Map<String, dynamic> json) {
+  final origin = (json['sale_origin'] ?? '').toString().trim().toLowerCase();
+  if (origin == 'field' || origin == 'field_load' || origin == 'shop') {
+    return origin;
+  }
+  final entry = (json['entry_source'] ?? '').toString().trim().toLowerCase();
+  if (entry == 'field_load' || json['is_field_load_sale'] == true) {
+    return 'field_load';
+  }
+  if (entry == 'field' || json['is_field_sale'] == true) return 'field';
+  return 'shop';
+}
+
+/// Label for [origin]. Compact labels fit a one-line day list.
+String saleOriginLabel(String origin, {bool compact = false}) {
+  switch (origin) {
+    case 'field':
+      return compact ? 'Field' : 'Field sale';
+    case 'field_load':
+      return compact ? 'Load' : 'Field load';
+    default:
+      return compact ? 'Shop' : 'Shop sale';
+  }
+}
+
 class SaleSummary {
   const SaleSummary({
     required this.id,
@@ -132,11 +161,7 @@ class SaleSummary {
   }
 
   factory SaleSummary.fromJson(Map<String, dynamic> json) {
-    final entrySource = json['entry_source']?.toString();
-    final origin = (json['sale_origin']?.toString() ??
-            (entrySource == 'field' ? 'field' : 'shop'))
-        .toLowerCase();
-    final field = _asBool(json['is_field_sale']) || origin == 'field';
+    final origin = readSaleOrigin(json);
     return SaleSummary(
       id: _asInt(json['id']) ?? 0,
       saleNumber: (json['sale_number'] ?? json['id'] ?? '').toString(),
@@ -153,9 +178,9 @@ class SaleSummary {
       cashierName: json['cashier_name']?.toString(),
       itemCount: (json['item_count'] as num?)?.toInt() ?? 0,
       clientChannel: json['client_channel']?.toString(),
-      entrySource: entrySource,
-      isFieldSale: field,
-      saleOrigin: field ? 'field' : 'shop',
+      entrySource: json['entry_source']?.toString(),
+      isFieldSale: origin == 'field',
+      saleOrigin: origin,
       needsSalespersonAction: _asBool(json['needs_salesperson_action']),
       rejectionReason: json['rejection_reason']?.toString(),
       approvalDetails: ApprovalDetails.fromJson(json['approval_details']),
@@ -304,11 +329,7 @@ class SaleDetail {
         }
       }
     }
-    final entrySource = json['entry_source']?.toString();
-    final origin = (json['sale_origin']?.toString() ??
-            (entrySource == 'field' ? 'field' : 'shop'))
-        .toLowerCase();
-    final field = _asBool(json['is_field_sale']) || origin == 'field';
+    final origin = readSaleOrigin(json);
     return SaleDetail(
       id: _asInt(json['id']) ?? 0,
       saleNumber: (json['sale_number'] ?? json['id'] ?? '').toString(),
@@ -337,8 +358,8 @@ class SaleDetail {
       saleType: json['sale_type']?.toString(),
       items: items,
       clientChannel: json['client_channel']?.toString(),
-      isFieldSale: field,
-      saleOrigin: field ? 'field' : 'shop',
+      isFieldSale: origin == 'field',
+      saleOrigin: origin,
       needsSalespersonAction: _asBool(json['needs_salesperson_action']),
       rejectionReason: json['rejection_reason']?.toString(),
       canCorrectDate: json['can_correct_date'] == true,

@@ -36,6 +36,19 @@ class FieldLoadsApi {
     return _post('agents/field-loads/$loadId/return/', {'lines': lines});
   }
 
+  /// Approve quantities a sales person wrote. Shop stock leaves on the server.
+  Future<Result<FieldLoad>> approveIssue(int loadId) {
+    return _post('agents/field-loads/$loadId/approve-issue/', const {});
+  }
+
+  /// Send written quantities back. Shop stock does not move.
+  Future<Result<FieldLoad>> declineIssue(int loadId) {
+    return _post(
+      'agents/field-loads/$loadId/decline-issue/',
+      const {'note': 'Check the quantities'},
+    );
+  }
+
   /// Accept the count. The server restocks returned units.
   Future<Result<FieldLoad>> accept(int loadId) {
     return _post('agents/field-loads/$loadId/accept/', const {});

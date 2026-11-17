@@ -29,6 +29,8 @@ FieldLoadBook _book({required String status, bool canApprove = false}) {
             returned: null,
             missing: null,
             stillOut: 25,
+            available: 25,
+            unitPrice: '150.00',
           ),
         ],
       ),
@@ -124,9 +126,11 @@ void main() {
       ),
     );
     expect(find.text('Cups'), findsWidgets);
-    expect(find.text('Record a field load sale'), findsOneWidget);
-    await tester.drag(find.byType(ListView), const Offset(0, -500));
-    await tester.pump();
+    expect(find.text('Available: 25'), findsOneWidget);
+    expect(find.text('Record a field sale'), findsOneWidget);
+    expect(find.text('Return to shop'), findsOneWidget);
+    await tester.tap(find.text('Return to shop'));
+    await tester.pumpAndSettle();
     expect(find.text('Submit physical count'), findsOneWidget);
     expect(find.text('Approve reconciliation'), findsNothing);
     expect(find.textContaining('07'), findsNothing);
@@ -146,5 +150,29 @@ void main() {
     expect(find.text('Approve reconciliation'), findsOneWidget);
     expect(find.text('Send back for correction'), findsOneWidget);
     expect(find.text('Record a field load sale'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a narrow phone keeps the sale on its own step', (tester) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fieldLoadsProvider.overrideWith(() => _ReadyLoads(_book(status: 'open'))),
+        ],
+        child: const MaterialApp(home: FieldLoadsPage()),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('Record a field sale'), findsOneWidget);
+    await tester.tap(find.text('Record a field sale'));
+    await tester.pumpAndSettle();
+    expect(find.text('Save sale'), findsOneWidget);
+    expect(find.text('My available stock'), findsNothing);
+    expect(find.text('KES 150'), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 }

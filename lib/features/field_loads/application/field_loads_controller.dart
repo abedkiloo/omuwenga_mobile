@@ -111,6 +111,12 @@ class FieldLoadsController extends Notifier<FieldLoadsState> {
     );
   }
 
+  /// Approve a written load. The server removes shop stock.
+  Future<String?> approveIssue(int loadId) => _mutate(_api.approveIssue(loadId));
+
+  /// Send a written load back. The server does not move stock.
+  Future<String?> declineIssue(int loadId) => _mutate(_api.declineIssue(loadId));
+
   Future<String?> accept(int loadId) => _mutate(_api.accept(loadId));
 
   Future<String?> reject(int loadId) => _mutate(_api.reject(loadId));

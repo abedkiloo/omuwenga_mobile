@@ -32,6 +32,23 @@ int? _ageDays(String? raw) {
   return DateTime.now().difference(dt).inDays;
 }
 
+/// Relationship label used in the customer information table.
+///
+/// [detail] is the open customer. A buyer who is not dormant or cooling off
+/// is Existing. A customer with no completed purchase is Registered only.
+///
+/// Returns a label of at most 20 characters.
+String _customerTypeLabel(CustomerDetail detail) {
+  if (detail.engagementTier == EngagementTier.prospect) return 'Registered only';
+  return switch (detail.buyerSegment) {
+    BuyerSegment.dormant => 'Dormant',
+    BuyerSegment.coolingOff => 'Cooling off',
+    BuyerSegment.newBuyer => 'New buyer',
+    BuyerSegment.champion => 'Champion',
+    _ => 'Existing',
+  };
+}
+
 class CustomerDetailPage extends ConsumerStatefulWidget {
   const CustomerDetailPage({
     super.key,
@@ -167,6 +184,19 @@ class _CustomerDetailPageState extends ConsumerState<CustomerDetailPage> {
                 ? () => context.push(AppRoutes.customerEdit(detail.id))
                 : null,
           ),
+          if (detail.callsEnabled) ...[
+            const SizedBox(height: 12),
+            CustomerCallHistory(
+              calls: detail.calls,
+              count: detail.callsCount,
+              customerType: _customerTypeLabel(detail),
+              location: detail.locationLine,
+              goods: detail.typicalGoods,
+              lastPurchase: _shortDate(detail.lastPurchasedAt),
+              phone: detail.phone ?? '',
+              isActive: detail.isActive,
+            ),
+          ],
           const SizedBox(height: 12),
           Text(
             key: const Key('customer_standing_hero'),
@@ -1156,3 +1186,145 @@ class _OrderDebtRow extends StatelessWidget {
     );
   }
 }
+
+/// Customer information and call history on the detail screen.
+///
+/// Shows phone, type, location, goods, and last purchase, then the newest
+/// three calls. [count] above the length of [calls] means older calls stay
+/// on the server. [calls] holds 0–50 rows and no phone numbers.
+class CustomerCallHistory extends StatefulWidget {
+  const CustomerCallHistory({
+    super.key,
+    required this.calls,
+    required this.count,
+    required this.customerType,
+    required this.location,
+    required this.goods,
+    required this.lastPurchase,
+    required this.phone,
+    required this.isActive,
+  });
+
+  final List<CustomerCallRecord> calls;
+  final int count;
+  final String customerType;
+  final String location;
+  final List<String> goods;
+  final String lastPurchase;
+  final String phone;
+  final bool isActive;
+
+  @override
+  State<CustomerCallHistory> createState() => _CustomerCallHistoryState();
+}
+
+class _CustomerCallHistoryState extends State<CustomerCallHistory> {
+  bool _showAll = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final shown = _showAll ? widget.calls : widget.calls.take(3).toList();
+    final goods = widget.goods.where((item) => item.trim().isNotEmpty).join(', ');
+    final rows = [
+      ('Phone', widget.phone.trim().isEmpty ? 'No number' : widget.phone),
+      ('Customer type', widget.customerType),
+      ('Location', widget.location.trim().isEmpty ? 'Not recorded' : widget.location),
+      ('Products of interest', goods.isEmpty ? 'None recorded' : goods),
+      ('Last purchase', widget.lastPurchase.isEmpty ? 'No purchase yet' : widget.lastPurchase),
+    ];
+    return CbSurfaceCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Customer information',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ),
+              Text(
+                widget.isActive ? 'Active' : 'Inactive',
+                key: const Key('customer_active_label'),
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: widget.isActive ? AppColors.success : AppColors.mutedForeground,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          for (final row in rows)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 140,
+                    child: Text(
+                      row.$1,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Text(row.$2)),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            'Call history',
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          if (shown.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text('No calls recorded yet.'),
+            ),
+          for (var index = 0; index < shown.length; index++)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${index + 1}  ${shown[index].calledOn} – ${shown[index].outcomeLabel}',
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    [
+                      if (shown[index].calledBy.isNotEmpty) shown[index].calledBy,
+                      if (shown[index].summary.isNotEmpty) shown[index].summary,
+                    ].join(' · '),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.mutedForeground,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (widget.count > widget.calls.length)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text('Showing the latest ${widget.calls.length} of ${widget.count}.'),
+            ),
+          if (widget.calls.length > 3 && !_showAll)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: OutlinedButton.icon(
+                key: const Key('customer_call_history_more'),
+                onPressed: () => setState(() => _showAll = true),
+                icon: const Icon(Icons.history),
+                label: const Text('View complete call history'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+

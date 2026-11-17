@@ -218,6 +218,9 @@ class CustomerDetail {
     this.purchaseCount = 0,
     this.lifetimeSalesValue,
     this.lastPurchasedAt,
+    this.calls = const [],
+    this.callsCount = 0,
+    this.callsEnabled = true,
   });
 
   final int id;
@@ -251,6 +254,9 @@ class CustomerDetail {
   final int purchaseCount;
   final double? lifetimeSalesValue;
   final String? lastPurchasedAt;
+  final List<CustomerCallRecord> calls;
+  final int callsCount;
+  final bool callsEnabled;
 
   bool get isBuyer => engagementTier == EngagementTier.buyer;
 
@@ -370,8 +376,50 @@ class CustomerDetail {
       purchaseCount: (customer['purchase_count'] as num?)?.toInt() ?? 0,
       lifetimeSalesValue: _asDouble(customer['lifetime_sales_value']),
       lastPurchasedAt: customer['last_purchased_at']?.toString(),
+      calls: _callRecords(json['calls']),
+      callsCount: (json['calls_count'] as num?)?.toInt() ?? 0,
+      callsEnabled: json['calls_enabled'] != false,
     );
   }
+}
+
+/// One recorded call on the customer detail screen.
+///
+/// The row has a date, outcome, staff name, and note. It does not carry a
+/// phone number.
+class CustomerCallRecord {
+  const CustomerCallRecord({
+    required this.id,
+    required this.calledOn,
+    required this.outcomeLabel,
+    required this.calledBy,
+    required this.summary,
+  });
+
+  final int id;
+  final String calledOn;
+  final String outcomeLabel;
+  final String calledBy;
+  final String summary;
+
+  factory CustomerCallRecord.fromJson(Map<String, dynamic> json) {
+    return CustomerCallRecord(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      calledOn: (json['called_on'] ?? '').toString(),
+      outcomeLabel: (json['outcome_label'] ?? 'Called').toString(),
+      calledBy: (json['called_by'] ?? '').toString(),
+      summary: (json['request_summary'] ?? '').toString(),
+    );
+  }
+}
+
+List<CustomerCallRecord> _callRecords(Object? raw) {
+  if (raw is! List) return const [];
+  return [
+    for (final item in raw)
+      if (item is Map)
+        CustomerCallRecord.fromJson(Map<String, dynamic>.from(item)),
+  ];
 }
 
 class CustomerOrderLite {

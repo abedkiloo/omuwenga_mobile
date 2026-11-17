@@ -29,6 +29,7 @@ class StoreHomeDashboard extends ConsumerWidget {
     this.canDispatch = false,
     this.canPlaceVisitOrders = false,
     this.canViewFieldLoads = false,
+    this.canUseCallBook = false,
     this.canAccessDelivery = false,
     this.canViewDeliveryHistory = false,
     this.canApprove = false,
@@ -43,6 +44,7 @@ class StoreHomeDashboard extends ConsumerWidget {
   final bool canDispatch;
   final bool canPlaceVisitOrders;
   final bool canViewFieldLoads;
+  final bool canUseCallBook;
   final bool canAccessDelivery;
   final bool canViewDeliveryHistory;
   final bool canApprove;
@@ -261,6 +263,17 @@ class StoreHomeDashboard extends ConsumerWidget {
           label: 'Field load',
           description: 'What you carried out',
           onTap: () => context.go(AppRoutes.fieldLoads),
+        ),
+      );
+    }
+    if (canUseCallBook) {
+      tools.add(
+        _HomeTool(
+          key: const Key('home_call_book'),
+          icon: Icons.phone_outlined,
+          label: 'Call centre',
+          description: 'Ten shops at a time',
+          onTap: () => context.go(AppRoutes.callBook),
         ),
       );
     }

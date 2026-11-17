@@ -1,3 +1,4 @@
+import 'package:completebyte_pos_mobile/features/daily_sales/domain/daily_report.dart';
 import 'package:completebyte_pos_mobile/features/sales_history/domain/payment_status.dart';
 import 'package:completebyte_pos_mobile/features/sales_history/domain/sale.dart';
 import 'package:completebyte_pos_mobile/features/sales_history/domain/sale_status_display.dart';
@@ -127,5 +128,31 @@ void main() {
     expect(list.lifecycle.label, 'Needs salesperson action');
     expect(detail.lifecycle.label, list.lifecycle.label);
     expect(detail.rejectionReason, 'Wrong prices');
+  });
+
+  test('a field load sale stays a field load on the phone', () {
+    const json = {
+      'id': 12,
+      'sale_number': 'S-12',
+      'total': '300',
+      'amount_paid': '300',
+      'sale_origin': 'field_load',
+      'entry_source': 'field_load',
+      'is_field_sale': false,
+      'is_field_load_sale': true,
+    };
+    final list = SaleSummary.fromJson(json);
+    final detail = SaleDetail.fromJson(json);
+    final day = DailyOrder.fromJson({
+      ...json,
+      'payment_status': 'paid',
+    });
+    expect(list.saleOrigin, 'field_load');
+    expect(list.isFieldSale, isFalse);
+    expect(detail.saleOrigin, 'field_load');
+    expect(day.saleOrigin, 'field_load');
+    expect(saleOriginLabel('field_load'), 'Field load');
+    expect(saleOriginLabel('field', compact: true), 'Field');
+    expect(saleOriginLabel('shop', compact: true), 'Shop');
   });
 }

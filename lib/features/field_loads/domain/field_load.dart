@@ -47,6 +47,7 @@ class FieldLoad {
     this.displayStatus = '',
     this.unitsTaken = 0,
     this.unitsSold = 0,
+    this.issuedAt = '',
   });
 
   final int id;
@@ -58,12 +59,16 @@ class FieldLoad {
   final int unitsTaken;
   final int unitsSold;
 
+  /// ISO timestamp from the server. Empty when the load has no issue time.
+  final String issuedAt;
+
   /// Sale totals on this load, as a decimal string. Empty becomes `0.00`.
   final String expected;
   final String collected;
 
   bool get isOpen => status == 'open';
   bool get isPending => status == 'pending_review';
+  bool get isAwaitingIssue => status == 'awaiting_issue';
 
   factory FieldLoad.fromJson(Map<String, dynamic> json) {
     final rawLines = json['lines'];
@@ -88,6 +93,7 @@ class FieldLoad {
       displayStatus: (json['display_status'] ?? '').toString(),
       unitsTaken: int.tryParse('${json['units_taken'] ?? 0}') ?? 0,
       unitsSold: int.tryParse('${json['units_sold'] ?? 0}') ?? 0,
+      issuedAt: (json['issued_at'] ?? '').toString(),
     );
   }
 }
@@ -160,7 +166,7 @@ class FieldLoadLine {
 /// [quantity] must be a whole number from 1 to the unsold remainder.
 /// [amountPaid] is a decimal string, 0 through the sale total. [customerId]
 /// is required when the sale is not fully paid. [paymentMethod] is `cash`,
-/// `mpesa`, `credit`, or `split`. Returns a map the API accepts. Does not
+/// `mpesa`, or `credit`. Returns a map the API accepts. Does not
 /// change shop stock, and does not create a field order.
 Map<String, dynamic> fieldLoadSellBody({
   required int productId,

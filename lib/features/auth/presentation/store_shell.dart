@@ -96,6 +96,7 @@ List<_NavItem> _businessMoreNav({
   required bool canHistory,
   bool canViewDailySales = false,
   bool canViewFieldLoads = false,
+  bool canUseCallBook = false,
   bool includeSalesHistory = false,
   bool fieldSalesOnly = false,
 }) {
@@ -181,6 +182,13 @@ List<_NavItem> _businessMoreNav({
         route: AppRoutes.fieldLoads,
         key: Key('more_field_load'),
       ),
+    if (canUseCallBook)
+      const _NavItem(
+        label: 'Call centre',
+        icon: Icons.phone_outlined,
+        route: AppRoutes.callBook,
+        key: Key('more_call_book'),
+      ),
     if (perms?.canViewDebtManagement ?? false)
       const _NavItem(
         label: 'Debtors',
@@ -238,6 +246,7 @@ List<_NavItem> _moreNav({
   required bool canApprove,
   bool canViewDailySales = false,
   bool canViewFieldLoads = false,
+  bool canUseCallBook = false,
   bool includePrimaryDupes = false,
   bool fieldSalesOnly = false,
 }) {
@@ -247,6 +256,7 @@ List<_NavItem> _moreNav({
     canHistory: canHistory,
     canViewDailySales: canViewDailySales,
     canViewFieldLoads: canViewFieldLoads,
+    canUseCallBook: canUseCallBook,
     includeSalesHistory: includePrimaryDupes || !historyOnBar,
     fieldSalesOnly: fieldSalesOnly,
   );
@@ -361,6 +371,12 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
           permissions: session.permissions,
           features: session.features,
         );
+    final canUseCallBook = session != null &&
+        sessionCanUseCallBook(
+          permissions: session.permissions,
+          profile: session.profile,
+          features: session.features,
+        );
     final fieldSalesOnly =
         session != null && isFieldSalesProfile(session.profile);
 
@@ -376,6 +392,7 @@ class _StoreShellPageState extends ConsumerState<StoreShellPage> {
       canHistory: canHistory,
       canViewDailySales: canViewDailySales,
       canViewFieldLoads: canViewFieldLoads,
+      canUseCallBook: canUseCallBook,
       includeSalesHistory: !historyOnBar,
       fieldSalesOnly: fieldSalesOnly,
     );
@@ -760,6 +777,12 @@ class MorePage extends ConsumerWidget {
           permissions: session.permissions,
           features: session.features,
         );
+    final canUseCallBook = session != null &&
+        sessionCanUseCallBook(
+          permissions: session.permissions,
+          profile: session.profile,
+          features: session.features,
+        );
     final canApprove =
         (perms?.canApproveSales ?? false) ||
         (perms?.canApproveDebtManagement ?? false) ||
@@ -772,6 +795,7 @@ class MorePage extends ConsumerWidget {
       canApprove: canApprove,
       canViewDailySales: canViewDailySales,
       canViewFieldLoads: canViewFieldLoads,
+      canUseCallBook: canUseCallBook,
       includePrimaryDupes: true,
       fieldSalesOnly: fieldSalesOnly,
     );
@@ -848,6 +872,11 @@ class PersonaHomePage extends ConsumerWidget {
       permissions: session.permissions,
       features: session.features,
     );
+    final canUseCallBook = sessionCanUseCallBook(
+      permissions: session.permissions,
+      profile: session.profile,
+      features: session.features,
+    );
     final canApprove = session.permissions.canApproveSales ||
         session.permissions.canApproveDebtManagement;
     final canAccessPos = session.permissions.canAccessPos &&
@@ -869,6 +898,7 @@ class PersonaHomePage extends ConsumerWidget {
               : session.permissions.canViewDebtManagement,
           canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
           canViewFieldLoads: canViewFieldLoads,
+          canUseCallBook: canUseCallBook,
           canDispatch: fieldSalesOnly ? false : session.permissions.canDispatch,
           canAccessDelivery:
               fieldSalesOnly ? false : session.permissions.canAccessDelivery,
@@ -894,6 +924,7 @@ class PersonaHomePage extends ConsumerWidget {
           canDispatch: session.permissions.canDispatch,
           canPlaceVisitOrders: session.permissions.canPlaceVisitOrders,
           canViewFieldLoads: canViewFieldLoads,
+          canUseCallBook: canUseCallBook,
           canAccessDelivery: session.permissions.canAccessDelivery,
           canViewDeliveryHistory: canHistory,
           canApprove: canApprove,

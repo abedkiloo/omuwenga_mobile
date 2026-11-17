@@ -9,6 +9,7 @@ import '../../../core/ui/client_channel_icon.dart';
 import '../../../design_system/design_system.dart';
 import '../../customers/presentation/debt_collection_list.dart';
 import '../../sales_history/domain/payment_status.dart';
+import '../../sales_history/domain/sale.dart';
 import '../application/daily_sales_controllers.dart';
 import '../domain/daily_navigation.dart';
 import '../domain/daily_report.dart';
@@ -95,6 +96,16 @@ class DailySalesPage extends ConsumerWidget {
                               style: Theme.of(context).textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.w700),
                             ),
+                            if (report != null &&
+                                (report.summary.fieldOrdersCount > 0 ||
+                                    report.summary.fieldLoadOrdersCount > 0))
+                              Text(
+                                key: const Key('daily_origin_split'),
+                                'Shop ${report.summary.shopOrdersCount} · Field ${report.summary.fieldOrdersCount} · Load ${report.summary.fieldLoadOrdersCount}',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(color: AppColors.mutedForeground),
+                              ),
                           ],
                         ),
                       ),
@@ -290,12 +301,14 @@ class DailySalesPage extends ConsumerWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  order.isFieldSale ? 'Field' : 'Shop',
+                  saleOriginLabel(order.saleOrigin, compact: true),
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: order.isFieldSale
-                        ? AppColors.primary
-                        : AppColors.mutedForeground,
+                    color: switch (order.saleOrigin) {
+                      'field' => AppColors.primary,
+                      'field_load' => AppColors.warning,
+                      _ => AppColors.mutedForeground,
+                    },
                   ),
                 ),
               ],

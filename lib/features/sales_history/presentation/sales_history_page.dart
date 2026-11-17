@@ -662,18 +662,22 @@ class _SaleHistoryCard extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: sale.isFieldSale
-                              ? AppColors.warning.withValues(alpha: 0.15)
-                              : AppColors.mutedForeground.withValues(alpha: 0.12),
+                          color: switch (sale.saleOrigin) {
+                            'field' => AppColors.warning.withValues(alpha: 0.15),
+                            'field_load' => AppColors.primary.withValues(alpha: 0.12),
+                            _ => AppColors.mutedForeground.withValues(alpha: 0.12),
+                          },
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
-                          sale.isFieldSale ? 'Field sale' : 'Shop sale',
+                          saleOriginLabel(sale.saleOrigin),
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: sale.isFieldSale
-                                ? AppColors.warning
-                                : AppColors.mutedForeground,
+                            color: switch (sale.saleOrigin) {
+                              'field' => AppColors.warning,
+                              'field_load' => AppColors.primary,
+                              _ => AppColors.mutedForeground,
+                            },
                           ),
                         ),
                       ),

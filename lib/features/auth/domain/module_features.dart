@@ -98,4 +98,7 @@ class ModuleFeatures {
 
   /// Stock a field agent carries, sells, and accounts for.
   bool get isFieldLoadEnabled => isEnabled('sales', 'field_load');
+
+  /// Weekly call book. On unless Module Settings turns it off.
+  bool get isCallBookEnabled => isEnabled('customers', 'call_book');
 }

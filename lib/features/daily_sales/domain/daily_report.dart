@@ -1,5 +1,6 @@
 import '../../customers/domain/debt_management.dart';
 import '../../sales_history/domain/payment_status.dart';
+import '../../sales_history/domain/sale.dart';
 import '../../sales_history/domain/sale_status_display.dart';
 
 double? _asDouble(Object? v) {
@@ -20,6 +21,9 @@ class DailySummary {
     required this.totalDebtCollected,
     required this.totalCollected,
     this.debtSettlementCount = 0,
+    this.shopOrdersCount = 0,
+    this.fieldOrdersCount = 0,
+    this.fieldLoadOrdersCount = 0,
   });
 
   final double totalSales;
@@ -32,6 +36,9 @@ class DailySummary {
   final double totalDebtCollected;
   final int debtSettlementCount;
   final double totalCollected;
+  final int shopOrdersCount;
+  final int fieldOrdersCount;
+  final int fieldLoadOrdersCount;
 
   factory DailySummary.fromJson(Map<String, dynamic> json) {
     return DailySummary(
@@ -45,6 +52,9 @@ class DailySummary {
       totalDebtCollected: _asDouble(json['total_debt_collected']) ?? 0,
       debtSettlementCount: (json['debt_settlement_count'] as num?)?.toInt() ?? 0,
       totalCollected: _asDouble(json['total_collected']) ?? 0,
+      shopOrdersCount: (json['shop_orders_count'] as num?)?.toInt() ?? 0,
+      fieldOrdersCount: (json['field_orders_count'] as num?)?.toInt() ?? 0,
+      fieldLoadOrdersCount: (json['field_load_orders_count'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -108,11 +118,7 @@ class DailyOrder {
           total: _asDouble(json['total']) ?? 0,
           amountPaid: _asDouble(json['amount_paid']) ?? 0,
         );
-    final entrySource = json['entry_source']?.toString();
-    final origin = (json['sale_origin']?.toString() ??
-            (entrySource == 'field' ? 'field' : 'shop'))
-        .toLowerCase();
-    final field = json['is_field_sale'] == true || origin == 'field';
+    final origin = readSaleOrigin(json);
     return DailyOrder(
       id: (json['id'] as num).toInt(),
       saleNumber: (json['sale_number'] ?? '').toString(),
@@ -127,8 +133,8 @@ class DailyOrder {
       cashierName: json['cashier_name']?.toString(),
       servedByName: json['served_by_name']?.toString(),
       clientChannel: json['client_channel']?.toString(),
-      isFieldSale: field,
-      saleOrigin: field ? 'field' : 'shop',
+      isFieldSale: origin == 'field',
+      saleOrigin: origin,
       status: json['status']?.toString(),
       refundStatus: json['refund_status']?.toString(),
     );

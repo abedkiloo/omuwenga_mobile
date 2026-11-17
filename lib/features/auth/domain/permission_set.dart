@@ -107,6 +107,9 @@ class PermissionSet {
   /// See a field load, sell from it, and submit the return count.
   bool get canViewFieldLoad => has('agents', 'field_load');
 
+  /// Shared call centre. Field Sales do not receive this permission.
+  bool get canUseCallBook => has('customers', 'call_book');
+
   /// Accept or send back a return count.
   bool get canApproveFieldLoad => has('agents', 'field_load_approve');
 

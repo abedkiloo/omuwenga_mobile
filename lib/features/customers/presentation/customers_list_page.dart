@@ -13,6 +13,7 @@ import '../application/customer_list_paging.dart';
 import '../application/customers_controllers.dart';
 import '../domain/customer.dart';
 import '../domain/customer_intelligence.dart';
+import 'location_search_field.dart';
 import '../domain/wallet_debt.dart';
 import '../../../core/format/money.dart';
 import 'classification_badges.dart';
@@ -366,7 +367,7 @@ class _CustomersListPageState extends ConsumerState<CustomersListPage> {
             child: CbSearchField(
               fieldKey: const Key('customers_search'),
               controller: _search,
-              hintText: 'Search name, contact or tags…',
+              hintText: 'Name, phone, place, or code',
               onSubmitted: (q) =>
                   ref.read(customersListProvider.notifier).load(search: q),
             ),
@@ -681,78 +682,43 @@ class _LocationLevelFilters extends ConsumerWidget {
             Row(
               children: [
                 Expanded(
-                  child: DropdownButtonFormField<String>(
+                  child: LocationSearchField(
                     key: const Key('customers_filter_county'),
-                    isDense: true,
-                    value: state.county.isEmpty ? '' : state.county,
-                    decoration: const InputDecoration(
-                      labelText: 'County',
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                    ),
-                    items: [
-                      const DropdownMenuItem(value: '', child: Text('All')),
-                      for (final name in counties)
-                        DropdownMenuItem(value: name, child: Text(name)),
-                    ],
-                    onChanged: (v) => ref
+                    label: 'County',
+                    value: state.county,
+                    items: counties,
+                    allowAll: true,
+                    onChanged: (value) => ref
                         .read(customersListProvider.notifier)
-                        .setCounty(v ?? ''),
+                        .setCounty(value),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: DropdownButtonFormField<String>(
+                  child: LocationSearchField(
                     key: const Key('customers_filter_sub_county'),
-                    isDense: true,
-                    value: state.subCounty.isEmpty ? '' : state.subCounty,
-                    decoration: const InputDecoration(
-                      labelText: 'Sub-county',
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                    ),
-                    items: [
-                      const DropdownMenuItem(value: '', child: Text('All')),
-                      for (final name in subs)
-                        DropdownMenuItem(value: name, child: Text(name)),
-                    ],
-                    onChanged: state.county.isEmpty
-                        ? null
-                        : (v) => ref
-                            .read(customersListProvider.notifier)
-                            .setSubCounty(v ?? ''),
+                    label: 'Sub-county',
+                    value: state.subCounty,
+                    items: subs,
+                    allowAll: true,
+                    enabled: state.county.isNotEmpty,
+                    onChanged: (value) => ref
+                        .read(customersListProvider.notifier)
+                        .setSubCounty(value),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
+            LocationSearchField(
               key: const Key('customers_filter_ward'),
-              isDense: true,
-              value: state.ward.isEmpty ? '' : state.ward,
-              decoration: const InputDecoration(
-                labelText: 'Ward',
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-              ),
-              items: [
-                const DropdownMenuItem(value: '', child: Text('All')),
-                for (final name in wards)
-                  DropdownMenuItem(value: name, child: Text(name)),
-              ],
-              onChanged: state.county.isEmpty || state.subCounty.isEmpty
-                  ? null
-                  : (v) =>
-                      ref.read(customersListProvider.notifier).setWard(v ?? ''),
+              label: 'Ward',
+              value: state.ward,
+              items: wards,
+              allowAll: true,
+              enabled: state.county.isNotEmpty && state.subCounty.isNotEmpty,
+              onChanged: (value) =>
+                  ref.read(customersListProvider.notifier).setWard(value),
             ),
           ],
         );

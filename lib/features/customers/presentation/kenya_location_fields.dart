@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/customers_controllers.dart';
 import '../domain/kenya_admin_units.dart';
+import 'location_search_field.dart';
 
 class KenyaLocationFields extends ConsumerWidget {
   const KenyaLocationFields({
@@ -114,13 +115,12 @@ class _Fields extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Dropdown(
+        LocationSearchField(
           key: const Key('customer_form_county'),
           label: 'County',
           value: effectiveCounty,
           items: counties,
           onChanged: (value) {
-            if (value == null) return;
             onCountyChanged(value);
             final subs = units.subCountiesFor(value);
             if (subs.isNotEmpty) {
@@ -131,27 +131,24 @@ class _Fields extends StatelessWidget {
           },
         ),
         const SizedBox(height: 12),
-        _Dropdown(
+        LocationSearchField(
           key: const Key('customer_form_sub_county'),
           label: 'Sub-county',
           value: effectiveSub,
           items: subCounties,
           onChanged: (value) {
-            if (value == null) return;
             onSubCountyChanged(value);
             final w = units.wardsFor(effectiveCounty, value);
             if (w.isNotEmpty) onWardChanged(w.first);
           },
         ),
         const SizedBox(height: 12),
-        _Dropdown(
+        LocationSearchField(
           key: const Key('customer_form_ward'),
           label: 'Ward',
           value: effectiveWard,
           items: wards,
-          onChanged: (value) {
-            if (value != null) onWardChanged(value);
-          },
+          onChanged: onWardChanged,
         ),
         const SizedBox(height: 4),
         Text(
@@ -165,36 +162,3 @@ class _Fields extends StatelessWidget {
   }
 }
 
-class _Dropdown extends StatelessWidget {
-  const _Dropdown({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-
-  final String label;
-  final String value;
-  final List<String> items;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final effectiveValue = items.contains(value)
-        ? value
-        : (items.isNotEmpty ? items.first : null);
-    return DropdownButtonFormField<String>(
-      value: effectiveValue,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
-      items: [
-        for (final item in items)
-          DropdownMenuItem<String>(value: item, child: Text(item)),
-      ],
-      onChanged: items.isEmpty ? null : onChanged,
-    );
-  }
-}

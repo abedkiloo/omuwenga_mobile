@@ -193,3 +193,17 @@ bool sessionCanViewFieldLoads({
   if (!features.isFieldLoadEnabled) return false;
   return permissions.canViewFieldLoad;
 }
+
+/// Call centre on the phone. Field Sales stay out, matching the web nav.
+///
+/// Returns false when the job is Field Sales, the feature is off, or the
+/// permission `customers.call_book` is missing. The feature defaults on.
+bool sessionCanUseCallBook({
+  required PermissionSet permissions,
+  required UserProfileSnapshot profile,
+  ModuleFeatures features = ModuleFeatures.empty,
+}) {
+  if (isFieldSalesProfile(profile)) return false;
+  if (!features.isCallBookEnabled) return false;
+  return permissions.canUseCallBook;
+}
