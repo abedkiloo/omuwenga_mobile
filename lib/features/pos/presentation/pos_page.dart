@@ -10,6 +10,7 @@ import '../../../core/media/image_upload_guard.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../design_system/design_system.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../auth/domain/persona.dart';
 import '../../customers/presentation/customer_picker_sheet.dart';
 import '../../payments/presentation/stk_wait_page.dart';
 import '../../payments/domain/mpesa_capture.dart';
@@ -1886,10 +1887,12 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
     final session = ref.watch(authControllerProvider).session;
     final sendForApproval =
         session != null && !session.permissions.canApproveSales;
+    final screenshotRequired = mobileMpesaScreenshotRequired(session?.profile);
     final valid = canSubmitCheckout(
       cart: cart,
       settings: settings,
       draft: draft,
+      mpesaScreenshotRequired: screenshotRequired,
     );
     final theme = Theme.of(context);
     final amountPaid =
@@ -2251,7 +2254,9 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                 if (needsMpesaCode) ...[
                   const SizedBox(height: 16),
                   Text(
-                    'Payment screenshot *',
+                    screenshotRequired
+                        ? 'Payment screenshot *'
+                        : 'Payment screenshot',
                     style: theme.textTheme.titleSmall,
                   ),
                   const SizedBox(height: 8),
@@ -2275,13 +2280,23 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                         fit: BoxFit.contain,
                       ),
                     ),
-                  ] else if (_showMpesaErrors)
+                  ] else if (screenshotRequired && _showMpesaErrors)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
                         'Attach a screenshot of the M-Pesa payment (till or bank).',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.error,
+                        ),
+                      ),
+                    )
+                  else if (!screenshotRequired && _receiptBytes == null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Optional. You can attach a screenshot, or finish the sale without one.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.mutedForeground,
                         ),
                       ),
                     ),
@@ -2352,7 +2367,8 @@ class _PaySheetState extends ConsumerState<_PaySheet> {
                           );
                           return;
                         }
-                        if (_receiptBytes == null || _receiptBytes!.isEmpty) {
+                        if (screenshotRequired &&
+                            (_receiptBytes == null || _receiptBytes!.isEmpty)) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(

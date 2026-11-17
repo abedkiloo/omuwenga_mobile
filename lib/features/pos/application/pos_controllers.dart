@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart' as app;
 import '../../auth/application/auth_controller.dart';
+import '../../auth/domain/persona.dart';
 import '../../../sync/application/connectivity_monitor.dart';
 import '../../../sync/data/outbox_store.dart';
 import '../../../sync/domain/client_uuid.dart';
@@ -182,11 +183,15 @@ class CheckoutController extends StateNotifier<CheckoutState> {
     final settings = _ref
         .read(posSettingsProvider)
         .maybeWhen(data: (s) => s, orElse: () => const PosSettings());
+    final screenshotRequired = mobileMpesaScreenshotRequired(
+      _ref.read(authControllerProvider).session?.profile,
+    );
     final reason = validateCheckout(
       cart: cart,
       settings: settings,
       draft: state.draft,
       deferPayment: deferPayment,
+      mpesaScreenshotRequired: screenshotRequired,
     );
     if (reason != null) {
       state = state.copyWith(phase: CheckoutPhase.error, message: reason);
@@ -201,7 +206,9 @@ class CheckoutController extends StateNotifier<CheckoutState> {
       final draft = state.draft;
       final collectingMpesa =
           draft.method == PosPaymentMethod.mpesa && draft.amountPaid > 0;
-      if (collectingMpesa) {
+      final hasReceipt = draft.paymentReceiptBytes != null &&
+          draft.paymentReceiptBytes!.isNotEmpty;
+      if (collectingMpesa && (hasReceipt || screenshotRequired)) {
         state = state.copyWith(
           phase: CheckoutPhase.error,
           message:

@@ -521,6 +521,7 @@ class PosApi {
       'allow_partial_payment': draft.paymentOnAccount && draft.amountPaid >= 0,
       'excess_payment_choice': 'change',
       'client_channel': 'mobile',
+      'pos_surface': 'mobile',
       if (!payLater &&
           draft.method.requiresReference &&
           draft.paymentReference.trim().isNotEmpty)

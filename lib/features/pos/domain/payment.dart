@@ -226,6 +226,7 @@ Map<String, dynamic> posSaleRequestBody({
     'excess_payment_choice': 'change',
     if (cart.customerId != null) 'customer_id': cart.customerId,
     if (cart.holdingId != null) 'holding_id': cart.holdingId,
+    'pos_surface': 'mobile',
     if (!payLater &&
         draft.method.requiresReference &&
         draft.paymentReference.trim().isNotEmpty)
@@ -239,11 +240,15 @@ Map<String, dynamic> posSaleRequestBody({
 }
 
 /// Returns null when checkout is valid; otherwise a short human reason.
+///
+/// [mpesaScreenshotRequired] is false on the phone for anyone who is not
+/// Sales Personnel. Debt collection does not use this function.
 String? validateCheckout({
   required PosCart cart,
   required PosSettings settings,
   required CheckoutDraft draft,
   bool deferPayment = false,
+  bool mpesaScreenshotRequired = true,
 }) {
   if (cart.isEmpty) return 'Add at least one product.';
   if (settings.requireCustomer && cart.customerId == null) {
@@ -276,8 +281,9 @@ String? validateCheckout({
     if (dest != 'till' && dest != 'bank') {
       return 'Choose till or bank before entering the M-Pesa code.';
     }
-    if (draft.paymentReceiptBytes == null ||
-        draft.paymentReceiptBytes!.isEmpty) {
+    if (mpesaScreenshotRequired &&
+        (draft.paymentReceiptBytes == null ||
+            draft.paymentReceiptBytes!.isEmpty)) {
       return 'Attach a screenshot of the M-Pesa payment (till or bank).';
     }
   }
@@ -298,10 +304,12 @@ bool canSubmitCheckout({
   required PosSettings settings,
   required CheckoutDraft draft,
   bool deferPayment = false,
+  bool mpesaScreenshotRequired = true,
 }) =>
     validateCheckout(
       cart: cart,
       settings: settings,
       draft: draft,
       deferPayment: deferPayment,
+      mpesaScreenshotRequired: mpesaScreenshotRequired,
     ) == null;

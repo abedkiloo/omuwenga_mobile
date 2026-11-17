@@ -364,4 +364,20 @@ void main() {
       );
     });
   });
+
+  test('phone M-Pesa screenshot stays required for Sales Personnel only', () {
+    final sales = UserProfileSnapshot.fromJson({
+      'role': 'cashier',
+      'custom_role': {'name': 'Sales Personnel'},
+    });
+    final manager = UserProfileSnapshot.fromJson({
+      'role': 'manager',
+      'custom_role': {'name': 'Manager'},
+    });
+    expect(isSalesPersonnelProfile(sales), isTrue);
+    expect(isSalesPersonnelProfile(manager), isFalse);
+    expect(mobileMpesaScreenshotRequired(null), isTrue);
+    expect(mobileMpesaScreenshotRequired(sales), isTrue);
+    expect(mobileMpesaScreenshotRequired(manager), isFalse);
+  });
 }

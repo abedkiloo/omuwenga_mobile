@@ -117,6 +117,24 @@ String? _roleDisplay(Map<String, dynamic> json) {
   return display;
 }
 
+/// True when the signed-in job is Sales Personnel.
+///
+/// [profile.roleDisplay] is the custom role name, 0–150 characters.
+/// A missing display uses the legacy [UserProfileSnapshot.role].
+bool isSalesPersonnelProfile(UserProfileSnapshot profile) {
+  final display = (profile.roleDisplay ?? '').trim().toLowerCase();
+  if (display == 'sales personnel') return true;
+  return profile.role.trim().toLowerCase() == 'sales';
+}
+
+/// Phone sale may skip the M-Pesa screenshot unless the seller is Sales Personnel.
+///
+/// A missing profile stays required so an empty session does not drop the rule.
+bool mobileMpesaScreenshotRequired(UserProfileSnapshot? profile) {
+  if (profile == null) return true;
+  return isSalesPersonnelProfile(profile);
+}
+
 /// True when the signed-in job is Field Sales (API scopes customers to ones they onboarded).
 bool isFieldSalesProfile(UserProfileSnapshot profile) {
   final display = (profile.roleDisplay ?? '').trim().toLowerCase();

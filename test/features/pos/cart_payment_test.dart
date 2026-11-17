@@ -243,6 +243,22 @@ void main() {
         contains('screenshot'),
       );
       expect(
+        validateCheckout(
+          cart: cart,
+          settings: const PosSettings(
+            enabledPaymentMethods: [PosPaymentMethod.mpesa],
+          ),
+          draft: const CheckoutDraft(
+            method: PosPaymentMethod.mpesa,
+            amountPaid: 150,
+            paymentReference: 'QHX7K2L9M1',
+            mpesaDestination: 'till',
+          ),
+          mpesaScreenshotRequired: false,
+        ),
+        isNull,
+      );
+      expect(
         canSubmitCheckout(
           cart: cart,
           settings: const PosSettings(
@@ -269,6 +285,7 @@ void main() {
       );
       expect(body['mpesa_destination'], 'bank');
       expect(body['payment_method'], 'mpesa');
+      expect(body['pos_surface'], 'mobile');
     });
 
     test('partial payment blocked when store setting is off', () {
