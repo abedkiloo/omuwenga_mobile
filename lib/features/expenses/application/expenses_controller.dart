@@ -229,6 +229,23 @@ class ExpensesController extends StateNotifier<ExpensesState> {
     return null;
   }
 
+  /// Marks or clears whether [id] must be entered again.
+  ///
+  /// Returns an error message, or null when the mark was saved.
+  Future<String?> setRedo(int id, bool needsRedo) async {
+    state = state.copyWith(saving: true, clearError: true);
+    final result = await _api.setRedo(id, needsRedo);
+    state = state.copyWith(saving: false);
+    if (result.isFailure) {
+      return result.when(
+        success: (_) => null,
+        failure: (e, _) => e.toString(),
+      );
+    }
+    await load();
+    return null;
+  }
+
   Future<String?> resubmit(int id) async {
     state = state.copyWith(saving: true, clearError: true);
     final result = await _api.resubmit(id);

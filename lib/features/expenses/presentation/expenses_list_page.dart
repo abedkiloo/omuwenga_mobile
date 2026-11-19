@@ -189,6 +189,8 @@ class _ExpensesListPageState extends ConsumerState<ExpensesListPage> {
                                                 if (expense.expenseDate
                                                     .isNotEmpty)
                                                   expense.expenseDate,
+                                                if (expense.needsRedo)
+                                                  'Needs redo',
                                               ].join(' · '),
                                               style: Theme.of(context)
                                                   .textTheme
@@ -232,6 +234,7 @@ class _ExpenseDetailSheet extends ConsumerStatefulWidget {
 
 class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
   bool _rejectOpen = false;
+  late bool _needsRedo = widget.expense.needsRedo;
   final _reason = TextEditingController();
 
   @override
@@ -402,6 +405,29 @@ class _ExpenseDetailSheetState extends ConsumerState<_ExpenseDetailSheet> {
                           ),
                         ],
                       ),
+                  ],
+                  if (canApprove) ...[
+                    OutlinedButton(
+                      key: Key('expense_redo_${expense.id}'),
+                      onPressed: state.saving
+                          ? null
+                          : () => act(() async {
+                                final next = !_needsRedo;
+                                final err = await ref
+                                    .read(expensesProvider.notifier)
+                                    .setRedo(expense.id, next);
+                                if (err == null && mounted) {
+                                  setState(() => _needsRedo = next);
+                                }
+                                return err;
+                              }),
+                      child: Text(
+                        _needsRedo
+                            ? 'Does not need to be redone'
+                            : 'Needs to be redone',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                   ],
                   if (expense.isRejected) ...[
                     FilledButton(

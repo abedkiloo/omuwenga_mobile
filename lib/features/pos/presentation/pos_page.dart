@@ -357,6 +357,11 @@ class _PosPageState extends ConsumerState<PosPage> {
       return '$label has no available stock.';
     }
     ref.read(cartControllerProvider.notifier).addProduct(product);
+    if (product.newSalePriceUnset && showSnackbars && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(CatalogProduct.newSalePriceUnsetLabel)),
+      );
+    }
     await _clearSearchAfterSelect();
     return null;
   }
@@ -1544,6 +1549,15 @@ class _CatalogProductCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (product.newSalePriceUnset)
+                  Text(
+                    CatalogProduct.newSalePriceUnsetLabel,
+                    key: Key('pos_price_unset_${product.id}'),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFFB45309),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 CbEllipsisText(
                   product.name,
                   key: Key('pos_product_${product.id}'),

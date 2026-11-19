@@ -224,6 +224,13 @@ List<_NavItem> _businessMoreNav({
         route: AppRoutes.expenses,
         key: Key('more_expenses'),
       ),
+    if (perms?.canRecordDelivery ?? false)
+      const _NavItem(
+        label: 'Record delivery',
+        icon: Icons.inventory_outlined,
+        route: AppRoutes.recordDelivery,
+        key: Key('more_record_delivery'),
+      ),
   ];
 }
 

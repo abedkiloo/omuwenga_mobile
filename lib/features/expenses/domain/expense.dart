@@ -66,6 +66,7 @@ class Expense {
     this.receiptNumber = '',
     this.expenseDate = '',
     this.notes = '',
+    this.needsRedo = false,
     this.imageUrl,
     this.createdById,
     this.createdByName,
@@ -87,6 +88,9 @@ class Expense {
   final String receiptNumber;
   final String expenseDate;
   final String notes;
+
+  /// Admin mark: this expense must be entered again.
+  final bool needsRedo;
   final String? imageUrl;
   final int? createdById;
   final String? createdByName;
@@ -127,6 +131,7 @@ class Expense {
       receiptNumber: (json['receipt_number'] ?? '').toString(),
       expenseDate: (json['expense_date'] ?? '').toString(),
       notes: (json['notes'] ?? '').toString(),
+      needsRedo: json['needs_redo'] == true,
       imageUrl: json['image_url']?.toString(),
       createdById: _asInt(json['created_by']),
       createdByName: json['created_by_name']?.toString(),

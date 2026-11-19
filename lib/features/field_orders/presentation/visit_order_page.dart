@@ -82,6 +82,11 @@ class _VisitOrderPageState extends ConsumerState<VisitOrderPage> {
     } else {
       ref.read(visitOrderProvider.notifier).addProduct(product);
     }
+    if (product.newSalePriceUnset && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(CatalogProduct.newSalePriceUnsetLabel)),
+      );
+    }
   }
 
   Future<void> _useCurrentLocation() async {
@@ -1043,6 +1048,16 @@ class _ProductsStepState extends ConsumerState<_ProductsStep> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    if (p.newSalePriceUnset)
+                                      Text(
+                                        CatalogProduct.newSalePriceUnsetLabel,
+                                        key: Key('visit_price_unset_${p.id}'),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: const Color(0xFFB45309),
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
                                     Text(
                                       p.name,
                                       style: theme.textTheme.titleSmall

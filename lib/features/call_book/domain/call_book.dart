@@ -27,6 +27,7 @@ class CallDayCount {
     required this.callable,
     required this.called,
     required this.notCalled,
+    this.subCounties = const [],
   });
 
   final int weekday;
@@ -34,17 +35,31 @@ class CallDayCount {
   final int called;
   final int notCalled;
 
+  /// Sub-counties on this day, 0–40 names, each 1–100 characters.
+  final List<String> subCounties;
+
   factory CallDayCount.fromJson(Map<String, dynamic> json) {
     int asInt(Object? value) {
       if (value is num) return value.toInt();
       return int.tryParse(value?.toString() ?? '') ?? 0;
     }
 
+    final rawPlaces = json['sub_counties'];
+    final places = rawPlaces is List
+        ? [
+            for (final item in rawPlaces.take(40))
+              if (item != null && item.toString().trim().isNotEmpty)
+                item.toString().trim().length > 100
+                    ? item.toString().trim().substring(0, 100)
+                    : item.toString().trim(),
+          ]
+        : const <String>[];
     return CallDayCount(
       weekday: asInt(json['weekday']).clamp(0, 4),
       callable: asInt(json['callable']),
       called: asInt(json['called']),
       notCalled: asInt(json['not_called']),
+      subCounties: places,
     );
   }
 }

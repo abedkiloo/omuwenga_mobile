@@ -68,6 +68,21 @@ void main() {
         'has_variants': true,
       });
       expect(p.hasVariants, isTrue);
+      expect(p.newSalePriceUnset, isFalse);
+    });
+
+    test('reads a delivery that is waiting for a selling price', () {
+      final p = CatalogProduct.fromJson({
+        'id': 2,
+        'name': 'Hinge',
+        'price': 50,
+        'new_sale_price_unset': true,
+      });
+      expect(p.newSalePriceUnset, isTrue);
+      expect(
+        CatalogProduct.newSalePriceUnsetLabel,
+        'New sale price has not been set',
+      );
     });
   });
 

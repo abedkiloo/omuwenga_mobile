@@ -31,7 +31,13 @@ CallBookPageData _page({
       called: 1,
       notCalled: 1,
       days: const [
-        CallDayCount(weekday: 0, callable: 2, called: 1, notCalled: 1),
+        CallDayCount(
+          weekday: 0,
+          callable: 2,
+          called: 1,
+          notCalled: 1,
+          subCounties: ['Starehe'],
+        ),
         CallDayCount(weekday: 1, callable: 0, called: 0, notCalled: 0),
       ],
     ),
@@ -225,6 +231,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Not Called Shop'), findsOneWidget);
+    expect(find.text('Monday · Starehe'), findsOneWidget);
     expect(find.text('Called Shop'), findsNothing);
     expect(find.text('Page 1 of 3'), findsOneWidget);
     await tester.tap(find.byKey(const Key('call_next_page')));

@@ -22,6 +22,7 @@ class CatalogProduct {
     this.trackStock = true,
     this.isLowStock = false,
     this.hasOutOfStock = false,
+    this.newSalePriceUnset = false,
   });
 
   final int id;
@@ -40,6 +41,12 @@ class CatalogProduct {
   final bool trackStock;
   final bool isLowStock;
   final bool hasOutOfStock;
+
+  /// True when a delivery of this product is waiting for a selling price.
+  final bool newSalePriceUnset;
+
+  /// Shown on the product row until that delivery has a selling price.
+  static const newSalePriceUnsetLabel = 'New sale price has not been set';
 
   bool get isUnavailable =>
       !hasVariants && trackStock && (stockQuantity == null || stockQuantity! <= 0);
@@ -84,6 +91,7 @@ class CatalogProduct {
       isLowStock: lowStock,
       hasOutOfStock: json['has_out_of_stock'] == true ||
           (trackStock && !json.containsKey('has_out_of_stock') && stock != null && stock <= 0),
+      newSalePriceUnset: json['new_sale_price_unset'] == true,
     );
   }
 }

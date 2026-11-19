@@ -123,6 +123,19 @@ class ExpensesApi {
     );
   }
 
+  /// Sets whether an admin says this expense must be entered again.
+  ///
+  /// [id] is the expense id, 1 or greater. [needsRedo] is the new mark.
+  /// Returns the saved expense, or a failure when the caller cannot approve.
+  Future<Result<Expense>> setRedo(int id, bool needsRedo) {
+    return _sendMap(
+      'expenses/$id/redo/',
+      {'needs_redo': needsRedo},
+      Expense.fromJson,
+      'Could not update the redo mark',
+    );
+  }
+
   Future<Result<Expense>> resubmit(int id) {
     return _sendMap(
       'expenses/$id/resubmit/',

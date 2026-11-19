@@ -55,6 +55,12 @@ class _CallBookPageState extends ConsumerState<CallBookPage> {
             ),
           if (summary != null) ...[
             const SizedBox(height: 12),
+            Text(
+              _dayHeader(summary, view.weekday),
+              key: const Key('call_day_places'),
+              style: theme.textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: [
@@ -62,7 +68,9 @@ class _CallBookPageState extends ConsumerState<CallBookPage> {
                   ChoiceChip(
                     key: Key('call_day_${day.weekday}'),
                     label: Text(
-                      '${callWeekdayLabel(day.weekday).substring(0, 3)} ${day.notCalled}',
+                      day.subCounties.isEmpty
+                          ? '${callWeekdayLabel(day.weekday).substring(0, 3)} ${day.notCalled}'
+                          : '${callWeekdayLabel(day.weekday).substring(0, 3)} · ${day.subCounties.first} ${day.notCalled}',
                     ),
                     selected: view.weekday == day.weekday,
                     onSelected: (_) => ref
@@ -285,4 +293,25 @@ class _RecordSheetState extends ConsumerState<_RecordSheet> {
   void _toast(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
+}
+
+/// Day name plus the sub-counties on that day's list.
+///
+/// [weekday] is 0–4. At most 8 names are shown. A longer list adds a count.
+String _dayHeader(CallBookSummary summary, int weekday) {
+  CallDayCount? day;
+  for (final item in summary.days) {
+    if (item.weekday == weekday) {
+      day = item;
+      break;
+    }
+  }
+  final name = callWeekdayLabel(weekday);
+  if (day == null || day.subCounties.isEmpty) {
+    return name.isEmpty ? 'Call list' : name;
+  }
+  final shown = day.subCounties.take(8).join(', ');
+  final extra = day.subCounties.length - 8;
+  final places = extra > 0 ? '$shown +$extra more' : shown;
+  return name.isEmpty ? places : '$name · $places';
 }

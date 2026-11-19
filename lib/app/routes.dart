@@ -23,6 +23,7 @@ abstract final class AppRoutes {
   static const payroll = '/payroll';
   static const approvals = '/approvals';
   static const expenses = '/expenses';
+  static const recordDelivery = '/inventory/delivery';
   static const fieldLoads = '/field-loads';
   static const callBook = '/call-book';
 

@@ -9,6 +9,7 @@ import '../features/payroll/presentation/payroll_page.dart';
 import '../features/field_loads/presentation/field_loads_page.dart';
 import '../features/call_book/presentation/call_book_page.dart';
 import '../features/expenses/presentation/expenses_list_page.dart';
+import '../features/inventory/presentation/record_delivery_page.dart';
 import '../features/dispatch/presentation/dispatch_queue_page.dart';
 import '../features/delivery/presentation/delivery_route_page.dart';
 import '../features/field_orders/presentation/google_map_pin_picker.dart';
@@ -177,6 +178,11 @@ GoRouter createAppRouter({
           !(permissions?.canViewExpenses ?? false)) {
         return AppRoutes.home;
       }
+      if (loc.startsWith(AppRoutes.recordDelivery) &&
+          !(permissions?.canRecordDelivery ?? false) &&
+          !(auth.session?.user.isSuperuser ?? false)) {
+        return AppRoutes.home;
+      }
       if (loc.startsWith(AppRoutes.fieldLoads)) {
         final session = auth.session;
         final allowed = session != null &&
@@ -312,6 +318,10 @@ GoRouter createAppRouter({
           GoRoute(
             path: AppRoutes.expenses,
             builder: (context, state) => const ExpensesListPage(),
+          ),
+          GoRoute(
+            path: AppRoutes.recordDelivery,
+            builder: (context, state) => const RecordDeliveryPage(),
           ),
           GoRoute(
             path: AppRoutes.fieldLoads,

@@ -99,6 +99,9 @@ class PermissionSet {
   bool get canViewPayroll =>
       has('payroll', 'view_own') || has('payroll', 'view');
 
+  /// Record a stock delivery. Cost is still set later by a Super Admin.
+  bool get canRecordDelivery => has('inventory', 'create');
+
   bool get canViewExpenses => has('expenses', 'view');
   bool get canCreateExpenses => has('expenses', 'create');
   bool get canUpdateExpenses => has('expenses', 'update');

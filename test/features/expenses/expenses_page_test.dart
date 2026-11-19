@@ -47,6 +47,7 @@ AuthSession _expenseUser({bool admin = false}) {
 
 List<Override> _overrides(AuthSession session) {
   final tokens = InMemoryTokenStore();
+  var needsRedo = false;
   return [
     ...seedOverrides(session, tokens: tokens),
     apiClientProvider.overrideWith((ref) {
@@ -58,6 +59,7 @@ List<Override> _overrides(AuthSession session) {
         tokenStore: tokens,
         httpClient: MockClient((request) async {
           final path = request.url.path;
+          needsRedo = needsRedo || path.contains('redo');
           if (path.contains('store-settings')) {
             return http.Response(
               jsonEncode({'maker_checker_enabled': false}),
@@ -97,10 +99,24 @@ List<Override> _overrides(AuthSession session) {
                     'receipt_number': '',
                     'expense_date': '2026-10-10',
                     'notes': '',
+                    'needs_redo': needsRedo,
                     'created_by': 3,
                     'created_by_name': 'mgr',
                   },
                 ],
+              }),
+              200,
+            );
+          }
+          if (path.contains('/redo/')) {
+            return http.Response(
+              jsonEncode({
+                'id': 11,
+                'expense_number': 'EXP-1',
+                'amount': '2500.00',
+                'description': 'Shop rent',
+                'status': 'pending',
+                'needs_redo': true,
               }),
               200,
             );
@@ -147,6 +163,19 @@ void main() {
     expect(expense.amount, 2500);
     expect(expense.isPending, isTrue);
     expect(expense.paymentLabel, 'M-PESA');
+    expect(expense.needsRedo, isFalse);
+  });
+
+  test('expense redo mark is read from the payload', () {
+    final expense = Expense.fromJson({
+      'id': 4,
+      'expense_number': 'EXP-4',
+      'amount': '10.00',
+      'description': 'Tea',
+      'status': 'rejected',
+      'needs_redo': true,
+    });
+    expect(expense.needsRedo, isTrue);
   });
 
   testWidgets('more menu shows Expenses when permitted', (tester) async {
@@ -192,5 +221,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Shop rent'), findsOneWidget);
     expect(find.byKey(const Key('expenses_add')), findsOneWidget);
+  });
+
+  testWidgets('admin can mark an expense to be redone', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final router = GoRouter(
+      initialLocation: AppRoutes.expenses,
+      routes: [
+        GoRoute(
+          path: AppRoutes.expenses,
+          builder: (_, _) => const ExpensesListPage(),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: _overrides(_expenseUser(admin: true)),
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('expense_row_11')));
+    await tester.pumpAndSettle();
+    expect(find.text('Needs to be redone'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('expense_redo_11')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Needs redo'), findsOneWidget);
   });
 }
